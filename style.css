@@ -18,6 +18,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -28,23 +29,37 @@ body {
   overflow: hidden;
 }
 
+/* =========================================================
+   BARRA DE PESTAÑAS MÓVIL (SOLO MÓVILES)
+   ========================================================= */
+.mobile-tab-bar {
+  display: none; /* Oculto en computadoras de escritorio */
+}
+
+.mobile-floating-actions {
+  display: none;
+}
+
 .app-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
 }
 
-/* SIDEBAR */
+/* =========================================================
+   SIDEBAR (PANEL DE CONTROL)
+   ========================================================= */
 .sidebar {
   width: 480px;
-  min-width: 440px;
+  min-width: 420px;
+  max-width: 520px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 20px;
-  gap: 16px;
+  padding: 18px;
+  gap: 14px;
 }
 
 .brand {
@@ -64,6 +79,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .brand h2 {
@@ -98,33 +114,34 @@ body {
 .section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.section-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-
-.section-hint {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.3;
+  gap: 8px;
 }
 
 .section-header-inline {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #e2e8f0;
+}
+
+.section-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 .template-chips {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 6px;
 }
 
 .chip {
@@ -139,14 +156,9 @@ body {
   transition: all 0.2s;
 }
 
-.chip:hover {
-  background-color: var(--bg-card-hover);
-  border-color: var(--primary);
-}
-
-.chip.active {
+.chip:hover, .chip.active {
   background-color: var(--primary);
-  border-color: var(--primary-hover);
+  border-color: var(--primary);
   color: white;
 }
 
@@ -189,7 +201,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 320px;
+  max-height: 330px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -256,7 +268,7 @@ body {
 
 .step-card textarea {
   width: 100%;
-  height: 48px;
+  height: 52px;
   resize: vertical;
 }
 
@@ -308,8 +320,8 @@ body {
 }
 
 .btn-large {
-  padding: 14px 20px;
-  font-size: 0.95rem;
+  padding: 13px 18px;
+  font-size: 0.92rem;
 }
 
 .btn-primary {
@@ -346,7 +358,7 @@ body {
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text-main);
-  padding: 4px 8px;
+  padding: 5px 9px;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -364,13 +376,16 @@ body {
 }
 
 .status-notice {
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: var(--text-muted);
   text-align: center;
   min-height: 18px;
+  padding: 2px;
 }
 
-/* ÁREA DE PREVISUALIZACIÓN */
+/* =========================================================
+   ÁREA DE PREVISUALIZACIÓN (CANVAS)
+   ========================================================= */
 .preview-area {
   flex-grow: 1;
   display: flex;
@@ -378,6 +393,7 @@ body {
   background-color: #0b0d13;
   padding: 16px;
   position: relative;
+  overflow: hidden;
 }
 
 .preview-header {
@@ -391,6 +407,7 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .preview-controls {
@@ -402,8 +419,8 @@ body {
   background-color: var(--bg-sidebar);
   border: 1px solid var(--border);
   color: var(--text-main);
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -423,6 +440,7 @@ body {
   justify-content: center;
   overflow: hidden;
   position: relative;
+  min-height: 300px;
 }
 
 #stageCanvas {
@@ -432,4 +450,157 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   border-radius: 12px;
   background-color: #ffffff;
+}
+
+/* =========================================================
+   DISEÑO 100% RESPONSIVO PARA CELULARES Y TABLETS (< 920px)
+   ========================================================= */
+@media (max-width: 920px) {
+  body {
+    overflow-y: auto;
+    height: 100vh;
+  }
+
+  /* Barra de pestañas móvil fija superior */
+  .mobile-tab-bar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #11151f;
+    border-bottom: 1px solid var(--border);
+    padding: 6px 12px;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .mobile-tab-btn {
+    flex: 1;
+    background: #1e2433;
+    border: 1px solid #2d3748;
+    color: #94a3b8;
+    padding: 8px 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-tab-btn.active {
+    background: #2563eb;
+    border-color: #3b82f6;
+    color: #ffffff;
+  }
+
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 54px);
+    width: 100%;
+    overflow: visible;
+  }
+
+  /* En móvil, los paneles se muestran según la pestaña activa */
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 14px;
+    height: auto;
+    overflow-y: visible;
+    gap: 12px;
+  }
+
+  .preview-area {
+    width: 100%;
+    padding: 10px;
+    min-height: calc(100vh - 60px);
+    box-sizing: border-box;
+  }
+
+  .canvas-wrapper {
+    min-height: 60vh;
+    height: 68vh;
+  }
+
+  #stageCanvas {
+    max-height: 98%;
+    max-width: 98%;
+  }
+
+  .mobile-floating-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .step-card-footer {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .steps-container {
+    max-height: 480px;
+  }
+
+  .brand h2 {
+    font-size: 1.05rem;
+  }
+
+  .brand-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+
+  /* Clases de control para pestañas en móvil */
+  body.mobile-tab-preview .sidebar {
+    display: none !important;
+  }
+  body.mobile-tab-preview .preview-area {
+    display: flex !important;
+  }
+
+  body.mobile-tab-steps .sidebar {
+    display: flex !important;
+  }
+  body.mobile-tab-steps #paneSettings {
+    display: none !important;
+  }
+  body.mobile-tab-steps #paneSteps {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+  body.mobile-tab-steps .preview-area {
+    display: none !important;
+  }
+
+  body.mobile-tab-settings .sidebar {
+    display: flex !important;
+  }
+  body.mobile-tab-settings #paneSteps {
+    display: none !important;
+  }
+  body.mobile-tab-settings #paneSettings {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+  body.mobile-tab-settings .preview-area {
+    display: none !important;
+  }
 }

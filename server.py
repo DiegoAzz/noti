@@ -3,6 +3,9 @@ import base64
 import json
 import mimetypes
 import os
+import shutil
+import subprocess
+import tempfile
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import edge_tts
@@ -13,7 +16,7 @@ mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
 
 HOST = os.environ.get("HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", "8090"))
+PORT = int(os.environ.get("PORT", "8095"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 ALLOWED_VOICES = {
@@ -26,6 +29,16 @@ ALLOWED_VOICES = {
     "es-AR-ElenaNeural": "Elena (Argentina - Expresiva)",
     "es-CL-CatalinaNeural": "Catalina (Chile - Amigable)",
 }
+
+def get_ffmpeg_path():
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and os.path.exists(exe):
+            return exe
+    except Exception:
+        pass
+    return shutil.which("ffmpeg")
 
 
 async def synthesize_neural_tts(text: str, voice: str, pitch_hz: int, rate_pct: int):
@@ -77,10 +90,16 @@ class ProfeHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path != "/api/tts":
-            self.send_error(404, "Endpoint no encontrado")
+        if self.path == "/api/tts":
+            self._handle_tts()
+            return
+        elif self.path == "/api/convert-mp4":
+            self._handle_convert_mp4()
             return
 
+        self.send_error(404, "Endpoint no encontrado")
+
+    def _handle_tts(self):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(length)
@@ -113,6 +132,61 @@ class ProfeHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             self._send_json(500, {"error": f"Error al generar voz de profesor: {str(exc)}"})
 
+    def _handle_convert_mp4(self):
+        ffmpeg_bin = get_ffmpeg_path()
+        if not ffmpeg_bin:
+            self._send_json(503, {"error": "FFmpeg no disponible en el servidor"})
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            raw_webm = self.rfile.read(length)
+            if not raw_webm or len(raw_webm) < 100:
+                self._send_json(400, {"error": "Datos de video inválidos o vacíos"})
+                return
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                in_path = os.path.join(tmpdir, "input.webm")
+                out_path = os.path.join(tmpdir, "output.mp4")
+
+                with open(in_path, "wb") as f:
+                    f.write(raw_webm)
+
+                cmd = [
+                    ffmpeg_bin,
+                    "-y",
+                    "-i", in_path,
+                    "-c:v", "libx264",
+                    "-preset", "veryfast",
+                    "-crf", "20",
+                    "-pix_fmt", "yuv420p",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    out_path
+                ]
+
+                proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if proc.returncode != 0 or not os.path.exists(out_path):
+                    err_msg = proc.stderr.decode("utf-8", errors="ignore")[-400:]
+                    print("Error FFmpeg conversión:", err_msg)
+                    self._send_json(500, {"error": f"Fallo al procesar MP4: {err_msg}"})
+                    return
+
+                with open(out_path, "rb") as f_out:
+                    mp4_bytes = f_out.read()
+
+                self.send_response(200)
+                self.send_header("Content-Type", "video/mp4")
+                self.send_header("Content-Length", str(len(mp4_bytes)))
+                self.send_header("Content-Disposition", 'attachment; filename="profe_rochi.mp4"')
+                self.end_headers()
+                self.wfile.write(mp4_bytes)
+
+        except Exception as exc:
+            print("Excepción en conversión MP4:", exc)
+            self._send_json(500, {"error": f"Error interno en conversión: {str(exc)}"})
+
     def _send_json(self, status: int, data: dict):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -127,6 +201,7 @@ def main():
     print(f"==================================================")
     print(f" PROFE PIZARRA IA listo en http://localhost:{PORT}")
     print(f" Modo educativo, animaciones de pizarra y voz IA")
+    print(f" FFmpeg disponible: {bool(get_ffmpeg_path())}")
     print(f"==================================================")
     try:
         server.serve_forever()

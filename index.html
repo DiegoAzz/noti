@@ -2,195 +2,229 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Profe Pizarra IA - Generador de Videos Educativos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;600;700;800;900&family=Kalam:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20">
   <script src="three.min.js"></script>
   <script src="GLTFLoader.js"></script>
 </head>
 <body>
+  <!-- BARRA DE PESTAÑAS MÓVIL (SOLO VISIBLE EN CELULAR / PANTALLAS PEQUEÑAS) -->
+  <nav class="mobile-tab-bar" id="mobileTabBar">
+    <button class="mobile-tab-btn active" id="tabBtnPreview" data-tab="preview">
+      <span>🎬</span>
+      <span>Video</span>
+    </button>
+    <button class="mobile-tab-btn" id="tabBtnSteps" data-tab="steps">
+      <span>📝</span>
+      <span>Guion</span>
+    </button>
+    <button class="mobile-tab-btn" id="tabBtnSettings" data-tab="settings">
+      <span>⚙️</span>
+      <span>Ajustes</span>
+    </button>
+  </nav>
+
   <div class="app-layout">
     <!-- PANEL DE CONTROL IZQUIERDO -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebarPanel">
       <div class="brand">
         <div class="brand-icon">🎓</div>
         <div>
           <h2>Profe Pizarra IA</h2>
-          <span class="badge">Estudio Educativo TikTok/Reels</span>
+          <span class="badge">Estudio Educativo TikTok / Reels</span>
         </div>
       </div>
 
-      <!-- PLANTILLAS RÁPIDAS -->
-      <div class="section">
-        <label class="section-title">📚 Plantillas de Ejemplo</label>
-        <div class="template-chips">
-          <button class="chip active" id="btnTplPalindromos">📖 Palíndromos</button>
-          <button class="chip" id="btnTplCapicua">🔢 Números Capicúa</button>
-          <button class="chip" id="btnTplAcentuacion">✍️ Ortografía</button>
-          <button class="chip" id="btnTplMates">📐 Ecuaciones</button>
-        </div>
-      </div>
-
-      <!-- CONFIGURACIÓN DE VOZ Y PERSONAJE -->
-      <div class="section">
-        <label class="section-title">🎙️ Profesor y Voz IA</label>
-        <div class="form-group">
-          <label for="selectVoice">Voz del docente:</label>
-          <select id="selectVoice" class="form-control">
-            <option value="es-CO-SalomeNeural" selected>Salomé (Colombia - Estilo Profe Mónica)</option>
-            <option value="es-CO-GonzaloNeural">Gonzalo (Colombia - Amable)</option>
-            <option value="es-MX-DaliaNeural">Dalia (México - Explicativa)</option>
-            <option value="es-MX-JorgeNeural">Jorge (México - Dinámico)</option>
-            <option value="es-ES-ElviraNeural">Elvira (España - Cátedra)</option>
-            <option value="es-ES-AlvaroNeural">Álvaro (España - Natural)</option>
-          </select>
+      <!-- PESTAÑA: AJUSTES / CONFIGURACIÓN -->
+      <div class="tab-pane-content" id="paneSettings">
+        <!-- PLANTILLAS RÁPIDAS -->
+        <div class="section">
+          <label class="section-title">📚 Plantillas de Ejemplo</label>
+          <div class="template-chips">
+            <button class="chip active" id="btnTplPalindromos">📖 Palíndromos</button>
+            <button class="chip" id="btnTplCapicua">🔢 Números Capicúa</button>
+            <button class="chip" id="btnTplAcentuacion">✍️ Ortografía</button>
+            <button class="chip" id="btnTplMates">📐 Ecuaciones</button>
+          </div>
         </div>
 
-        <div class="form-row">
+        <!-- CONFIGURACIÓN DE VOZ Y PERSONAJE -->
+        <div class="section">
+          <label class="section-title">🎙️ Profesor y Voz IA</label>
           <div class="form-group">
-            <label>Docente Predeterminado:</label>
-            <div style="background: rgba(220, 38, 38, 0.12); border: 1.5px solid #ef4444; border-radius: 8px; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.25rem;">🔥</span>
-                <div>
-                  <div style="font-weight: 800; font-size: 0.82rem; color: #fca5a5;">La Profe Rochi (Animada)</div>
-                  <div style="font-size: 0.66rem; color: #94a3b8;">Sprites Limpios: Habla + Gestos + Pizarra</div>
+            <label for="selectVoice">Voz del docente:</label>
+            <select id="selectVoice" class="form-control">
+              <option value="es-CO-SalomeNeural" selected>Salomé (Colombia - Estilo Profe Mónica)</option>
+              <option value="es-CO-GonzaloNeural">Gonzalo (Colombia - Amable)</option>
+              <option value="es-MX-DaliaNeural">Dalia (México - Explicativa)</option>
+              <option value="es-MX-JorgeNeural">Jorge (México - Dinámico)</option>
+              <option value="es-ES-ElviraNeural">Elvira (España - Cátedra)</option>
+              <option value="es-ES-AlvaroNeural">Álvaro (España - Natural)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Docente Predeterminado:</label>
+              <div style="background: rgba(220, 38, 38, 0.12); border: 1.5px solid #ef4444; border-radius: 8px; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.25rem;">🔥</span>
+                  <div>
+                    <div style="font-weight: 800; font-size: 0.82rem; color: #fca5a5;">La Profe Rochi (Animada)</div>
+                    <div style="font-size: 0.66rem; color: #94a3b8;">Sprites Limpios: Habla + Gestos + Pizarra</div>
+                  </div>
                 </div>
+                <span style="background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 10px;">OFICIAL</span>
               </div>
-              <span style="background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 10px;">OFICIAL</span>
+              <input type="hidden" id="selectAvatar" value="bellum">
             </div>
-            <input type="hidden" id="selectAvatar" value="bellum">
-          </div>
-          <div class="form-group">
-            <label for="selectTheme">Estilo Pizarra:</label>
-            <select id="selectTheme" class="form-control">
-              <option value="classroom" selected>🏫 Aula Animada (Pizarra Amarilla)</option>
-              <option value="whiteboard_grid">Pizarra Blanca Cuadriculada</option>
-              <option value="whiteboard_clean">Pizarra Blanca Lisa</option>
-              <option value="blackboard_green">Pizarra Verde Tiza</option>
-              <option value="blackboard_dark">Pizarra Oscura Moderna</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- LOGO OFICIAL DEL CANAL: LA PROFE ROCHI -->
-        <div class="form-group" style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.35); margin-top: 6px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size:0.78rem; color:#c084fc; font-weight:700;">🌟 Logo del Canal:</label>
-            <span style="font-size:0.7rem; color:#34d399; font-weight:600;">✅ La Profe Rochi</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
-            <img src="assets/logo_profe_rochi.png" style="width:36px; height:36px; border-radius:50%; border:2px solid #fbbf24;" alt="Logo">
-            <span style="font-size:0.75rem; color:#cbd5e1;">Emblema oficial en la pared superior del aula</span>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="selectCameraMode">Cámara:</label>
-            <select id="selectCameraMode" class="form-control">
-              <option value="director" selected>Director Dinámico (Corte a Profe y Pizarra)</option>
-              <option value="split">Pantalla Dividida (Profe + Pizarra)</option>
-              <option value="board_focus">Enfoque Pizarra</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="selectFormat">Formato:</label>
-            <select id="selectFormat" class="form-control">
-              <option value="9:16" selected>9:16 (TikTok / Reels / Shorts)</option>
-              <option value="16:9">16:9 (YouTube)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- MEZCLADOR DE AUDIO Y VOLÚMENES CONFIGURABLES -->
-        <div class="form-group" style="background: rgba(15, 23, 42, 0.65); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.28); margin-top: 8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-            <label style="font-size:0.8rem; color:#93c5fd; font-weight:800; letter-spacing: 0.3px;">🎛️ Mezclador de Audio:</label>
-            <span style="font-size:0.68rem; color:#60a5fa; background: rgba(59, 130, 246, 0.15); padding: 2px 6px; border-radius: 4px;">Configurable</span>
-          </div>
-
-          <!-- 1. VOLUMEN VOZ DOCENTE -->
-          <div style="margin-bottom: 8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
-              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎙️ Voz Docente:</span>
-              <span id="labelVoiceVol" style="font-size:0.72rem; color:#60a5fa; font-weight:700;">90%</span>
+            <div class="form-group">
+              <label for="selectTheme">Estilo Pizarra:</label>
+              <select id="selectTheme" class="form-control">
+                <option value="classroom" selected>🏫 Aula Animada (Pizarra Amarilla)</option>
+                <option value="whiteboard_grid">Pizarra Blanca Cuadriculada</option>
+                <option value="whiteboard_clean">Pizarra Blanca Lisa</option>
+                <option value="blackboard_green">Pizarra Verde Tiza</option>
+                <option value="blackboard_dark">Pizarra Oscura Moderna</option>
+              </select>
             </div>
-            <input type="range" id="sliderVoiceVol" min="0" max="100" value="90" class="form-control" style="cursor:pointer; height:6px; padding:0;">
           </div>
 
-          <!-- 2. MÚSICA SUAVE DE FONDO -->
-          <div style="margin-bottom: 8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
-              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎵 Música Suave (Fondo):</span>
-              <span id="labelMusicVol" style="font-size:0.72rem; color:#34d399; font-weight:700;">12%</span>
+          <!-- LOGO OFICIAL DEL CANAL: LA PROFE ROCHI -->
+          <div class="form-group" style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.35); margin-top: 6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label style="font-size:0.78rem; color:#c084fc; font-weight:700;">🌟 Logo del Canal:</label>
+              <span style="font-size:0.7rem; color:#34d399; font-weight:600;">✅ La Profe Rochi</span>
             </div>
-            <select id="selectBgMusic" class="form-control" style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 5px;">
-              <option value="suave" selected>🎶 Acústica Suave y Agradable (Daily Beetle)</option>
-              <option value="none">🔇 Sin música de fondo</option>
-            </select>
-            <input type="range" id="sliderMusicVol" min="0" max="100" value="12" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+            <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+              <img src="assets/logo_profe_rochi.png" style="width:36px; height:36px; border-radius:50%; border:2px solid #fbbf24;" alt="Logo">
+              <span style="font-size:0.75rem; color:#cbd5e1;">Emblema oficial en la pared superior del aula</span>
+            </div>
           </div>
 
-          <!-- 3. EFECTO MARCADOR PIZARRA -->
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
-              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">✏️ Sonido Marcador/Pizarra:</span>
-              <span id="labelSoundVol" style="font-size:0.72rem; color:#fbbf24; font-weight:700;">35%</span>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="selectCameraMode">Cámara:</label>
+              <select id="selectCameraMode" class="form-control">
+                <option value="director" selected>Director Dinámico (Corte a Profe y Pizarra)</option>
+                <option value="split">Pantalla Dividida (Profe + Pizarra)</option>
+                <option value="board_focus">Enfoque Pizarra</option>
+              </select>
             </div>
-            <input type="range" id="sliderMarkerSound" min="0" max="100" value="35" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+            <div class="form-group">
+              <label for="selectFormat">Formato:</label>
+              <select id="selectFormat" class="form-control">
+                <option value="9:16" selected>9:16 (TikTok / Reels / Shorts)</option>
+                <option value="16:9">16:9 (YouTube)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- MEZCLADOR DE AUDIO Y VOLÚMENES CONFIGURABLES -->
+          <div class="form-group" style="background: rgba(15, 23, 42, 0.65); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.28); margin-top: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <label style="font-size:0.8rem; color:#93c5fd; font-weight:800; letter-spacing: 0.3px;">🎛️ Mezclador de Audio:</label>
+              <span style="font-size:0.68rem; color:#60a5fa; background: rgba(59, 130, 246, 0.15); padding: 2px 6px; border-radius: 4px;">Configurable</span>
+            </div>
+
+            <!-- 1. VOLUMEN VOZ DOCENTE -->
+            <div style="margin-bottom: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+                <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎙️ Voz Docente:</span>
+                <span id="labelVoiceVol" style="font-size:0.72rem; color:#60a5fa; font-weight:700;">90%</span>
+              </div>
+              <input type="range" id="sliderVoiceVol" min="0" max="100" value="90" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+            </div>
+
+            <!-- 2. MÚSICA SUAVE DE FONDO -->
+            <div style="margin-bottom: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+                <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎵 Música Suave (Fondo):</span>
+                <span id="labelMusicVol" style="font-size:0.72rem; color:#34d399; font-weight:700;">12%</span>
+              </div>
+              <select id="selectBgMusic" class="form-control" style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 5px;">
+                <option value="suave" selected>🎶 Acústica Suave y Agradable (Daily Beetle)</option>
+                <option value="none">🔇 Sin música de fondo</option>
+              </select>
+              <input type="range" id="sliderMusicVol" min="0" max="100" value="12" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+            </div>
+
+            <!-- 3. EFECTO MARCADOR PIZARRA -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+                <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🖊️ Sonido Marcador Acrílico:</span>
+                <span id="labelSoundVol" style="font-size:0.72rem; color:#f59e0b; font-weight:700;">35%</span>
+              </div>
+              <input type="range" id="sliderMarkerSound" min="0" max="100" value="35" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- EDITOR DE SECUENCIA / PASOS -->
-      <div class="section flex-grow">
-        <div class="section-header-inline">
-          <label class="section-title">📝 Guion y Pasos</label>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-sm" id="btnTogglePasteScript" style="background:#4f46e5; color:#fff;" title="Pegar texto o guion completo">📋 Pegar Guion</button>
-            <button class="btn-sm" id="btnAddStep">+ Añadir</button>
+      <!-- PESTAÑA: GUION Y PASOS -->
+      <div class="tab-pane-content" id="paneSteps">
+        <!-- EDITOR DE SECUENCIA / PASOS -->
+        <div class="section flex-grow">
+          <div class="section-header-inline">
+            <label class="section-title">📝 Guion y Pasos</label>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-sm" id="btnCopyPrompt" style="background:#059669; color:#fff;" title="Copiar Prompt Maestro para ChatGPT / Claude">🤖 Prompt IA</button>
+              <button class="btn-sm" id="btnTogglePasteScript" style="background:#4f46e5; color:#fff;" title="Pegar texto o guion completo">📋 Pegar Guion</button>
+              <button class="btn-sm" id="btnAddStep">+ Añadir</button>
+            </div>
+          </div>
+          <p class="section-hint">Define lo que explica la docente y las palabras clave que escribe en la pizarra.</p>
+
+          <!-- CAJA DESPLEGABLE PARA PEGAR TEXTO COMPLETO -->
+          <div id="pasteScriptPanel" style="display:none; background:#1e1b4b; border:1px solid #6366f1; border-radius:8px; padding:10px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.75rem; font-weight:700; color:#c7d2fe;">📋 Pegar Texto o Guion Completo:</span>
+              <button class="btn-sm" id="btnClosePasteScript" style="padding:1px 6px; font-size:0.7rem;">✕</button>
+            </div>
+
+            <div style="display:flex; gap:6px; margin: 6px 0 8px 0; flex-wrap:wrap;">
+              <button class="btn-sm" id="btnCopyPromptInside" style="background:#059669; color:#fff; font-size:0.7rem; flex:1;">
+                🤖 Copiar Prompt para ChatGPT/Claude
+              </button>
+              <button class="btn-sm" id="btnLoadExampleScript" style="background:#374151; color:#e5e7eb; font-size:0.7rem;">
+                💡 Cargar Ejemplo
+              </button>
+            </div>
+
+            <p style="font-size:0.68rem; color:#a5b4fc; margin-bottom:6px;">
+              Formato con etiquetas (escribe ágil en pizarra y luego se pone a un costado para que se lea):<br>
+              <code>TÍTULO: PALÍNDROMOS<br>
+              HABLA: ¡Hola! Hoy te enseño qué son los palíndromos.<br>
+              PIZARRA: reconocer<br>
+              HABLA: Fíjate cómo se lee igual al revés.<br>
+              PIZARRA: somos<br>
+              HABLA: ¿Conoces otro palíndromo? ¡Comenta!</code>
+            </p>
+            <textarea id="rawScriptText" class="form-control" rows="6" style="font-size:0.75rem; font-family:monospace;" placeholder="Pega aquí tu guion o texto..."></textarea>
+            <button id="btnProcessRawScript" class="btn btn-primary btn-sm" style="width:100%; margin-top:6px; font-weight:700;">
+              ⚡ Auto-Dividir y Cargar en Pasos
+            </button>
+          </div>
+
+          <div id="stepsList" class="steps-container"></div>
+        </div>
+
+        <!-- GENERADOR RÁPIDO CON IA -->
+        <div class="section ai-helper">
+          <label class="section-title">💡 Asistente Rápido de Temas</label>
+          <p class="section-hint" style="margin-bottom:6px;">Genera una lección pedagógica completa, dividida en pasos y con pizarra sincronizada.</p>
+          <div class="ai-input-group">
+            <input type="text" id="aiTopicInput" class="form-control" placeholder="Ej: Reglas de la B y la V, Palabras Agudas, Fracciones...">
+            <button id="btnAiGenerate" class="btn btn-secondary">Crear Lección</button>
           </div>
         </div>
-        <p class="section-hint">Define lo que explica el docente y lo que se escribe en pizarra.</p>
-
-        <!-- CAJA DESPLEGABLE PARA PEGAR TEXTO COMPLETO -->
-        <div id="pasteScriptPanel" style="display:none; background:#1e1b4b; border:1px solid #6366f1; border-radius:8px; padding:10px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span style="font-size:0.75rem; font-weight:700; color:#c7d2fe;">📋 Pegar Texto o Guion Completo:</span>
-            <button class="btn-sm" id="btnClosePasteScript" style="padding:1px 6px; font-size:0.7rem;">✕</button>
-          </div>
-          <p style="font-size:0.68rem; color:#a5b4fc; margin-bottom:6px;">
-            Formato con etiquetas (o pega cualquier texto largo y el sistema lo divide solo):<br>
-            <code>TÍTULO: Los Palíndromos<br>
-            HABLA: ¡Hola! Hoy te enseño qué son los palíndromos.<br>
-            PIZARRA: reconocer<br>
-            HABLA: Fíjate cómo se lee igual al revés.<br>
-            PIZARRA: somos<br>
-            HABLA: ¿Conoces otro palíndromo? ¡Comenta!</code>
-          </p>
-          <textarea id="rawScriptText" class="form-control" rows="6" style="font-size:0.75rem; font-family:monospace;" placeholder="Pega aquí tu guion o texto..."></textarea>
-          <button id="btnProcessRawScript" class="btn btn-primary btn-sm" style="width:100%; margin-top:6px; font-weight:700;">
-            ⚡ Auto-Dividir y Cargar en Pasos
-          </button>
-        </div>
-
-        <div id="stepsList" class="steps-container"></div>
       </div>
 
-      <!-- GENERADOR RÁPIDO CON IA -->
-      <div class="section ai-helper">
-        <label class="section-title">💡 Asistente Rápido de Temas</label>
-        <div class="ai-input-group">
-          <input type="text" id="aiTopicInput" class="form-control" placeholder="Ej: Reglas de la B y la V, Ley de Signos...">
-          <button id="btnAiGenerate" class="btn btn-secondary">Crear Lección</button>
-        </div>
-      </div>
-
-      <!-- ACCIONES PRINCIPALES -->
+      <!-- BOTONES DE ACCIÓN (DISPONIBLES SIEMPRE) -->
       <div class="actions-panel">
         <button id="btnPlayPreview" class="btn btn-primary btn-large">
           ▶ Generar y Reproducir
@@ -198,7 +232,7 @@
         <button id="btnRecord" class="btn btn-accent btn-large">
           ⏺ Grabar y Descargar Video MP4
         </button>
-        <button id="btnDownloadThumbnail" class="btn btn-secondary btn-large" style="margin-top: 6px; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1); color: #fde047;">
+        <button id="btnDownloadThumbnail" class="btn btn-secondary btn-large" style="margin-top: 4px; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1); color: #fde047;">
           📸 Guardar Miniatura HD (Cover)
         </button>
       </div>
@@ -206,12 +240,12 @@
     </aside>
 
     <!-- ÁREA DE PREVISUALIZACIÓN -->
-    <main class="preview-area">
+    <main class="preview-area" id="previewPanel">
       <div class="preview-header">
         <div class="video-badges">
           <span class="badge" id="badgeResolution">1080 × 1920 (9:16)</span>
           <span class="badge" id="badgeTime">00:00 / 00:00</span>
-          <span class="badge badge-accent" id="badgeRecording" style="display: none;">● GRABANDO VIDEO...</span>
+          <span class="badge badge-accent" id="badgeRecording" style="display: none;">● GRABANDO MP4...</span>
         </div>
         <div class="preview-controls">
           <button class="btn-icon" id="btnRestart" title="Reiniciar">🔄</button>
@@ -222,9 +256,15 @@
       <div class="canvas-wrapper" id="canvasWrapper">
         <canvas id="stageCanvas" width="1080" height="1920"></canvas>
       </div>
+
+      <!-- BOTONES FLOTANTES MÓVILES PARA ACCIÓN RÁPIDA -->
+      <div class="mobile-floating-actions">
+        <button id="btnMobilePlay" class="btn btn-primary btn-sm" style="flex:1;">▶ Vista Previa</button>
+        <button id="btnMobileRecord" class="btn btn-accent btn-sm" style="flex:1;">⏺ Guardar MP4</button>
+      </div>
     </main>
   </div>
 
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

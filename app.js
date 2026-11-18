@@ -138,6 +138,42 @@ const state = {
   recordingMimeType: ""
 };
 
+// Prompt Maestro Pedagógico para ChatGPT / Claude / Gemini
+const MASTER_AI_PROMPT = `Actúa como guionista pedagógico profesional para "La Profe Rochi" (canal educativo estilo "La Profe Mónica", en formato vertical para TikTok, Reels y Shorts con pizarra animada interactiva).
+
+Tu misión es crear una lección en video atractiva, concisa, entretenida y muy fácil de entender sobre el tema que te pida el usuario.
+
+ESTRUCTURA Y REGLAS TÉCNICAS OBLIGATORIAS:
+1. El guion debe estar compuesto por pasos usando ÚNICAMENTE estas etiquetas:
+TÍTULO: [Título del tema en MAYÚSCULAS, máx 24 caracteres]
+HABLA: [Frase dicha por la docente, con entusiasmo, calidez y tono pedagógico, MÁXIMO 130 caracteres por frase]
+PIZARRA: [Palabra clave, número, ecuación o ejemplo corto que se escribe en la pizarra, MÁXIMO 20 caracteres]
+
+2. REGLA FUNDAMENTAL DE PIZARRA Y TIEMPOS (SIN DEMORAS):
+- En la pizarra la profesora escribe primero la palabra clave de forma ágil y luego se pone a un costado para que el público lea con total claridad mientras ella sigue explicando.
+- Por tanto, el texto de PIZARRA debe ser MUY CORTO (ejemplos: "1 2 2 1", "reconocer", "camión", "a² + b² = c²", "Fotosíntesis"). NUNCA pongas oraciones largas en PIZARRA.
+- Cada línea de HABLA debe ser breve (máximo 130 caracteres) para que la voz vaya perfectamente sincronizada con la pizarra.
+
+3. SECUENCIA ÓPTIMA DE LA LECCIÓN (6 PASOS):
+- Paso 1 (Gancho): TÍTULO y saludo con energía.
+- Paso 2 (Concepto): HABLA explicando qué es en una sola frase sencilla.
+- Paso 3 (Ejemplo 1): PIZARRA con el primer ejemplo + HABLA explicando por qué cumple la regla.
+- Paso 4 (Detalle visual): HABLA destacando el truco o detalle clave del ejemplo.
+- Paso 5 (Ejemplo 2): PIZARRA con el segundo ejemplo + HABLA explicándolo.
+- Paso 6 (Llamado a la acción): HABLA invitando a comentar (ej: "¿Conoces otro ejemplo? ¡Déjalo aquí en los comentarios!").
+
+EJEMPLO DE SALIDA EXACTA:
+TÍTULO: PALABRAS AGUDAS
+HABLA: ¡Aprende las palabras agudas en solo 30 segundos!
+HABLA: ¿Sabías cuándo una palabra aguda lleva tilde? ¡Es muy fácil!
+PIZARRA: camión
+HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
+PIZARRA: compás
+HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
+HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!
+
+¡Genera ahora el guion para el siguiente tema!: `;
+
 // Plantillas educativas iniciales
 const TEMPLATES = {
   capicua: [
@@ -347,8 +383,16 @@ const btnDownloadThumbnail = document.getElementById("btnDownloadThumbnail");
 const btnTogglePasteScript = document.getElementById("btnTogglePasteScript");
 const btnClosePasteScript = document.getElementById("btnClosePasteScript");
 const btnProcessRawScript = document.getElementById("btnProcessRawScript");
+const btnCopyPrompt = document.getElementById("btnCopyPrompt");
+const btnCopyPromptInside = document.getElementById("btnCopyPromptInside");
+const btnLoadExampleScript = document.getElementById("btnLoadExampleScript");
 const pasteScriptPanel = document.getElementById("pasteScriptPanel");
 const rawScriptText = document.getElementById("rawScriptText");
+const tabBtnPreview = document.getElementById("tabBtnPreview");
+const tabBtnSteps = document.getElementById("tabBtnSteps");
+const tabBtnSettings = document.getElementById("tabBtnSettings");
+const btnMobilePlay = document.getElementById("btnMobilePlay");
+const btnMobileRecord = document.getElementById("btnMobileRecord");
 const customGlbInput = document.getElementById("customGlbInput");
 const label3dStatus = document.getElementById("label3dStatus");
 
@@ -495,6 +539,68 @@ function setupEventListeners() {
       resizeCanvas();
     });
   }
+
+  // Botones para copiar el Prompt Maestro pedagógico para ChatGPT/Claude
+  const handleCopyPrompt = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(MASTER_AI_PROMPT).then(() => {
+        updateStatus("✅ ¡Prompt copiado al portapapeles! Pégalo en ChatGPT o Claude con tu tema.");
+        alert("✅ ¡Prompt Maestro Copiado!\n\nPégalo en ChatGPT, Claude o Gemini con el tema que quieras y te devolverá el guion perfecto listo para pegar.");
+      }).catch(() => {
+        promptFallback();
+      });
+    } else {
+      promptFallback();
+    }
+  };
+
+  const promptFallback = () => {
+    if (rawScriptText) {
+      rawScriptText.value = MASTER_AI_PROMPT;
+      if (pasteScriptPanel) pasteScriptPanel.style.display = "block";
+      updateStatus("📋 Prompt insertado en el cuadro de texto.");
+    }
+  };
+
+  if (btnCopyPrompt) btnCopyPrompt.addEventListener("click", handleCopyPrompt);
+  if (btnCopyPromptInside) btnCopyPromptInside.addEventListener("click", handleCopyPrompt);
+
+  if (btnLoadExampleScript) {
+    btnLoadExampleScript.addEventListener("click", () => {
+      if (rawScriptText) {
+        rawScriptText.value = `TÍTULO: PALABRAS AGUDAS
+HABLA: ¡Aprende las palabras agudas en solo 30 segundos!
+HABLA: ¿Sabías cuándo una palabra aguda lleva tilde? ¡Es muy fácil!
+PIZARRA: camión
+HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
+PIZARRA: compás
+HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
+HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
+        updateStatus("💡 Ejemplo cargado en el cuadro. Haz clic en '⚡ Auto-Dividir'.");
+      }
+    });
+  }
+
+  // Pestañas de navegación para celulares y pantallas pequeñas
+  const setMobileTab = (tabName) => {
+    document.body.classList.remove("mobile-tab-preview", "mobile-tab-steps", "mobile-tab-settings");
+    document.body.classList.add(`mobile-tab-${tabName}`);
+
+    if (tabBtnPreview) tabBtnPreview.classList.toggle("active", tabName === "preview");
+    if (tabBtnSteps) tabBtnSteps.classList.toggle("active", tabName === "steps");
+    if (tabBtnSettings) tabBtnSettings.classList.toggle("active", tabName === "settings");
+  };
+
+  if (tabBtnPreview) tabBtnPreview.addEventListener("click", () => setMobileTab("preview"));
+  if (tabBtnSteps) tabBtnSteps.addEventListener("click", () => setMobileTab("steps"));
+  if (tabBtnSettings) tabBtnSettings.addEventListener("click", () => setMobileTab("settings"));
+
+  // Inicializar en pestaña Preview en móvil
+  setMobileTab("preview");
+
+  // Botones flotantes móviles
+  if (btnMobilePlay) btnMobilePlay.addEventListener("click", () => generateAndPlay());
+  if (btnMobileRecord) btnMobileRecord.addEventListener("click", () => toggleRecording());
 
   // Panel para pegar texto completo y dividir pasos automáticamente
   if (btnTogglePasteScript) {
@@ -962,9 +1068,27 @@ async function generateAndPlay() {
     const audioUrl = URL.createObjectURL(audioBlob);
     state.audioElement.src = audioUrl;
 
+    // Esperar a que el audio cargue completamente sus metadatos y buffer
+    await new Promise((resolve) => {
+      let resolved = false;
+      const onReady = () => {
+        if (!resolved) {
+          resolved = true;
+          state.audioElement.removeEventListener("canplaythrough", onReady);
+          resolve();
+        }
+      };
+      state.audioElement.addEventListener("canplaythrough", onReady);
+      setTimeout(onReady, 400);
+    });
+
+    if (state.audioElement.duration && !isNaN(state.audioElement.duration)) {
+      state.duration = Math.max(state.duration, state.audioElement.duration);
+    }
+
+    state.currentTime = 0;
     restartAllAudio();
     state.isPlaying = true;
-    state.duration = state.audioElement.duration || 10;
     btnTogglePlay.textContent = "⏸";
     btnRecord.disabled = false;
     updateStatus("▶ Reproduciendo lección con música suave y pizarra interactiva.");
@@ -1008,6 +1132,11 @@ function assignTimestampsToSteps() {
     const startWord = state.wordsTimeline[startIdx];
     const endWord = state.wordsTimeline[endIdx];
 
+    step.startWordIdx = startIdx;
+    step.endWordIdx = endIdx;
+    // Guardar el segmento de palabras exacto para subtítulos milimétricos (Karaoke)
+    step.words = state.wordsTimeline.slice(startIdx, endIdx + 1);
+
     currentWordIdx += stepWordCount;
 
     // Tiempo de inicio del paso (cuando empieza la primera palabra)
@@ -1021,12 +1150,13 @@ function assignTimestampsToSteps() {
     if (nextStartWord) {
       step.endTime = nextStartWord.start;
     } else {
-      step.endTime = endWord ? (endWord.start + endWord.duration + 0.4) : ((idx + 1) * 3);
+      step.endTime = endWord ? (endWord.start + endWord.duration + 0.5) : ((idx + 1) * 3);
     }
   });
 
   const lastWord = state.wordsTimeline[totalWords - 1];
-  state.duration = lastWord ? (lastWord.start + lastWord.duration + 0.5) : 15;
+  // Duración real garantizada: nunca se corta a los 10 segundos
+  state.duration = lastWord ? (lastWord.start + lastWord.duration + 0.8) : 15;
 }
 
 function restartPlayback() {
@@ -1051,51 +1181,117 @@ function togglePausePlayback() {
 function generateAiTopic() {
   const topic = aiTopicInput.value.trim();
   if (!topic) {
-    alert("Por favor ingresa un tema educativo (ej: Reglas de la B y la V).");
+    alert("Por favor ingresa un tema educativo (ej: Reglas de la B y la V, Palabras Agudas, Fracciones).");
     return;
   }
 
   updateStatus(`💡 Generando lección interactiva para: "${topic}"...`);
 
   setTimeout(() => {
+    const cleanTopic = topic.replace(/[¡!¿?]/g, "").trim();
+    const upperTopic = cleanTopic.toUpperCase().slice(0, 24);
+
+    // Heurísticas pedagógicas inteligentes según palabras clave del tema
+    let ex1 = "Ejemplo 1";
+    let ex2 = "Ejemplo 2";
+    let expl1 = `Fíjate cómo aplicamos la regla fundamental en este primer caso.`;
+    let expl2 = `Y mira cómo se mantiene la misma lógica en este segundo ejemplo.`;
+
+    const lower = cleanTopic.toLowerCase();
+    if (lower.includes("signo") || lower.includes("signos")) {
+      ex1 = "(+) · (-) = (-)";
+      ex2 = "(-) · (-) = (+)";
+      expl1 = "Signos diferentes multiplicados siempre dan resultado negativo.";
+      expl2 = "¡Y signos iguales multiplicados siempre dan resultado positivo!";
+    } else if (lower.includes("aguda") || lower.includes("agudas")) {
+      ex1 = "camión";
+      ex2 = "compás";
+      expl1 = "Lleva tilde en la O porque termina en la letra N.";
+      expl2 = "¡Y compás lleva tilde porque termina en la letra S!";
+    } else if (lower.includes("llana") || lower.includes("llanas") || lower.includes("grave")) {
+      ex1 = "árbol";
+      ex2 = "lápiz";
+      expl1 = "Lleva tilde porque termina en L, es decir, no termina en N ni en S.";
+      expl2 = "¡Y lápiz lleva tilde porque termina en la letra Z!";
+    } else if (lower.includes("esdrújula") || lower.includes("esdrujula")) {
+      ex1 = "música";
+      ex2 = "pájaro";
+      expl1 = "El acento está en la antepenúltima sílaba, por eso siempre lleva tilde.";
+      expl2 = "¡Todas las palabras esdrújulas se acentúan sin excepción!";
+    } else if (lower.includes("fraccion") || lower.includes("fracciones")) {
+      ex1 = "1/2 + 1/4 = 3/4";
+      ex2 = "2/4 = 1/2";
+      expl1 = "Convertimos al mismo denominador para poder sumar fácilmente.";
+      expl2 = "¡Y simplificamos dividiendo numerador y denominador entre dos!";
+    } else if (lower.includes("b") && lower.includes("v")) {
+      ex1 = "cantaba";
+      ex2 = "iba";
+      expl1 = "Las terminaciones del pretérito imperfecto en -aba van siempre con B.";
+      expl2 = "¡Y los derivados del verbo ir también se escriben con B!";
+    } else if (lower.includes("pitagoras") || lower.includes("pitágoras")) {
+      ex1 = "a² + b² = c²";
+      ex2 = "3² + 4² = 5²";
+      expl1 = "La suma de los catetos al cuadrado equivale a la hipotenusa al cuadrado.";
+      expl2 = "Fíjate: nueve más dieciséis es veinticinco. ¡Exacto!";
+    } else if (lower.includes("fotosintesis") || lower.includes("fotosíntesis")) {
+      ex1 = "CO₂ + Luz → O₂";
+      ex2 = "Clorofila";
+      expl1 = "Las plantas absorben dióxido de carbono y liberan oxígeno vital.";
+      expl2 = "¡La clorofila es el pigmento verde encargado de atrapar la luz solar!";
+    } else {
+      const words = cleanTopic.split(/\s+/);
+      ex1 = words.slice(0, 2).join(" ").slice(0, 20);
+      ex2 = words.length > 2 ? words.slice(2, 4).join(" ").slice(0, 20) : "Regla Clave";
+    }
+
     state.steps = [
       {
-        speech: `¡Hola a todos! Hoy vamos a aprender de forma super fácil todo sobre: ${topic}.`,
+        speech: `¡Hola! Hoy aprenderás de forma súper fácil: ${cleanTopic}.`,
         action: "write",
-        text: topic.toUpperCase(),
+        text: upperTopic,
+        target: "title",
+        camera: "board"
+      },
+      {
+        speech: "Presta mucha atención a la pizarra para dominar este concepto en un minuto.",
+        action: "talk",
+        text: "",
+        target: "intro",
         camera: "teacher"
       },
       {
-        speech: "Presta mucha atención a la pizarra para que no se te olvide este concepto clave.",
+        speech: expl1,
         action: "write",
-        text: "Regla Principal",
+        text: ex1,
+        target: "example1",
         camera: "board"
       },
       {
-        speech: "Fíjate en este primer ejemplo práctico y cómo se conectan los elementos.",
-        action: "arc",
-        text: "Ejemplo 1",
-        fromIdx: 0,
-        toIdx: 8,
-        camera: "board"
-      },
-      {
-        speech: "Si aplicas esta regla, jamás volverás a equivocarte en tus exámenes o trabajos.",
+        speech: "Observa con cuidado cómo se cumple la regla paso a paso.",
         action: "highlight",
-        text: "¡Aprobado! ✓",
+        text: ex1,
+        target: "example1",
         camera: "board"
       },
       {
-        speech: "¿Te ha quedado claro? ¡Dale me gusta y comparte este video con tus compañeros!",
-        action: "highlight",
-        text: "¡Comparte!",
+        speech: expl2,
+        action: "write",
+        text: ex2,
+        target: "example2",
+        camera: "board"
+      },
+      {
+        speech: `¿Tienes alguna duda sobre ${cleanTopic}? ¡Déjala aquí en los comentarios!`,
+        action: "talk",
+        text: "",
+        target: "outro",
         camera: "teacher"
       }
     ];
 
     renderStepsUI();
-    updateStatus(`Lección para "${topic}" lista. Presiona 'Generar y Reproducir'.`);
-  }, 400);
+    updateStatus(`✅ ¡Lección para "${topic}" lista! Haz clic en '▶ Generar y Reproducir'.`);
+  }, 300);
 }
 
 /* =========================================================
@@ -1368,13 +1564,23 @@ function drawBoardContent(w, h, currentStep, time) {
   let handAngle = -0.15;
   let isWritingNow = false;
 
+  const t = state.currentTime;
+
   // 1. TÍTULO DE LA LECCIÓN (FILA 0): Siempre visible y destacado en la cabecera de la pizarra
   const titleStep = state.steps.find(s => s.target === "title") || state.steps[0];
   if (titleStep && titleStep.action === "write") {
     const isCurrentTitle = (currentIdx === 0);
-    // Sincronización exacta 1:1 con la voz: avanza al mismo ritmo que la docente habla
-    const writeProgTitle = isCurrentTitle ? (currentStep.speechProgress || 0) : 1;
     const fullTitle = titleStep.text || "";
+    const stepStart = titleStep.startTime || 0;
+    const speechEnd = titleStep.speechEndTime || (stepStart + 2.5);
+    const speechDur = Math.max(0.8, speechEnd - stepStart);
+
+    // Duración de escritura ágil y natural (máx 50% del paso o ~10 letras por segundo)
+    const writeDurTitle = Math.min(speechDur * 0.50, Math.max(0.8, fullTitle.length * 0.08));
+    const elapsedTitle = Math.max(0, t - stepStart);
+    const isTitleWriting = isCurrentTitle && (elapsedTitle < writeDurTitle) && state.isPlaying;
+    const writeProgTitle = isCurrentTitle ? Math.min(1.0, elapsedTitle / Math.max(0.01, writeDurTitle)) : 1.0;
+
     const charCount = Math.floor(fullTitle.length * writeProgTitle);
     const textToShow = fullTitle.substring(0, charCount);
 
@@ -1391,8 +1597,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, startY);
 
-    // Escribe activamente mientras habla la frase del título
-    if (isCurrentTitle && currentStep.isSpeakingPhase && writeProgTitle < 0.98 && fullTitle.length > 0 && state.isPlaying) {
+    // Escribe activamente solo durante la fase ágil de escritura
+    if (isTitleWriting && fullTitle.length > 0) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = startY - 14;
@@ -1414,11 +1620,19 @@ function drawBoardContent(w, h, currentStep, time) {
   if (activeWriteIdx >= 1) {
     const s = state.steps[activeWriteIdx];
     const isCurrent = (activeWriteIdx === currentIdx);
-    // Sincronización exacta 1:1 con la voz: avanza al mismo ritmo que la docente habla
-    const writeProg = isCurrent ? (currentStep.speechProgress || 0) : 1;
+    const fullText = s.text || "";
     const yPos = startY + rowHeight; // Fila 1
 
-    const fullText = s.text || "";
+    const stepStart = s.startTime || 0;
+    const speechEnd = s.speechEndTime || (stepStart + 2.5);
+    const speechDur = Math.max(0.8, speechEnd - stepStart);
+
+    // Velocidad de escritura ágil (la mano no se arrastra ni se retrasa: ej: "1 2 2 1" toma ~0.8s)
+    const writeDur = Math.min(speechDur * 0.45, Math.max(0.75, fullText.length * 0.09));
+    const elapsed = Math.max(0, t - stepStart);
+    const isWritingActive = isCurrent && (elapsed < writeDur) && state.isPlaying;
+    const writeProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, writeDur)) : 1.0;
+
     const charCount = Math.floor(fullText.length * writeProg);
     const textToShow = fullText.substring(0, charCount);
 
@@ -1436,8 +1650,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, yPos);
 
-    // Escribe activamente mientras la docente está pronunciando la explicación
-    if (isCurrent && currentStep.isSpeakingPhase && writeProg < 0.98 && fullText.length > 0 && state.isPlaying) {
+    // Escribe activamente solo mientras traza la palabra. Al terminar, la docente se pone a un costado
+    if (isWritingActive && fullText.length > 0) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = yPos - 14;
@@ -1450,7 +1664,14 @@ function drawBoardContent(w, h, currentStep, time) {
       const subStep = state.steps[j];
       if (!subStep) continue;
       const isSubCurrent = (j === currentIdx);
-      const subProg = isSubCurrent ? (currentStep.progress || 1) : 1;
+      const subStepStart = subStep.startTime || 0;
+      const subSpeechEnd = subStep.speechEndTime || (subStepStart + 2.5);
+      const subSpeechDur = Math.max(0.8, subSpeechEnd - subStepStart);
+
+      const subElapsed = Math.max(0, t - subStepStart);
+      const subDrawDur = Math.min(subSpeechDur * 0.38, 1.0);
+      const isSubDrawing = isSubCurrent && (subElapsed < subDrawDur) && state.isPlaying;
+      const subProg = isSubCurrent ? Math.min(1.0, subElapsed / Math.max(0.01, subDrawDur)) : 1.0;
 
       if (subStep.action === "arc") {
         const text = s.text || subStep.text || "";
@@ -1470,12 +1691,12 @@ function drawBoardContent(w, h, currentStep, time) {
           drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, subProg);
         }
 
-        if (isSubCurrent && subProg < 0.98 && state.isPlaying) {
-          const t = Math.min(1, subProg);
+        if (isSubDrawing) {
+          const tArc = Math.min(1, subProg);
           const midX = (p1X + p2X) / 2;
           const midY = (yPos - 58) - 42;
-          handTargetX = (1 - t) * (1 - t) * p1X + 2 * (1 - t) * t * midX + t * t * p2X;
-          handTargetY = (1 - t) * (1 - t) * (yPos - 58) + 2 * (1 - t) * t * midY + t * t * (yPos - 58);
+          handTargetX = (1 - tArc) * (1 - tArc) * p1X + 2 * (1 - tArc) * tArc * midX + tArc * tArc * p2X;
+          handTargetY = (1 - tArc) * (1 - tArc) * (yPos - 58) + 2 * (1 - tArc) * tArc * midY + tArc * tArc * (yPos - 58);
           handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
           isWritingNow = true;
         }
@@ -1493,7 +1714,7 @@ function drawBoardContent(w, h, currentStep, time) {
         ctx.textAlign = "left";
         ctx.fillText(hlText, hlStartX, yPos);
 
-        if (isSubCurrent && subProg < 0.98 && state.isPlaying) {
+        if (isSubDrawing) {
           handTargetX = hlStartX + textW;
           handTargetY = yPos - 22;
           handAngle = -0.05;
@@ -2625,8 +2846,22 @@ function drawViralCaptions(w, h, currentStep) {
   const words = text.split(/\s+/).filter(w => w.length > 0);
   if (words.length === 0) return;
 
-  const progress = Math.max(0, Math.min(0.999, (currentStep.speechProgress !== undefined) ? currentStep.speechProgress : (currentStep.progress || 0)));
-  const activeWordIdx = Math.min(words.length - 1, Math.floor(progress * words.length));
+  let activeWordIdx = 0;
+  if (currentStep.words && currentStep.words.length > 0) {
+    const curTime = state.currentTime;
+    for (let k = 0; k < currentStep.words.length; k++) {
+      const wInfo = currentStep.words[k];
+      if (curTime >= wInfo.start && curTime < (wInfo.start + wInfo.duration + 0.12)) {
+        activeWordIdx = Math.min(words.length - 1, k);
+        break;
+      } else if (curTime >= (wInfo.start + wInfo.duration)) {
+        activeWordIdx = Math.min(words.length - 1, k);
+      }
+    }
+  } else {
+    const progress = Math.max(0, Math.min(0.999, (currentStep.speechProgress !== undefined) ? currentStep.speechProgress : (currentStep.progress || 0)));
+    activeWordIdx = Math.min(words.length - 1, Math.floor(progress * words.length));
+  }
 
   // Bloques dinámicos de 3 palabras para que nunca se desborde ni tape a la docente
   const wordsPerChunk = 3;
@@ -2731,9 +2966,23 @@ async function startRecording() {
     await state.audioContext.resume();
   }
 
-  // Reiniciar reproducción desde el inicio para captura completa
+  // Pausar y asegurar inicio exacto en segundo 0 para captura completa
+  state.audioElement.pause();
+  if (state.bgMusicAudio) state.bgMusicAudio.pause();
   state.audioElement.currentTime = 0;
+  if (state.bgMusicAudio) state.bgMusicAudio.currentTime = 0;
   state.currentTime = 0;
+
+  // Esperar confirmación de seek a 0 para que no empiece a la mitad
+  await new Promise((resolve) => {
+    if (state.audioElement.currentTime === 0) return resolve();
+    const onSeeked = () => {
+      state.audioElement.removeEventListener("seeked", onSeeked);
+      resolve();
+    };
+    state.audioElement.addEventListener("seeked", onSeeked, { once: true });
+    setTimeout(resolve, 300);
+  });
 
   const canvasStream = canvas.captureStream(30);
   let audioTracks = [];
@@ -2814,17 +3063,7 @@ async function startRecording() {
 
   state.mediaRecorder.onstop = saveRecordedVideo;
 
-  // Auto-detener y descargar automáticamente cuando finalice el audio de la lección
-  state.audioElement.onended = () => {
-    state.isPlaying = false;
-    btnTogglePlay.textContent = "▶";
-    if (state.isRecording) {
-      setTimeout(() => {
-        stopRecording();
-      }, 500);
-    }
-  };
-
+  // La finalización de la grabación se gestiona de forma centralizada en el listener ended de audioElement
   state.mediaRecorder.start(250);
   restartAllAudio();
   state.isPlaying = true;
@@ -2835,9 +3074,13 @@ function stopRecording() {
   if (!state.isRecording) return;
   state.isRecording = false;
   badgeRecording.style.display = "none";
+  btnRecord.classList.remove("btn-accent");
   btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
 
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+    try {
+      state.mediaRecorder.requestData();
+    } catch (e) {}
     state.mediaRecorder.stop();
   }
 }
@@ -2846,36 +3089,35 @@ async function saveRecordedVideo() {
   updateStatus("💾 Procesando y preparando archivo MP4 para descarga...");
 
   const isNativeMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
-  const blobType = isNativeMp4 ? "video/mp4" : "video/webm";
-  const rawBlob = new Blob(state.recordedChunks, { type: blobType });
+  const rawBlob = new Blob(state.recordedChunks, { type: isNativeMp4 ? "video/mp4" : "video/webm" });
 
   if (isNativeMp4) {
     downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
     return;
   }
 
-  // Si grabó en WebM, intentar conversión en backend a MP4 si está disponible
+  // Enviar al servidor para conversión profesional FFmpeg (100% compatible y sin recortes)
   try {
-    const formData = new FormData();
-    formData.append("video", rawBlob, "recording.webm");
-
+    updateStatus("⚙️ Convirtiendo a MP4 optimizado con audio y duración completa...");
     const resp = await fetch("/api/convert-mp4", {
       method: "POST",
-      body: formData
+      headers: { "Content-Type": "video/webm" },
+      body: rawBlob
     });
 
     if (resp.ok) {
       const mp4Blob = await resp.blob();
       downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
       return;
+    } else {
+      console.warn("Fallo conversión backend, código:", resp.status);
     }
   } catch (e) {
     console.warn("Conversión remota no disponible, descargando localmente:", e);
   }
 
-  // Descargar con extensión .mp4
-  const mp4Blob = new Blob(state.recordedChunks, { type: "video/mp4" });
-  downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
+  // Fallback si no hubo conversión
+  downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
 }
 
 function downloadBlob(blob, filename) {

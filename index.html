@@ -113,6 +113,22 @@
           </div>
           <input type="range" id="sliderMarkerSound" min="0" max="100" value="80" class="form-control" style="cursor:pointer; height:6px; padding:0;">
         </div>
+
+        <!-- MÚSICA SUAVE Y AGRADABLE DE FONDO -->
+        <div class="form-group" style="background: rgba(16, 185, 129, 0.08); padding: 10px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.28); margin-top: 6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+            <label for="selectBgMusic" style="font-size:0.78rem; color:#34d399; font-weight:700;">🎵 Música Suave de Fondo:</label>
+            <span id="labelMusicVol" style="font-size:0.72rem; color:#6ee7b7; font-weight:700;">18%</span>
+          </div>
+          <select id="selectBgMusic" class="form-control" style="font-size: 0.8rem; margin-bottom: 6px;">
+            <option value="suave" selected>🎶 Acústica Suave y Agradable (Daily Beetle)</option>
+            <option value="none">🔇 Sin música de fondo</option>
+          </select>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.7rem; color:#9ca3af;">Vol:</span>
+            <input type="range" id="sliderMusicVol" min="0" max="100" value="18" class="form-control" style="cursor:pointer; height:6px; padding:0; flex-grow:1;">
+          </div>
+        </div>
       </div>
 
       <!-- EDITOR DE SECUENCIA / PASOS -->
@@ -194,6 +210,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

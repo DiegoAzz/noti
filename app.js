@@ -113,6 +113,11 @@ const state = {
   cameraMode: "director",
   format: "9:16",
   soundVolume: 0.8,
+  musicTrack: "suave",
+  musicVolume: 0.18,
+  bgMusicAudio: null,
+  bgMusicSourceNode: null,
+  bgMusicGainNode: null,
   steps: [],
   isPlaying: false,
   isRecording: false,
@@ -331,6 +336,9 @@ const aiTopicInput = document.getElementById("aiTopicInput");
 const btnAiGenerate = document.getElementById("btnAiGenerate");
 const sliderMarkerSound = document.getElementById("sliderMarkerSound");
 const labelSoundVol = document.getElementById("labelSoundVol");
+const selectBgMusic = document.getElementById("selectBgMusic");
+const sliderMusicVol = document.getElementById("sliderMusicVol");
+const labelMusicVol = document.getElementById("labelMusicVol");
 const btnDownloadThumbnail = document.getElementById("btnDownloadThumbnail");
 const btnTogglePasteScript = document.getElementById("btnTogglePasteScript");
 const btnClosePasteScript = document.getElementById("btnClosePasteScript");
@@ -514,6 +522,36 @@ function setupEventListeners() {
       state.soundVolume = val / 100;
       if (labelSoundVol) labelSoundVol.textContent = `${val}%`;
       soundEngine.setVolume(state.soundVolume);
+    });
+  }
+
+  // Controles de música suave de fondo
+  if (sliderMusicVol) {
+    sliderMusicVol.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.musicVolume = val / 100;
+      if (labelMusicVol) labelMusicVol.textContent = `${val}%`;
+      if (state.bgMusicGainNode && state.audioContext) {
+        state.bgMusicGainNode.gain.setTargetAtTime(state.musicVolume, state.audioContext.currentTime, 0.04);
+      }
+      if (val === 0 && state.bgMusicAudio) {
+        state.bgMusicAudio.pause();
+      } else if (state.isPlaying && state.bgMusicAudio && state.bgMusicAudio.paused && state.musicTrack !== "none") {
+        state.bgMusicAudio.play().catch(() => {});
+      }
+    });
+  }
+
+  if (selectBgMusic) {
+    selectBgMusic.addEventListener("change", (e) => {
+      state.musicTrack = e.target.value;
+      if (state.musicTrack === "none") {
+        if (state.bgMusicAudio) state.bgMusicAudio.pause();
+      } else {
+        if (state.isPlaying && state.bgMusicAudio) {
+          state.bgMusicAudio.play().catch(() => {});
+        }
+      }
     });
   }
 
@@ -778,12 +816,31 @@ function escapeHtml(str) {
   return (str || "").replace(/"/g, '&quot;');
 }
 
-/* AUDIO & SÍNTESIS CON EDGE-TTS */
+/* AUDIO & SÍNTESIS CON EDGE-TTS Y MÚSICA SUAVE DE FONDO */
 function initAudio() {
   if (!state.audioContext) {
     state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
   soundEngine.init(state.audioContext);
+
+  // Inicializar reproductor de música suave y agradable de fondo
+  if (!state.bgMusicAudio) {
+    state.bgMusicAudio = new Audio("/assets/music_suave.mp3");
+    state.bgMusicAudio.loop = true;
+    state.bgMusicAudio.preload = "auto";
+  }
+
+  if (state.audioContext && !state.bgMusicSourceNode && state.bgMusicAudio) {
+    try {
+      state.bgMusicSourceNode = state.audioContext.createMediaElementSource(state.bgMusicAudio);
+      state.bgMusicGainNode = state.audioContext.createGain();
+      state.bgMusicGainNode.gain.setValueAtTime(state.musicVolume, state.audioContext.currentTime);
+      state.bgMusicSourceNode.connect(state.bgMusicGainNode);
+      state.bgMusicGainNode.connect(state.audioContext.destination);
+    } catch (e) {
+      console.warn("Conexión de música suave de fondo:", e);
+    }
+  }
 
   if (!state.audioElement) {
     state.audioElement = new Audio();
@@ -795,11 +852,43 @@ function initAudio() {
       state.isPlaying = false;
       btnTogglePlay.textContent = "▶";
       soundEngine.updateWriting(false);
+      pauseAllAudio();
       if (state.isRecording) {
-        stopRecording();
+        setTimeout(() => stopRecording(), 500);
       }
     });
   }
+}
+
+function playAllAudio() {
+  if (state.audioContext && state.audioContext.state === "suspended") {
+    state.audioContext.resume();
+  }
+  if (state.audioElement) {
+    state.audioElement.play().catch(e => console.warn("Audio voz play:", e));
+  }
+  if (state.bgMusicAudio && state.musicTrack !== "none" && state.musicVolume > 0.01) {
+    state.bgMusicAudio.play().catch(e => console.warn("Música fondo play:", e));
+  }
+}
+
+function pauseAllAudio() {
+  if (state.audioElement) {
+    state.audioElement.pause();
+  }
+  if (state.bgMusicAudio) {
+    state.bgMusicAudio.pause();
+  }
+}
+
+function restartAllAudio() {
+  if (state.audioElement) {
+    state.audioElement.currentTime = 0;
+  }
+  if (state.bgMusicAudio) {
+    state.bgMusicAudio.currentTime = 0;
+  }
+  playAllAudio();
 }
 
 function updateTimeBadge() {
@@ -853,12 +942,12 @@ async function generateAndPlay() {
     const audioUrl = URL.createObjectURL(audioBlob);
     state.audioElement.src = audioUrl;
 
-    await state.audioElement.play();
+    restartAllAudio();
     state.isPlaying = true;
     state.duration = state.audioElement.duration || 10;
     btnTogglePlay.textContent = "⏸";
     btnRecord.disabled = false;
-    updateStatus("▶ Reproduciendo lección sincronizada con sonido de pizarra.");
+    updateStatus("▶ Reproduciendo lección con música suave y pizarra interactiva.");
   } catch (err) {
     console.error(err);
     alert("Hubo un error: " + err.message);
@@ -903,23 +992,19 @@ function assignTimestampsToSteps() {
 }
 
 function restartPlayback() {
-  if (state.audioElement) {
-    state.audioElement.currentTime = 0;
-    state.audioElement.play();
-    state.isPlaying = true;
-    btnTogglePlay.textContent = "⏸";
-  }
+  restartAllAudio();
+  state.isPlaying = true;
+  btnTogglePlay.textContent = "⏸";
 }
 
 function togglePausePlayback() {
-  if (!state.audioElement) return;
   if (state.isPlaying) {
-    state.audioElement.pause();
+    pauseAllAudio();
     state.isPlaying = false;
     btnTogglePlay.textContent = "▶";
     soundEngine.updateWriting(false);
   } else {
-    state.audioElement.play();
+    playAllAudio();
     state.isPlaying = true;
     btnTogglePlay.textContent = "⏸";
   }
@@ -2606,6 +2691,12 @@ async function startRecording() {
       } catch (e) {}
     }
 
+    if (state.bgMusicGainNode && state.destAudioStreamNode) {
+      try {
+        state.bgMusicGainNode.connect(state.destAudioStreamNode);
+      } catch (e) {}
+    }
+
     audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
   } catch (e) {
     console.warn("Audio Context ya conectado:", e);
@@ -2668,9 +2759,9 @@ async function startRecording() {
   };
 
   state.mediaRecorder.start(250);
-  await state.audioElement.play();
+  restartAllAudio();
   state.isPlaying = true;
-  updateStatus("⏺ Grabando video MP4 en alta definición... Se descargará automáticamente al terminar.");
+  updateStatus("⏺ Grabando video MP4 con música y pizarra... Se descargará automáticamente al terminar.");
 }
 
 function stopRecording() {

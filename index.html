@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HERO NEWS // Estudio 3D de Noticias</title>
+  <link rel="stylesheet" href="style.css?v=4" />
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Panel izquierdo: Controles -->
+    <aside class="control-panel">
+      <header class="panel-header">
+        <div class="logo-badge">HNN</div>
+        <div>
+          <h1>HERO NEWS 3D</h1>
+          <p>Estudio estilo videojuego</p>
+        </div>
+      </header>
+
+      <div class="panel-body">
+        <!-- Formato y Cámara -->
+        <section class="card">
+          <h2>1. Personaje y Estudio</h2>
+          <div class="field">
+            <label for="avatarSelect">Avatar 3D</label>
+            <select id="avatarSelect">
+              <option value="avatarsdk" selected>Hombre Realista 3D (Noticiero)</option>
+              <option value="avaturn">Mujer Realista 3D (Traje Ejecutivo)</option>
+              <option value="brunette">Mujer Estilizada 3D (Presentadora)</option>
+              <option value="procedural">Superhéroe Low-Poly (Clásico)</option>
+            </select>
+          </div>
+          <div class="file-row">
+            <input id="customAvatarInput" type="file" accept=".glb,.gltf" title="Subir tu propio avatar 3D (.glb)" />
+            <label class="cape-toggle" title="Poner capa de superhéroe atrás">
+              <input id="capeToggle" type="checkbox" /> Capa
+            </label>
+          </div>
+          <p id="avatarStatus" class="hint">Cargando avatar humano 3D... (o sube tu propio .glb de avaturn.me)</p>
+
+          <div class="row-2">
+            <div class="field">
+              <label for="aspectSelect">Formato</label>
+              <select id="aspectSelect">
+                <option value="9:16" selected>9:16 (TikTok / Reels)</option>
+                <option value="16:9">16:9 (YouTube)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cameraSelect">Cámara</label>
+              <select id="cameraSelect">
+                <option value="auto" selected>Automática (TV)</option>
+                <option value="front">Frontal Noticiero</option>
+                <option value="hero">Ángulo Heroico</option>
+                <option value="closeup">Primer Plano</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="moodSelect">Estado / Mood</label>
+              <select id="moodSelect">
+                <option value="epic" selected>Épico (Azul/Oro)</option>
+                <option value="alert">Alerta Roja</option>
+                <option value="tech">Cyber / Tech</option>
+                <option value="chill">Relajado</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="heroNameInput">Nombre del Héroe</label>
+              <input id="heroNameInput" type="text" value="CAPITÁN NOVA" maxlength="24" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Contenido de la Noticia -->
+        <section class="card">
+          <h2>2. Contexto de la Noticia</h2>
+          <div class="field">
+            <label for="headlineInput">Titular (sale en pantalla y holograma)</label>
+            <input
+              id="headlineInput"
+              type="text"
+              value="NUEVA IA REVOLUCIONA LOS VIDEOJUEGOS INDIE"
+              maxlength="80"
+            />
+          </div>
+          <div class="field">
+            <label for="contextInput">Pega aquí tu noticia o guion</label>
+            <textarea id="contextInput" rows="5">¡Atención ciudadanos! Hoy tenemos noticias de última hora desde el mundo tecnológico. Un nuevo motor de inteligencia artificial está permitiendo a pequeños creadores diseñar mundos enteros en cuestión de minutos. ¡Manténganse alerta, el futuro apenas comienza!</textarea>
+          </div>
+          <button id="heroizeBtn" class="btn btn-secondary" type="button">
+            ⚡ Convertir texto a estilo Superhéroe
+          </button>
+
+          <div class="divider">Galería de imágenes reales atrás (hasta 5)</div>
+          <div class="row-2">
+            <div class="field">
+              <label for="screenModeSelect">Dónde mostrar</label>
+              <select id="screenModeSelect">
+                <option value="backdrop" selected>Fondo TV (TikTok/Reels)</option>
+                <option value="monitor">Pantalla TV 3D atrás</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="galleryStyleSelect">Cómo aparecen</label>
+              <select id="galleryStyleSelect">
+                <option value="carousel" selected>Carrusel Elegante (1 a 1)</option>
+                <option value="mosaic">Mosaico (Todas a la vez)</option>
+                <option value="fade">Cine (Fade suave)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="imageFitSelect">Ajuste responsivo</label>
+              <select id="imageFitSelect">
+                <option value="contain" selected>Completa (sin cortar)</option>
+                <option value="cover-top">Llenar (desde arriba)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Acciones rápidas</label>
+              <div class="file-row">
+                <button id="addImagesBtn" class="btn btn-secondary btn-sm" type="button" style="flex:1;">
+                  ＋ Agregar (0/5)
+                </button>
+                <button id="clearImagesBtn" class="btn btn-ghost btn-sm" type="button" title="Quitar todas">✕</button>
+              </div>
+            </div>
+          </div>
+          <input id="newsImagesInput" type="file" accept="image/*" multiple hidden />
+          <div id="imageThumbs" class="image-slots"></div>
+          <p id="imagesStatus" class="hint">Haz clic en cualquier recuadro, arrastra fotos o pega con Ctrl+V (hasta 5).</p>
+        </section>
+
+        <!-- Voz de Superhéroe -->
+        <section class="card">
+          <h2>3. Voz IA de Superhéroe</h2>
+          <div class="field">
+            <label for="voiceSelect">Voz Neural (Calidad Locutor)</label>
+            <select id="voiceSelect">
+              <option value="es-MX-JorgeNeural" selected>Jorge (MX - Superhéroe Grave)</option>
+              <option value="es-US-AlonsoNeural">Alonso (Latino - Locutor TV)</option>
+              <option value="es-ES-AlvaroNeural">Álvaro (ES - Cinematográfico)</option>
+              <option value="es-CO-GonzaloNeural">Gonzalo (CO - Firme / Noticiero)</option>
+              <option value="es-AR-TomasNeural">Tomás (AR - Enérgico)</option>
+              <option value="es-CL-LorenzoNeural">Lorenzo (CL - Profundo)</option>
+              <option value="es-MX-DaliaNeural">Dalia (MX - Heroína)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fxSelect">Efecto de Audio</label>
+            <select id="fxSelect">
+              <option value="heroic" selected>Estudio Heroico (Graves + Potencia)</option>
+              <option value="comms">Comunicador de Casco (Videojuego)</option>
+              <option value="clean">Natural (Sin filtro)</option>
+            </select>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="pitchRange">Tono grave: <span id="pitchVal">-10 Hz</span></label>
+              <input id="pitchRange" type="range" min="-20" max="10" step="1" value="-10" />
+            </div>
+            <div class="field">
+              <label for="rateRange">Velocidad: <span id="rateVal">+5%</span></label>
+              <input id="rateRange" type="range" min="-20" max="30" step="5" value="5" />
+            </div>
+          </div>
+
+          <div class="divider">o sube tu propio audio (ElevenLabs / MP3 / WAV)</div>
+          <div class="file-row">
+            <input id="audioFileInput" type="file" accept="audio/*" />
+            <button id="clearAudioBtn" class="btn btn-ghost btn-sm" type="button" title="Quitar audio">✕</button>
+          </div>
+          <p id="audioStatus" class="hint">Listo: Voz Neural IA + Lip-Sync real + Audio incluido en video.</p>
+        </section>
+
+        <!-- Acciones -->
+        <section class="card actions-card">
+          <div class="action-buttons">
+            <button id="broadcastBtn" class="btn btn-primary" type="button">
+              ▶ Transmitir Noticia
+            </button>
+            <button id="stopBtn" class="btn btn-danger" type="button" disabled>
+              ■ Detener
+            </button>
+          </div>
+          <button id="recordBtn" class="btn btn-record" type="button">
+            ● Grabar y Descargar Video (.webm)
+          </button>
+          <p class="hint">
+            La grabación incluye el 3D, los subtítulos sincronizados y la voz neural del superhéroe.
+          </p>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Panel derecho: Vista del Estudio 3D -->
+    <main class="stage-area">
+      <div class="stage-wrapper ratio-9-16" id="stageWrapper">
+        <canvas id="bgCanvas"></canvas>
+        <canvas id="glCanvas"></canvas>
+        <canvas id="hudCanvas"></canvas>
+        <div class="rec-indicator" id="recIndicator">
+          <span class="rec-dot"></span> GRABANDO
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>

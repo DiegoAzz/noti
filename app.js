@@ -1214,27 +1214,53 @@ function renderSensualCover(targetCanvas) {
   tCtx.fillText(lessonTitle, 0, 4);
   tCtx.restore();
 
-  // 4. Pose Sensual de la Señorita Bellum de espaldas con marcador en la pizarra
-  let writeImg = (bellumSprites.write && (bellumSprites.write[2] || bellumSprites.write[1] || bellumSprites.write[0]));
-  if (writeImg && writeImg.complete && writeImg.naturalWidth > 0) {
-    const targetH = 1000;
-    const targetW = (writeImg.naturalWidth / writeImg.naturalHeight) * targetH;
-    const teacherX = w * 0.44; // 475px - posición centrada frente a la pizarra
-    const teacherY = 1750; // Pies firmes en el suelo
+  // 3b. Texto escrito en la pizarra en la portada
+  const boardText = lessonTitle;
+  if (boardText) {
+    tCtx.save();
+    let bFontSize = 52;
+    tCtx.font = `bold ${bFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let bTextW = tCtx.measureText(boardText).width;
+    const maxBW = 400;
+    if (bTextW > maxBW) {
+      bFontSize = Math.max(32, Math.floor(bFontSize * (maxBW / bTextW)));
+      tCtx.font = `bold ${bFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      bTextW = tCtx.measureText(boardText).width;
+    }
+    const bStartX = 250;
+    const bStartY = 880;
+
+    tCtx.fillStyle = palette.accentInk || "#1d4ed8";
+    tCtx.textAlign = "left";
+    tCtx.fillText(boardText, bStartX, bStartY);
+    tCtx.restore();
+  }
+
+  // 4. Pose Ultra Sensual y Glamurosa de La Profe Rochi (Cuerpo completo, curvas de reloj de arena, escote, tacones y mirada seductora)
+  let sensualImg = bellumSprites.sensualCover;
+  if (!sensualImg || !sensualImg.complete || sensualImg.naturalWidth === 0) {
+    sensualImg = (bellumSprites.turn && (bellumSprites.turn[1] || bellumSprites.turn[0])) || (bellumSprites.talk && bellumSprites.talk[0]);
+  }
+
+  if (sensualImg && sensualImg.complete && sensualImg.naturalWidth > 0) {
+    const targetH = 1200; // Gran tamaño protagonista para cautivar en el feed
+    const targetW = (sensualImg.naturalWidth / sensualImg.naturalHeight) * targetH;
+    const teacherX = w * 0.61; // 660px - elegante y visible frente a la pizarra
+    const teacherY = 1790;     // Pies apoyados con firmeza en el suelo
     const drawX = teacherX - targetW / 2;
-    const drawY = teacherY - (targetH * (780 / 800));
+    const drawY = teacherY - targetH;
 
     tCtx.save();
     tCtx.save();
-    tCtx.shadowColor = "rgba(15, 23, 42, 0.35)";
-    tCtx.shadowBlur = 26;
-    tCtx.shadowOffsetX = 10;
-    tCtx.shadowOffsetY = 14;
-    tCtx.drawImage(writeImg, drawX, drawY, targetW, targetH);
+    tCtx.shadowColor = "rgba(15, 23, 42, 0.40)";
+    tCtx.shadowBlur = 30;
+    tCtx.shadowOffsetX = 12;
+    tCtx.shadowOffsetY = 16;
+    tCtx.drawImage(sensualImg, drawX, drawY, targetW, targetH);
     tCtx.restore();
 
-    // Dibujar la figura en pose sensual de espaldas
-    tCtx.drawImage(writeImg, drawX, drawY, targetW, targetH);
+    // Dibujar la figura con máxima resolución y curvas definidas
+    tCtx.drawImage(sensualImg, drawX, drawY, targetW, targetH);
     tCtx.restore();
   }
 }
@@ -2653,10 +2679,12 @@ const bellumSprites = {
   talk: [],
   write: [],
   turn: [],
-  base: new Image()
+  base: new Image(),
+  sensualCover: new Image()
 };
 
 bellumSprites.base.src = "/avatars/sprites/base_pose.png";
+bellumSprites.sensualCover.src = "/avatars/clean_sprites/sensual_cover_pose.png";
 
 // 8 frames de animación explicando con gestos expresivos (hablando, apuntando, sonriendo)
 for (let i = 1; i <= 8; i++) {

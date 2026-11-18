@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HERO NEWS // Estudio 3D de Noticias</title>
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
@@ -171,12 +171,32 @@
             </div>
           </div>
 
+          <div class="divider">Música de fondo suave (100% sin copyright)</div>
+          <div class="row-2">
+            <div class="field">
+              <label for="musicSelect">Tema musical</label>
+              <select id="musicSelect">
+                <option value="modern" selected>Noticiero Suave (Elegante)</option>
+                <option value="breaking">Última Hora (Tensión Suave)</option>
+                <option value="chill">Tendencias Chill (Agradable)</option>
+                <option value="none">Sin música</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="musicVolRange">Volumen: <span id="musicVolVal">22%</span></label>
+              <div class="file-row">
+                <input id="musicVolRange" type="range" min="0" max="60" step="2" value="22" style="flex:1;" />
+                <button id="testMusicBtn" class="btn btn-ghost btn-sm" type="button" title="Escuchar muestra">🎵</button>
+              </div>
+            </div>
+          </div>
+
           <div class="divider">o sube tu propio audio (ElevenLabs / MP3 / WAV)</div>
           <div class="file-row">
             <input id="audioFileInput" type="file" accept="audio/*" />
             <button id="clearAudioBtn" class="btn btn-ghost btn-sm" type="button" title="Quitar audio">✕</button>
           </div>
-          <p id="audioStatus" class="hint">Listo: Voz Neural IA + Lip-Sync real + Audio incluido en video.</p>
+          <p id="audioStatus" class="hint">Listo: Voz Neural IA + Música suave sin copyright + Audio incluido en video.</p>
         </section>
 
         <!-- Acciones -->
@@ -193,7 +213,7 @@
             ● Grabar y Descargar Video (.webm)
           </button>
           <p class="hint">
-            La grabación incluye el 3D, los subtítulos sincronizados y la voz neural del superhéroe.
+            La grabación incluye el 3D, tus fotos, subtítulos, voz neural y música de fondo sin copyright.
           </p>
         </section>
       </div>
@@ -212,6 +232,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

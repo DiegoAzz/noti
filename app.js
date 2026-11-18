@@ -38,6 +38,10 @@
   const pitchVal = document.getElementById('pitchVal');
   const rateRange = document.getElementById('rateRange');
   const rateVal = document.getElementById('rateVal');
+  const musicSelect = document.getElementById('musicSelect');
+  const musicVolRange = document.getElementById('musicVolRange');
+  const musicVolVal = document.getElementById('musicVolVal');
+  const testMusicBtn = document.getElementById('testMusicBtn');
   const audioFileInput = document.getElementById('audioFileInput');
   const clearAudioBtn = document.getElementById('clearAudioBtn');
   const audioStatus = document.getElementById('audioStatus');
@@ -1718,11 +1722,196 @@
     return sourceNode;
   }
 
-  function playAudioWithLipSync(audioUrl, wordTimings, onDoneCallback) {
+  // =========================================================
+  // 7B. MÚSICA DE FONDO SUAVE (100% SIN COPYRIGHT - WEB AUDIO)
+  // =========================================================
+  const MUSIC_THEMES = {
+    modern: {
+      bpm: 98,
+      // Cmaj9 -> Am9 -> Fmaj9 -> G6 (suave, elegante y profesional)
+      chords: [
+        [261.63, 329.63, 392.0, 493.88, 587.33],
+        [220.0, 329.63, 392.0, 493.88, 523.25],
+        [174.61, 261.63, 329.63, 392.0, 440.0],
+        [196.0, 293.66, 329.63, 440.0, 493.88],
+      ],
+      bass: [130.81, 110.0, 87.31, 98.0],
+      pluckPattern: [0, 2, 4, 2, 1, 3, 2, 0],
+      cutoff: 1250,
+    },
+    breaking: {
+      bpm: 108,
+      // Dm9 -> Bbmaj7 -> C6 -> Am7 (pulso informativo suave)
+      chords: [
+        [293.66, 349.23, 440.0, 523.25, 659.25],
+        [233.08, 349.23, 440.0, 587.33],
+        [261.63, 329.63, 392.0, 440.0],
+        [220.0, 329.63, 392.0, 523.25],
+      ],
+      bass: [146.83, 116.54, 130.81, 110.0],
+      pluckPattern: [0, 1, 2, 3, 2, 1, 2, 0],
+      cutoff: 1400,
+    },
+    chill: {
+      bpm: 86,
+      // Fmaj7 -> Em7 -> Dm9 -> Cmaj9 (agradable para tendencias / resumen)
+      chords: [
+        [174.61, 220.0, 261.63, 329.63, 392.0],
+        [164.81, 196.0, 246.94, 293.66, 392.0],
+        [146.83, 220.0, 261.63, 329.63, 349.23],
+        [130.81, 196.0, 246.94, 293.66, 329.63],
+      ],
+      bass: [87.31, 82.41, 73.42, 65.41],
+      pluckPattern: [0, 3, 2, 4, 1, 3, 2, 1],
+      cutoff: 1050,
+    },
+  };
+
+  let musicBus = null;
+  let musicFilter = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  let musicRunning = false;
+  let musicPreviewActive = false;
+
+  function ensureAudioGraph() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!mediaDest) {
+      mediaDest = audioCtx.createMediaStreamDestination();
+    }
+    if (!musicBus) {
+      musicFilter = audioCtx.createBiquadFilter();
+      musicFilter.type = 'lowpass';
+      musicFilter.frequency.value = 1250;
+      musicFilter.Q.value = 0.6;
+
+      musicBus = audioCtx.createGain();
+      musicBus.gain.value = 0.0001;
+
+      musicFilter.connect(musicBus);
+      musicBus.connect(audioCtx.destination);
+      musicBus.connect(mediaDest);
+    }
+  }
+
+  function getTargetMusicGain() {
+    const pct = musicVolRange ? parseFloat(musicVolRange.value) : 22;
+    return Math.max(0.0001, (pct / 100) * 0.48);
+  }
+
+  function scheduleMusicNote(freq, startTime, duration, peakGain, type = 'sine') {
+    if (!audioCtx || !musicFilter) return;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    const attack = Math.min(0.28, duration * 0.25);
+    const release = Math.min(0.65, duration * 0.45);
+    g.gain.setValueAtTime(0.0001, startTime);
+    g.gain.linearRampToValueAtTime(peakGain, startTime + attack);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peakGain * 0.55), startTime + Math.max(attack + 0.05, duration - release));
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc.connect(g);
+    g.connect(musicFilter);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+
+  function triggerMusicStep() {
+    if (!musicRunning || !audioCtx) return;
+    const themeKey = musicSelect ? musicSelect.value : 'modern';
+    const theme = MUSIC_THEMES[themeKey];
+    if (!theme) return;
+
+    const now = audioCtx.currentTime + 0.04;
+    const beatSec = 60 / theme.bpm;
+    const stepSec = beatSec / 2; // corcheas (8 pasos por compás)
+    const barIdx = Math.floor(musicStep / 8) % theme.chords.length;
+    const stepInBar = musicStep % 8;
+    const chord = theme.chords[barIdx];
+    const bassFreq = theme.bass[barIdx];
+
+    musicFilter.frequency.setTargetAtTime(theme.cutoff, now, 0.2);
+
+    // 1) Colchón armónico cálido al inicio de cada compás
+    if (stepInBar === 0) {
+      chord.forEach((freq, idx) => {
+        scheduleMusicNote(freq, now + idx * 0.025, beatSec * 4.1, 0.085, 'sine');
+        if (idx < 3) {
+          scheduleMusicNote(freq * 1.002, now + idx * 0.03, beatSec * 3.8, 0.024, 'triangle');
+        }
+      });
+    }
+
+    // 2) Bajo suave y cálido en tiempos 1 y 3
+    if (stepInBar === 0 || stepInBar === 4) {
+      scheduleMusicNote(bassFreq, now, beatSec * 1.9, 0.19, 'sine');
+    }
+
+    // 3) Pulso suave tipo estudio de noticias (discreto, agradable)
+    if (stepInBar === 0 || stepInBar === 3 || stepInBar === 6) {
+      const noteIdx = theme.pluckPattern[stepInBar % theme.pluckPattern.length] % chord.length;
+      const pluckFreq = chord[noteIdx] * (stepInBar === 3 ? 2 : 1);
+      scheduleMusicNote(pluckFreq, now, stepSec * 1.35, 0.042, 'sine');
+    }
+
+    musicStep++;
+  }
+
+  function startBackgroundMusic() {
+    const themeKey = musicSelect ? musicSelect.value : 'modern';
+    if (themeKey === 'none' || !MUSIC_THEMES[themeKey]) {
+      stopBackgroundMusic(true);
+      return;
+    }
+
+    ensureAudioGraph();
+    stopBackgroundMusic(true);
+
+    const theme = MUSIC_THEMES[themeKey];
+    const stepMs = (60 / theme.bpm / 2) * 1000;
+    musicStep = 0;
+    musicRunning = true;
+
+    const now = audioCtx.currentTime;
+    musicBus.gain.cancelScheduledValues(now);
+    musicBus.gain.setValueAtTime(0.0001, now);
+    musicBus.gain.linearRampToValueAtTime(getTargetMusicGain(), now + 0.5);
+
+    triggerMusicStep();
+    musicTimer = setInterval(triggerMusicStep, stepMs);
+  }
+
+  function stopBackgroundMusic(immediate = false) {
+    musicRunning = false;
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+    if (audioCtx && musicBus) {
+      const now = audioCtx.currentTime;
+      musicBus.gain.cancelScheduledValues(now);
+      if (immediate) {
+        musicBus.gain.setValueAtTime(0.0001, now);
+      } else {
+        musicBus.gain.setValueAtTime(Math.max(0.0001, musicBus.gain.value), now);
+        musicBus.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      }
+    }
+  }
+
+  function playAudioWithLipSync(audioUrl, wordTimings, onDoneCallback) {
+    ensureAudioGraph();
+
+    // Iniciar música de fondo suave mezclada en el mismo AudioContext / grabación
+    musicPreviewActive = false;
+    if (testMusicBtn) testMusicBtn.textContent = '🎵';
+    startBackgroundMusic();
 
     audioEl = new Audio(audioUrl);
     audioEl.crossOrigin = 'anonymous';
@@ -1734,7 +1923,6 @@
     analyser.fftSize = 256;
     freqData = new Uint8Array(analyser.frequencyBinCount);
 
-    mediaDest = audioCtx.createMediaStreamDestination();
     processed.connect(analyser);
     analyser.connect(audioCtx.destination);
     analyser.connect(mediaDest);
@@ -1857,6 +2045,7 @@
     state.targetSpeechEnergy = 0;
     broadcastBtn.disabled = false;
     broadcastBtn.textContent = '▶ Transmitir Noticia';
+    stopBackgroundMusic(false);
     if (subtitleInterval) {
       clearInterval(subtitleInterval);
       subtitleInterval = null;
@@ -1872,6 +2061,9 @@
       audioEl.pause();
       audioEl = null;
     }
+    stopBackgroundMusic(true);
+    musicPreviewActive = false;
+    if (testMusicBtn) testMusicBtn.textContent = '🎵';
     analyser = null;
     if (subtitleInterval) {
       clearInterval(subtitleInterval);
@@ -2421,6 +2613,47 @@
     const v = parseInt(rateRange.value, 10);
     rateVal.textContent = `${v >= 0 ? '+' : ''}${v}%`;
   });
+
+  if (musicVolRange) {
+    musicVolRange.addEventListener('input', () => {
+      const v = parseInt(musicVolRange.value, 10);
+      if (musicVolVal) musicVolVal.textContent = `${v}%`;
+      if (audioCtx && musicBus && musicRunning) {
+        musicBus.gain.setTargetAtTime(getTargetMusicGain(), audioCtx.currentTime, 0.08);
+      }
+    });
+  }
+
+  if (musicSelect) {
+    musicSelect.addEventListener('change', () => {
+      if (musicRunning) {
+        if (musicSelect.value === 'none') {
+          stopBackgroundMusic(false);
+          musicPreviewActive = false;
+          if (testMusicBtn) testMusicBtn.textContent = '🎵';
+        } else {
+          startBackgroundMusic();
+        }
+      }
+    });
+  }
+
+  if (testMusicBtn) {
+    testMusicBtn.addEventListener('click', () => {
+      if (musicPreviewActive) {
+        stopBackgroundMusic(false);
+        musicPreviewActive = false;
+        testMusicBtn.textContent = '🎵';
+      } else {
+        if (musicSelect && musicSelect.value === 'none') {
+          musicSelect.value = 'modern';
+        }
+        startBackgroundMusic();
+        musicPreviewActive = true;
+        testMusicBtn.textContent = '■';
+      }
+    });
+  }
 
   broadcastBtn.addEventListener('click', () => startBroadcast());
   stopBtn.addEventListener('click', () => stopBroadcast(false));

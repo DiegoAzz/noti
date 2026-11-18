@@ -1312,9 +1312,11 @@ function drawBoardContent(w, h, currentStep, time) {
   const titleStep = state.steps.find(s => s.target === "title") || state.steps[0];
   if (titleStep && titleStep.action === "write") {
     const isCurrentTitle = (currentIdx === 0);
-    const progressTitle = isCurrentTitle ? (currentStep.progress || 1) : 1;
+    const rawProgTitle = isCurrentTitle ? (currentStep.progress || 0) : 1;
+    // La escritura se realiza en el primer 45% del paso; el 55% restante es para que el usuario lea libremente
+    const writeProgTitle = isCurrentTitle ? Math.min(1.0, rawProgTitle / 0.45) : 1;
     const fullTitle = titleStep.text || "";
-    const charCount = Math.floor(fullTitle.length * progressTitle);
+    const charCount = Math.floor(fullTitle.length * writeProgTitle);
     const textToShow = fullTitle.substring(0, charCount);
 
     let fontSize = 66;
@@ -1330,7 +1332,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, startY);
 
-    if (isCurrentTitle && progressTitle < 0.98 && fullTitle.length > 0 && state.isPlaying) {
+    // Solo se considera en escritura activa durante la primera mitad (rawProgTitle < 0.45)
+    if (isCurrentTitle && rawProgTitle < 0.45 && fullTitle.length > 0 && state.isPlaying) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = startY - 14;
@@ -1352,11 +1355,13 @@ function drawBoardContent(w, h, currentStep, time) {
   if (activeWriteIdx >= 1) {
     const s = state.steps[activeWriteIdx];
     const isCurrent = (activeWriteIdx === currentIdx);
-    const progress = isCurrent ? (currentStep.progress || 1) : 1;
+    const rawProg = isCurrent ? (currentStep.progress || 0) : 1;
+    // La escritura se completa en el primer 45% del paso; el 55% restante es tiempo para que el usuario lea
+    const writeProg = isCurrent ? Math.min(1.0, rawProg / 0.45) : 1;
     const yPos = startY + rowHeight; // Fila 1
 
     const fullText = s.text || "";
-    const charCount = Math.floor(fullText.length * progress);
+    const charCount = Math.floor(fullText.length * writeProg);
     const textToShow = fullText.substring(0, charCount);
 
     let fontSize = 72;
@@ -1373,7 +1378,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, yPos);
 
-    if (isCurrent && progress < 0.98 && fullText.length > 0 && state.isPlaying) {
+    // Solo escribe activamente con la mano durante el primer 45% del paso
+    if (isCurrent && rawProg < 0.45 && fullText.length > 0 && state.isPlaying) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = yPos - 14;
@@ -1774,6 +1780,8 @@ function drawTeacher(w, h, cameraType, time, currentStep) {
     return;
   }
 
+  // AL TERMINAR DE ESCRIBIR O EN PASOS DE EXPLICACIÓN / ARCO / RESALTADO:
+  // ¡LA DOCENTE SE POSICIONA A UN COSTADO (DERECHA) PARA NO TAPAR LA PIZARRA Y DEJAR LEER AL PÚBLICO!
   ctx.save();
 
   const blink = Math.sin(time * 0.003) > 0.96;
@@ -1781,21 +1789,26 @@ function drawTeacher(w, h, cameraType, time, currentStep) {
   const headBob = Math.sin(time * 0.004) * 4;
   const sway = Math.sin(time * 0.0025) * 3;
 
-  let teacherX = w / 2;
-  let teacherY = 1750; // Pies firmes en el suelo
-  let teacherScale = 1.08;
+  const rawProg = currentStep ? (currentStep.progress || 0) : 0;
+  const currentStepIdx = currentStep ? currentStep.index : 0;
+  const hasBoardText = (state.steps && state.steps.some((s, idx) => s.action === "write" && idx <= currentStepIdx));
 
-  if (isPointing) {
-    // Si está señalando fórmulas o arcos, situarla elegantemente a la derecha
-    teacherX = w * 0.78;
-    teacherScale = 0.88;
-  } else if (cameraType === "split") {
-    teacherX = w * 0.78;
-    teacherScale = 0.82;
-  } else {
-    // En plano docente de explicación frontal
+  // Posición a un costado (derecha del aula: 853px) para que la pizarra quede 100% visible
+  const targetSideX = w * 0.79;
+  let teacherX = targetSideX;
+  let teacherY = 1750; // Pies firmes en el suelo
+  let teacherScale = 0.92;
+
+  // Transición suave: al terminar de trazar la letra (entre 45% y 60% del paso),
+  // se aparta elegantemente hacia la derecha para revelar lo que escribió
+  if (currentStep && currentStep.action === "write" && rawProg >= 0.45 && rawProg < 0.60 && state.lastHandX) {
+    const slideT = (rawProg - 0.45) / 0.15; // 0.0 a 1.0
+    const startX = Math.min(targetSideX, state.lastHandX + 160);
+    teacherX = (1 - slideT) * startX + slideT * targetSideX;
+  } else if (!hasBoardText && currentStepIdx === 0 && rawProg < 0.45) {
+    // Si no se ha escrito nada en la pizarra aún, saludo inicial en el centro
     teacherX = w / 2;
-    teacherScale = 1.10;
+    teacherScale = 1.08;
   }
 
   ctx.translate(teacherX, teacherY + headBob);

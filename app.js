@@ -126,7 +126,9 @@ const state = {
   recordedChunks: [],
   lastHandX: null,
   lastHandY: null,
-  isWritingNow: false
+  isWritingNow: false,
+  audioElementSourceNode: null,
+  recordingMimeType: ""
 };
 
 // Plantillas educativas iniciales
@@ -2248,7 +2250,7 @@ function drawViralCaptions(w, h, currentStep) {
 }
 
 /* =========================================================
-   GRABACIÓN Y DESCARGA DIRECTA DE VIDEO (WEBM / MP4)
+   GRABACIÓN Y DESCARGA DIRECTA DE VIDEO (MP4)
    ========================================================= */
 function toggleRecording() {
   if (state.isRecording) {
@@ -2264,49 +2266,90 @@ async function startRecording() {
     return;
   }
 
+  if (state.isRecording) {
+    stopRecording();
+    return;
+  }
+
   state.isRecording = true;
   state.recordedChunks = [];
   btnRecord.classList.add("btn-accent");
-  btnRecord.textContent = "⏹ Detener y Guardar";
+  btnRecord.textContent = "⏹ Detener y Guardar MP4";
   badgeRecording.style.display = "inline-block";
 
-  state.audioElement.currentTime = 0;
-
-  const canvasStream = canvas.captureStream(30);
-
-  let combinedStream = canvasStream;
-  try {
-    if (!state.audioContext) {
-      initAudio();
-    }
-    const dest = state.audioContext.createMediaStreamDestination();
-    state.destAudioStreamNode = dest;
-
-    // Conectar elemento de audio y sonido de marcador al destino de grabación
-    const source = state.audioContext.createMediaElementSource(state.audioElement);
-    source.connect(dest);
-    source.connect(state.audioContext.destination);
-
-    if (soundEngine.masterGain) {
-      soundEngine.masterGain.connect(dest);
-    }
-
-    combinedStream = new MediaStream([
-      ...canvasStream.getVideoTracks(),
-      ...dest.stream.getAudioTracks()
-    ]);
-  } catch (e) {
-    console.warn("Audio Context ya conectado o usando stream directo:", e);
+  // Despertar AudioContext si estaba suspendido
+  if (!state.audioContext) {
+    initAudio();
+  }
+  if (state.audioContext && state.audioContext.state === "suspended") {
+    await state.audioContext.resume();
   }
 
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-    ? "video/webm;codecs=vp9,opus"
-    : "video/webm";
+  // Reiniciar reproducción desde el inicio para captura completa
+  state.audioElement.currentTime = 0;
+  state.currentTime = 0;
 
-  state.mediaRecorder = new MediaRecorder(combinedStream, {
-    mimeType: mimeType,
-    videoBitsPerSecond: 4500000
-  });
+  const canvasStream = canvas.captureStream(30);
+  let audioTracks = [];
+
+  try {
+    if (!state.destAudioStreamNode) {
+      state.destAudioStreamNode = state.audioContext.createMediaStreamDestination();
+    }
+
+    if (!state.audioElementSourceNode) {
+      state.audioElementSourceNode = state.audioContext.createMediaElementSource(state.audioElement);
+      state.audioElementSourceNode.connect(state.destAudioStreamNode);
+      state.audioElementSourceNode.connect(state.audioContext.destination);
+    }
+
+    if (soundEngine && soundEngine.masterGain) {
+      try {
+        soundEngine.masterGain.connect(state.destAudioStreamNode);
+      } catch (e) {}
+    }
+
+    audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
+  } catch (e) {
+    console.warn("Audio Context ya conectado:", e);
+    if (state.destAudioStreamNode) {
+      audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
+    }
+  }
+
+  const combinedStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...audioTracks
+  ]);
+
+  // Selección de códec compatible con MP4
+  const mp4Types = [
+    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/mp4;codecs=avc1",
+    "video/mp4;codecs=h264,aac",
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm"
+  ];
+  let chosenMime = "video/webm";
+  for (let m of mp4Types) {
+    if (MediaRecorder.isTypeSupported(m)) {
+      chosenMime = m;
+      break;
+    }
+  }
+  state.recordingMimeType = chosenMime;
+
+  try {
+    state.mediaRecorder = new MediaRecorder(combinedStream, {
+      mimeType: chosenMime,
+      videoBitsPerSecond: 5000000
+    });
+  } catch (err) {
+    console.warn("Fallo con mimeType " + chosenMime + ", usando MediaRecorder predeterminado:", err);
+    state.mediaRecorder = new MediaRecorder(combinedStream);
+  }
 
   state.mediaRecorder.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) {
@@ -2316,36 +2359,77 @@ async function startRecording() {
 
   state.mediaRecorder.onstop = saveRecordedVideo;
 
-  state.mediaRecorder.start();
+  // Auto-detener y descargar automáticamente cuando finalice el audio de la lección
+  state.audioElement.onended = () => {
+    if (state.isRecording) {
+      stopRecording();
+    }
+  };
+
+  state.mediaRecorder.start(250);
   await state.audioElement.play();
   state.isPlaying = true;
-  updateStatus("⏺ Grabando video en alta definición con audio de pizarra y voz...");
+  updateStatus("⏺ Grabando video MP4 en alta definición... Se descargará automáticamente al terminar.");
 }
 
 function stopRecording() {
   if (!state.isRecording) return;
   state.isRecording = false;
   badgeRecording.style.display = "none";
-  btnRecord.textContent = "⏺ Grabar y Descargar Video";
+  btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
 
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     state.mediaRecorder.stop();
   }
 }
 
-function saveRecordedVideo() {
-  updateStatus("💾 Procesando y descargando archivo de video...");
-  const blob = new Blob(state.recordedChunks, { type: "video/webm" });
+async function saveRecordedVideo() {
+  updateStatus("💾 Procesando y preparando archivo MP4 para descarga...");
+
+  const isNativeMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
+  const blobType = isNativeMp4 ? "video/mp4" : "video/webm";
+  const rawBlob = new Blob(state.recordedChunks, { type: blobType });
+
+  if (isNativeMp4) {
+    downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
+    return;
+  }
+
+  // Si grabó en WebM, intentar conversión en backend a MP4 si está disponible
+  try {
+    const formData = new FormData();
+    formData.append("video", rawBlob, "recording.webm");
+
+    const resp = await fetch("/api/convert-mp4", {
+      method: "POST",
+      body: formData
+    });
+
+    if (resp.ok) {
+      const mp4Blob = await resp.blob();
+      downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
+      return;
+    }
+  } catch (e) {
+    console.warn("Conversión remota no disponible, descargando localmente:", e);
+  }
+
+  // Descargar con extensión .mp4
+  const mp4Blob = new Blob(state.recordedChunks, { type: "video/mp4" });
+  downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.style.display = "none";
   a.href = url;
-  a.download = `profe_pizarra_${Date.now()}.webm`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    updateStatus("✅ Video descargado con éxito. ¡Listo para TikTok o Reels!");
+    updateStatus("✅ ¡Video MP4 descargado con éxito! Listo para publicar.");
   }, 100);
 }

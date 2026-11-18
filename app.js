@@ -595,6 +595,7 @@ HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
     if (tabBtnSteps) tabBtnSteps.classList.toggle("active", tabName === "steps");
     if (tabBtnSettings) tabBtnSettings.classList.toggle("active", tabName === "settings");
   };
+  window.setMobileTab = setMobileTab;
 
   if (tabBtnPreview) tabBtnPreview.addEventListener("click", () => setMobileTab("preview"));
   if (tabBtnSteps) tabBtnSteps.addEventListener("click", () => setMobileTab("steps"));
@@ -648,6 +649,9 @@ HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
   const btnPreviewCover = document.getElementById("btnPreviewCover");
   const btnMobileCover = document.getElementById("btnMobileCover");
   const toggleCoverPreview = () => {
+    if (window.innerWidth <= 920 && window.setMobileTab) {
+      window.setMobileTab("preview");
+    }
     if (state.audioElement && !state.audioElement.paused) {
       state.audioElement.pause();
       state.isPlaying = false;
@@ -1299,6 +1303,9 @@ function formatTime(sec) {
 
 async function generateAndPlay() {
   state.isShowingCoverPreview = false;
+  if (window.innerWidth <= 920 && window.setMobileTab) {
+    window.setMobileTab("preview");
+  }
   btnPlayPreview.disabled = true;
   updateStatus("🎙️ Sintetizando voz con Inteligencia Artificial...");
 
@@ -3224,6 +3231,9 @@ function toggleRecording() {
 
 async function startRecording() {
   state.isShowingCoverPreview = false;
+  if (window.innerWidth <= 920 && window.setMobileTab) {
+    window.setMobileTab("preview");
+  }
   if (state.isRecording) {
     stopRecording();
     return;

@@ -181,6 +181,9 @@ body {
 }
 
 .form-control {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text-main);
@@ -190,6 +193,25 @@ body {
   font-family: inherit;
   outline: none;
   transition: border-color 0.2s;
+}
+
+select.form-control {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+select.form-control optgroup {
+  background-color: #0f172a;
+  color: #93c5fd;
+  font-weight: 800;
+}
+
+select.form-control option {
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-weight: 500;
+  padding: 6px 8px;
 }
 
 .form-control:focus {

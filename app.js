@@ -1237,40 +1237,6 @@ function renderSensualCover(targetCanvas) {
     tCtx.drawImage(writeImg, drawX, drawY, targetW, targetH);
     tCtx.restore();
   }
-
-  // 5. Subtítulo estilo gancho viral en la parte inferior
-  const firstSpeech = (state.steps && state.steps[0] && state.steps[0].speech) ? state.steps[0].speech : "¡Hola, mis estudiantes!";
-  const hookSentence = firstSpeech.split(/[\.\!\?]/).filter(s => s.trim().length > 0)[0] || "¡Hola, mis estudiantes!";
-  const subText = hookSentence.trim().startsWith("¡") ? hookSentence.trim() : `¡${hookSentence.trim()}!`;
-
-  tCtx.save();
-  const subY = h - 240;
-  tCtx.font = "bold 44px 'Inter', sans-serif";
-  const subTextW = tCtx.measureText(subText).width;
-  const pillW = Math.min(940, Math.max(380, subTextW + 80));
-  const pillH = 74;
-
-  tCtx.save();
-  tCtx.shadowColor = "rgba(0,0,0,0.55)";
-  tCtx.shadowBlur = 24;
-  tCtx.shadowOffsetY = 10;
-  tCtx.fillStyle = "rgba(15, 23, 42, 0.92)";
-  tCtx.beginPath();
-  tCtx.roundRect(w / 2 - pillW / 2, subY - pillH / 2, pillW, pillH, 20);
-  tCtx.fill();
-  tCtx.restore();
-
-  tCtx.strokeStyle = "rgba(251, 191, 36, 0.5)";
-  tCtx.lineWidth = 2.5;
-  tCtx.beginPath();
-  tCtx.roundRect(w / 2 - pillW / 2, subY - pillH / 2, pillW, pillH, 20);
-  tCtx.stroke();
-
-  tCtx.textAlign = "center";
-  tCtx.textBaseline = "middle";
-  tCtx.fillStyle = "#ffffff";
-  tCtx.fillText(subText, w / 2, subY);
-  tCtx.restore();
 }
 
 function downloadThumbnailCover() {

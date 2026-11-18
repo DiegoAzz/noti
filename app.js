@@ -505,20 +505,24 @@ function setup3DCharacter(model) {
 
 // Iniciar aplicación
 window.addEventListener("DOMContentLoaded", () => {
-  setupEventListeners();
-  initTopicsSelector();
-  loadTemplate("capicua");
-  initAudio();
-  initThree3D();
-  resizeCanvas();
+  try { initTopicsSelector(); } catch (e) { console.error("Error al iniciar temas:", e); }
+  try { setupEventListeners(); } catch (e) { console.error("Error al iniciar listeners:", e); }
+  try { loadTemplate("capicua"); } catch (e) { console.error("Error al cargar plantilla:", e); }
+  try { initAudio(); } catch (e) { console.error("Error al iniciar audio:", e); }
+  try { initThree3D(); } catch (e) { console.error("Error al iniciar 3D:", e); }
+  try { resizeCanvas(); } catch (e) { console.error("Error al redimensionar canvas:", e); }
   requestAnimationFrame(renderLoop);
 });
 
 function setupEventListeners() {
-  document.getElementById("btnTplCapicua").addEventListener("click", (e) => switchActiveTemplate(e, "capicua"));
-  document.getElementById("btnTplPalindromos").addEventListener("click", (e) => switchActiveTemplate(e, "palindromos"));
-  document.getElementById("btnTplAcentuacion").addEventListener("click", (e) => switchActiveTemplate(e, "acentuacion"));
-  document.getElementById("btnTplMates").addEventListener("click", (e) => switchActiveTemplate(e, "mates"));
+  const bindClick = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  };
+  bindClick("btnTplCapicua", (e) => switchActiveTemplate(e, "capicua"));
+  bindClick("btnTplPalindromos", (e) => switchActiveTemplate(e, "palindromos"));
+  bindClick("btnTplAcentuacion", (e) => switchActiveTemplate(e, "acentuacion"));
+  bindClick("btnTplMates", (e) => switchActiveTemplate(e, "mates"));
 
   document.getElementById("btnAddStep").addEventListener("click", () => {
     state.steps.push({
@@ -1293,8 +1297,25 @@ function initTopicsSelector() {
   const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
   if (!topics || topics.length === 0) {
     if (!window._initTopicsRetryCount) window._initTopicsRetryCount = 0;
+    window._initTopicsRetryCount++;
+
+    // En Coolify, si la red retrasa el script o hay desincronización de caché, descargarlo directamente
+    if (window._initTopicsRetryCount === 6 && !window._fetchingTopicsScript) {
+      window._fetchingTopicsScript = true;
+      fetch("rae_topics.js?t=" + Date.now())
+        .then(res => res.text())
+        .then(code => {
+          try {
+            eval(code);
+            initTopicsSelector();
+          } catch (e) {
+            console.error("Error al evaluar rae_topics.js dinámico:", e);
+          }
+        })
+        .catch(err => console.error("Error al hacer fetch dinámico de rae_topics.js:", err));
+    }
+
     if (window._initTopicsRetryCount < 100) {
-      window._initTopicsRetryCount++;
       setTimeout(initTopicsSelector, 50);
     }
     return;

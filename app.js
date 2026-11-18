@@ -935,6 +935,162 @@ function parseScriptText(raw) {
 }
 
 /* =========================================================
+   PALETAS CROMÁTICAS TEMÁTICAS POR ASIGNATURA (FEED & PIZARRA)
+   Permiten diferenciar al instante en TikTok/Shorts/Reels cada materia
+   ========================================================= */
+const SUBJECT_PALETTES = {
+  math: {
+    id: "math",
+    name: "Matemáticas",
+    badgeName: "MATEMÁTICAS",
+    badgeIcon: "📐",
+    wallColor: "rgba(30, 64, 175, 0.68)", // Azul Real tecnológico
+    boardBg: "#f0f7ff",                   // Superficie blanco hielo
+    boardBorder: "#2563eb",               // Marco azul brillante
+    hasGrid: true,                        // Cuadrícula matemática
+    gridColor: "rgba(59, 130, 246, 0.18)",
+    bannerGrad: ["#1e40af", "#3b82f6", "#60a5fa"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#1d4ed8",
+    badgeBg: "#2563eb",
+    mainInk: "#0f172a",
+    accentInk: "#1d4ed8",
+    redInk: "#dc2626"
+  },
+  science: {
+    id: "science",
+    name: "Ciencias Naturales",
+    badgeName: "CIENCIAS NATURALES",
+    badgeIcon: "🌱",
+    wallColor: "rgba(6, 95, 70, 0.68)",   // Verde bosque esmeralda
+    boardBg: "#f0fdf4",                   // Superficie menta limpia
+    boardBorder: "#059669",               // Marco esmeralda
+    hasGrid: false,
+    bannerGrad: ["#065f46", "#059669", "#34d399"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#047857",
+    badgeBg: "#059669",
+    mainInk: "#064e3b",
+    accentInk: "#059669",
+    redInk: "#dc2626"
+  },
+  social: {
+    id: "social",
+    name: "Ciencias Sociales",
+    badgeName: "CIENCIAS SOCIALES",
+    badgeIcon: "🗺️",
+    wallColor: "rgba(154, 52, 18, 0.68)", // Terracota / Ámbar tierra
+    boardBg: "#fffbeb",                   // Pergamino cálido
+    boardBorder: "#d97706",               // Marco ámbar
+    hasGrid: false,
+    bannerGrad: ["#9a3412", "#d97706", "#fbbf24"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#78350f",
+    badgeBg: "#d97706",
+    mainInk: "#1c1917",
+    accentInk: "#b45309",
+    redInk: "#dc2626"
+  },
+  spanish: {
+    id: "spanish",
+    name: "Lengua Castellana",
+    badgeName: "LENGUA CASTELLANA",
+    badgeIcon: "📖",
+    wallColor: "rgba(107, 33, 168, 0.50)", // Púrpura oficial La Profe Rochi
+    boardBg: "#ffffff",                   // Pizarra blanca acrílica clásica
+    boardBorder: "#f59e0b",               // Marco dorado tradicional
+    hasGrid: false,
+    bannerGrad: ["#fbbf24", "#fef08a", "#f59e0b"],
+    bannerTextColor: "#1e1b4b",
+    bannerBorder: "#78350f",
+    badgeBg: "#ef4444",
+    mainInk: "#111827",
+    accentInk: "#1d4ed8",
+    redInk: "#dc2626"
+  },
+  english: {
+    id: "english",
+    name: "Inglés",
+    badgeName: "INGLÉS",
+    badgeIcon: "🇬🇧",
+    wallColor: "rgba(49, 46, 129, 0.70)", // Azul marino real británico / Índigo
+    boardBg: "#f8fafc",                   // Pizarra moderna pizarra-hielo
+    boardBorder: "#4f46e5",               // Marco índigo
+    hasGrid: false,
+    bannerGrad: ["#312e81", "#4f46e5", "#818cf8"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#3730a3",
+    badgeBg: "#4f46e5",
+    mainInk: "#0f172a",
+    accentInk: "#4338ca",
+    redInk: "#dc2626"
+  },
+  ethics: {
+    id: "ethics",
+    name: "Ética y Valores",
+    badgeName: "ÉTICA Y VALORES",
+    badgeIcon: "🤝",
+    wallColor: "rgba(15, 118, 110, 0.68)", // Verde azulado / Aguamarina
+    boardBg: "#f0fdfa",                   // Superficie agua suave
+    boardBorder: "#0d9488",               // Marco aguamarina
+    hasGrid: false,
+    bannerGrad: ["#0f766e", "#0d9488", "#2dd4bf"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#115e59",
+    badgeBg: "#0d9488",
+    mainInk: "#134e4a",
+    accentInk: "#0d9488",
+    redInk: "#dc2626"
+  },
+  rae: {
+    id: "rae",
+    name: "Ortografía RAE",
+    badgeName: "ORTOGRAFÍA RAE",
+    badgeIcon: "✍️",
+    wallColor: "rgba(157, 23, 77, 0.68)", // Rubí vino / Carmesí viral
+    boardBg: "#fff1f2",                   // Rosa pálido elegante
+    boardBorder: "#e11d48",               // Marco carmesí
+    hasGrid: false,
+    bannerGrad: ["#9d174d", "#e11d48", "#fb7185"],
+    bannerTextColor: "#ffffff",
+    bannerBorder: "#be123c",
+    badgeBg: "#e11d48",
+    mainInk: "#111827",
+    accentInk: "#be123c",
+    redInk: "#dc2626"
+  }
+};
+
+function getCurrentSubjectPalette() {
+  const select = document.getElementById("selectRaeTopic");
+  const topicId = select ? select.value : "";
+  const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
+  const curTopic = topics.find(t => t.id === topicId);
+  const cat = (curTopic ? (curTopic.category || "") : "").toLowerCase();
+  const title = getLessonTitle().toLowerCase();
+
+  if (cat.includes("matemát") || title.includes("capicúa") || title.includes("número") || title.includes("tabla") || title.includes("suma") || title.includes("conjunto") || title.includes("descomposi") || title.includes("multiplica")) {
+    return SUBJECT_PALETTES.math;
+  }
+  if (cat.includes("natural") || cat.includes("ciencia") || title.includes("célula") || title.includes("tejido") || title.includes("tierra") || title.includes("rotación")) {
+    return SUBJECT_PALETTES.science;
+  }
+  if (cat.includes("social") || title.includes("colombia") || title.includes("sector") || title.includes("cardinal") || title.includes("departamento")) {
+    return SUBJECT_PALETTES.social;
+  }
+  if (cat.includes("ingl") || title.includes("english") || title.includes("number") || title.includes("color") || title.includes("house") || title.includes("school") || title.includes("material")) {
+    return SUBJECT_PALETTES.english;
+  }
+  if (cat.includes("ética") || cat.includes("valor") || title.includes("conflicto") || title.includes("democracia") || title.includes("ambiente") || title.includes("agresión")) {
+    return SUBJECT_PALETTES.ethics;
+  }
+  if (cat.includes("lengua") || title.includes("sustantivo") || title.includes("tilde") || title.includes("sega") || title.includes("adjetivo") || title.includes("verbo") || title.includes("sinónimo") || title.includes("antónimo") || title.includes("palíndrom")) {
+    return SUBJECT_PALETTES.spanish;
+  }
+  return SUBJECT_PALETTES.rae;
+}
+
+/* =========================================================
    PORTADA SENSUAL HD Y SELECTOR DE TEMAS - LA PROFE ROCHI
    ========================================================= */
 
@@ -942,6 +1098,8 @@ function renderSensualCover(targetCanvas) {
   const tCtx = targetCanvas.getContext("2d");
   const w = targetCanvas.width;
   const h = targetCanvas.height;
+
+  const palette = getCurrentSubjectPalette();
 
   // 1. Fondo de aula ilustrada oficial (formato 9:16 vertical)
   const isLandscape = (w > h);
@@ -952,6 +1110,47 @@ function renderSensualCover(targetCanvas) {
     tCtx.fillStyle = "#81399d";
     tCtx.fillRect(0, 0, w, h);
   }
+
+  // 1b. Tinte temático de la pared según la asignatura (Diferenciación instantánea en el Feed)
+  if (palette && palette.wallColor) {
+    tCtx.save();
+    tCtx.globalCompositeOperation = "color";
+    tCtx.fillStyle = palette.wallColor;
+    tCtx.fillRect(0, 0, w, 1340);
+    tCtx.restore();
+  }
+
+  // 1c. Fondo del tablero según la materia (Diferenciación de color para el Feed)
+  const bx0 = 212, by0 = 692, bw = 678, bh = 476;
+  tCtx.save();
+  tCtx.fillStyle = palette.boardBg;
+  tCtx.beginPath();
+  tCtx.roundRect(bx0, by0, bw, bh, 20);
+  tCtx.fill();
+
+  if (palette.hasGrid) {
+    tCtx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.18)";
+    tCtx.lineWidth = 1.5;
+    for (let gy = by0 + 20; gy < by0 + bh; gy += 32) {
+      tCtx.beginPath();
+      tCtx.moveTo(bx0, gy);
+      tCtx.lineTo(bx0 + bw, gy);
+      tCtx.stroke();
+    }
+    for (let gx = bx0 + 20; gx < bx0 + bw; gx += 32) {
+      tCtx.beginPath();
+      tCtx.moveTo(gx, by0);
+      tCtx.lineTo(gx, by0 + bh);
+      tCtx.stroke();
+    }
+  }
+
+  tCtx.lineWidth = 5;
+  tCtx.strokeStyle = palette.boardBorder;
+  tCtx.beginPath();
+  tCtx.roundRect(bx0, by0, bw, bh, 20);
+  tCtx.stroke();
+  tCtx.restore();
 
   // 2. Logo oficial "La Profe Rochi" en la pared superior (centrado en x=540, y=255)
   const cx = w / 2;
@@ -970,7 +1169,7 @@ function renderSensualCover(targetCanvas) {
     tCtx.restore();
   }
 
-  // 3. Banner dorado superior con el Título del Tema (tamaño configurable)
+  // 3. Banner superior con el Título del Tema y Badge temático
   const lessonTitle = getLessonTitle();
   const bannerFontSize = state.bannerTitleFontSize || Math.round((state.titleFontSize || 66) * 0.68);
   const bannerY = 465;
@@ -987,38 +1186,40 @@ function renderSensualCover(targetCanvas) {
   tCtx.shadowBlur = 20;
   tCtx.shadowOffsetY = 8;
   const grad = tCtx.createLinearGradient(-bannerW / 2, 0, bannerW / 2, 0);
-  grad.addColorStop(0, "#fbbf24");
-  grad.addColorStop(0.5, "#fef08a");
-  grad.addColorStop(1, "#f59e0b");
+  grad.addColorStop(0, palette.bannerGrad[0]);
+  grad.addColorStop(0.5, palette.bannerGrad[1]);
+  grad.addColorStop(1, palette.bannerGrad[2]);
   tCtx.fillStyle = grad;
   tCtx.beginPath();
   tCtx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
   tCtx.fill();
   tCtx.restore();
 
-  // Borde oscuro marcado
+  // Borde temático marcado
   tCtx.lineWidth = 4;
-  tCtx.strokeStyle = "#78350f";
+  tCtx.strokeStyle = palette.bannerBorder;
   tCtx.beginPath();
   tCtx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
   tCtx.stroke();
 
-  // Etiqueta 🔴 TEMA DE HOY
-  const tagW = 150;
+  // Etiqueta distintiva de Asignatura (Badge temático para el Feed)
+  tCtx.font = "bold 14px 'Inter', sans-serif";
+  const badgeLabel = `${palette.badgeIcon} ${palette.badgeName}`;
+  const badgeTextW = tCtx.measureText(badgeLabel).width;
+  const tagW = Math.max(160, badgeTextW + 28);
   const tagH = 26;
-  tCtx.fillStyle = "#ef4444";
+  tCtx.fillStyle = palette.badgeBg;
   tCtx.beginPath();
   tCtx.roundRect(-tagW / 2, -bannerH / 2 - 13, tagW, tagH, 8);
   tCtx.fill();
   tCtx.fillStyle = "#ffffff";
-  tCtx.font = "bold 15px 'Inter', sans-serif";
   tCtx.textAlign = "center";
   tCtx.textBaseline = "middle";
-  tCtx.fillText("🔴 TEMA DE HOY", 0, -bannerH / 2);
+  tCtx.fillText(badgeLabel, 0, -bannerH / 2);
 
   // Texto del título con tamaño configurable
   tCtx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
-  tCtx.fillStyle = "#1e1b4b";
+  tCtx.fillStyle = palette.bannerTextColor;
   tCtx.textAlign = "center";
   tCtx.textBaseline = "middle";
   tCtx.fillText(lessonTitle, 0, 4);
@@ -1109,7 +1310,18 @@ function initTopicsSelector() {
   if (!select) return;
 
   const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
-  if (topics.length === 0) return;
+  if (!topics || topics.length === 0) {
+    if (!window._initTopicsRetryCount) window._initTopicsRetryCount = 0;
+    if (window._initTopicsRetryCount < 100) {
+      window._initTopicsRetryCount++;
+      setTimeout(initTopicsSelector, 50);
+    }
+    return;
+  }
+
+  // Si ya tiene más de 5 opciones (está poblado con las 60 lecciones), no duplicar
+  if (select.options.length > 5 && select.dataset.populated === "true") return;
+  select.dataset.populated = "true";
 
   const groups = {};
   topics.forEach(t => {
@@ -1118,7 +1330,7 @@ function initTopicsSelector() {
     groups[cat].push(t);
   });
 
-  select.innerHTML = '<option value="" disabled selected>👉 Selecciona un tema curricular o de la RAE...</option>';
+  select.innerHTML = '<option value="" disabled selected>👉 Selecciona un tema de la lista...</option>';
 
   for (const [catName, catTopics] of Object.entries(groups)) {
     const optgroup = document.createElement("optgroup");
@@ -1132,12 +1344,22 @@ function initTopicsSelector() {
     select.appendChild(optgroup);
   }
 
-  select.addEventListener("change", (e) => {
-    if (e.target.value) loadTopicLesson(e.target.value);
-  });
+  if (!select.dataset.bound) {
+    select.dataset.bound = "true";
+    select.addEventListener("change", (e) => {
+      if (e.target.value) loadTopicLesson(e.target.value);
+    });
+    select.addEventListener("focus", () => {
+      if (select.options.length <= 1) initTopicsSelector();
+    });
+    select.addEventListener("pointerdown", () => {
+      if (select.options.length <= 1) initTopicsSelector();
+    });
+  }
 
   const btnLoad = document.getElementById("btnLoadRaeTopic");
-  if (btnLoad) {
+  if (btnLoad && !btnLoad.dataset.bound) {
+    btnLoad.dataset.bound = "true";
     btnLoad.addEventListener("click", () => {
       if (select.value) {
         loadTopicLesson(select.value);
@@ -1148,7 +1370,8 @@ function initTopicsSelector() {
   }
 
   const btnRandom = document.getElementById("btnRandomRaeTopic");
-  if (btnRandom) {
+  if (btnRandom && !btnRandom.dataset.bound) {
+    btnRandom.dataset.bound = "true";
     btnRandom.addEventListener("click", () => {
       const rand = topics[Math.floor(Math.random() * topics.length)];
       if (rand) {
@@ -1163,6 +1386,12 @@ function initTopicsSelector() {
     updateYoutubeCopy(topics[0]);
   }
 }
+
+// Exponer en window y escuchar evento load para máxima fiabilidad
+window.initTopicsSelector = initTopicsSelector;
+window.addEventListener("load", () => {
+  initTopicsSelector();
+});
 
 function updateYoutubeCopy(topic) {
   const ytTitleInput = document.getElementById("ytCopyTitle");
@@ -1269,12 +1498,20 @@ function loadTopicLesson(topicId) {
   // Actualizar automáticamente el Copy de YouTube con este tema
   updateYoutubeCopy(topic);
 
+  // Actualizar badge de Asignatura activa si existe en la UI
+  const badgeActive = document.getElementById("activeSubjectBadge");
+  const pal = getCurrentSubjectPalette();
+  if (badgeActive && pal) {
+    badgeActive.textContent = `${pal.badgeIcon} ${pal.badgeName}`;
+    badgeActive.style.background = pal.badgeBg;
+  }
+
   state.currentTime = 0;
   state.duration = 0;
   state.isPlaying = false;
   state.isRecording = false;
 
-  updateStatus(`✅ ¡Lección cargada: "${topic.name}"! Haz clic en '▶ Generar y Reproducir'.`);
+  updateStatus(`✅ ¡Lección cargada: "${topic.name}" (${pal.name})! Haz clic en '▶ Generar y Reproducir'.`);
 }
 
 window.removeStep = (idx) => {
@@ -1819,46 +2056,50 @@ function drawChannelLogo(w, h, time) {
 
   ctx.translate(cx, bannerY);
 
+  const palette = getCurrentSubjectPalette();
+
   // Sombra del banner
   ctx.save();
   ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
   ctx.shadowBlur = 20;
   ctx.shadowOffsetY = 8;
 
-  // Fondo gradiente dorado
+  // Fondo gradiente temático según asignatura
   const grad = ctx.createLinearGradient(-bannerW / 2, 0, bannerW / 2, 0);
-  grad.addColorStop(0, "#fbbf24");
-  grad.addColorStop(0.5, "#fef08a");
-  grad.addColorStop(1, "#f59e0b");
+  grad.addColorStop(0, palette.bannerGrad[0]);
+  grad.addColorStop(0.5, palette.bannerGrad[1]);
+  grad.addColorStop(1, palette.bannerGrad[2]);
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
   ctx.fill();
   ctx.restore();
 
-  // Borde oscuro marcado
+  // Borde temático marcado
   ctx.lineWidth = 4;
-  ctx.strokeStyle = "#78350f";
+  ctx.strokeStyle = palette.bannerBorder;
   ctx.beginPath();
   ctx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
   ctx.stroke();
 
-  // Mini etiqueta superior "🔴 TEMA DE HOY"
-  const tagW = 150;
+  // Mini etiqueta superior temática con Asignatura
+  ctx.font = "bold 14px 'Inter', sans-serif";
+  const badgeLabel = `${palette.badgeIcon} ${palette.badgeName}`;
+  const badgeTextW = ctx.measureText(badgeLabel).width;
+  const tagW = Math.max(160, badgeTextW + 28);
   const tagH = 26;
-  ctx.fillStyle = "#ef4444";
+  ctx.fillStyle = palette.badgeBg;
   ctx.beginPath();
   ctx.roundRect(-tagW / 2, -bannerH / 2 - 13, tagW, tagH, 8);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 15px 'Inter', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("🔴 TEMA DE HOY", 0, -bannerH / 2);
+  ctx.fillText(badgeLabel, 0, -bannerH / 2);
 
   // Texto del título
   ctx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
-  ctx.fillStyle = "#1e1b4b";
+  ctx.fillStyle = palette.bannerTextColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(lessonTitle, 0, 4);
@@ -1874,11 +2115,52 @@ function drawWhiteboardBackground(w, h) {
     const bg = isLandscape ? bgClassroomH : bgClassroomV;
     if (bg && bg.complete && bg.naturalWidth > 0) {
       ctx.drawImage(bg, 0, 0, w, h);
-      return;
+    } else {
+      ctx.fillStyle = "#81399d";
+      ctx.fillRect(0, 0, w, h);
     }
-    // Fallback mientras carga la imagen
-    ctx.fillStyle = "#81399d";
-    ctx.fillRect(0, 0, w, h);
+
+    // Aplicar paleta por materia en el aula y tablero durante la reproducción
+    const palette = getCurrentSubjectPalette();
+    if (palette && palette.wallColor) {
+      ctx.save();
+      ctx.globalCompositeOperation = "color";
+      ctx.fillStyle = palette.wallColor;
+      ctx.fillRect(0, 0, w, 1340);
+      ctx.restore();
+    }
+
+    // Fondo del tablero según la materia
+    const bx0 = 212, by0 = 692, bw = 678, bh = 476;
+    ctx.save();
+    ctx.fillStyle = palette.boardBg;
+    ctx.beginPath();
+    ctx.roundRect(bx0, by0, bw, bh, 20);
+    ctx.fill();
+
+    if (palette.hasGrid) {
+      ctx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.18)";
+      ctx.lineWidth = 1.5;
+      for (let gy = by0 + 20; gy < by0 + bh; gy += 32) {
+        ctx.beginPath();
+        ctx.moveTo(bx0, gy);
+        ctx.lineTo(bx0 + bw, gy);
+        ctx.stroke();
+      }
+      for (let gx = bx0 + 20; gx < bx0 + bw; gx += 32) {
+        ctx.beginPath();
+        ctx.moveTo(gx, by0);
+        ctx.lineTo(gx, by0 + bh);
+        ctx.stroke();
+      }
+    }
+
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = palette.boardBorder;
+    ctx.beginPath();
+    ctx.roundRect(bx0, by0, bw, bh, 20);
+    ctx.stroke();
+    ctx.restore();
     return;
   }
   if (state.theme === "blackboard_green") {
@@ -1940,10 +2222,11 @@ function drawBoardContent(w, h, currentStep, time) {
   if (!state.steps || state.steps.length === 0) return;
 
   const currentIdx = currentStep ? currentStep.index : 0;
+  const palette = getCurrentSubjectPalette();
   const isDark = state.theme.includes("blackboard");
-  const mainInk = isDark ? "#ffffff" : "#111827";
-  const blueInk = isDark ? "#60a5fa" : "#1d4ed8";
-  const redInk = isDark ? "#f87171" : "#b91c1c";
+  const mainInk = isDark ? "#ffffff" : palette.mainInk;
+  const blueInk = isDark ? "#60a5fa" : palette.accentInk;
+  const redInk = isDark ? "#f87171" : palette.redInk;
 
   const isClassroom = (state.theme === "classroom");
   const startY = isClassroom ? 760 : (h * 0.18);

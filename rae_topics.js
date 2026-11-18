@@ -1,5 +1,5 @@
 /**
- * BIBLIOTECA MAESTRA DE LECCIONES EDUCATIVAS: RAE Y PROFE MÓNICA
+ * BIBLIOTECA MAESTRA DE LECCIONES EDUCATIVAS: LA PROFE ROCHI Y RAE
  * Más de 60 temas estructurados listos para generar video y pizarra animada
  * Asignaturas: Matemáticas, Ciencias Naturales, Ciencias Sociales, Lengua Castellana, Inglés, Ética y Valores, y Ortografía RAE.
  */
@@ -1403,7 +1403,7 @@ const RAE_TOPICS = [
     ]
   },
   // =========================================================
-  // ASIGNATURAS CURRICULARES (OFICIAL PROFE MÓNICA)
+  // ASIGNATURAS CURRICULARES (OFICIALES LA PROFE ROCHI)
   // =========================================================
 {
     "id": "representaci_n_y_determinaci_n_de_conjuntos",
@@ -2535,7 +2535,7 @@ const RAE_TOPICS = [
     "summary": "El acento y la tilde (técnica SEGA)",
     "steps": [
       {
-        "speech": "¡Hola! El método SEGA de la La Profe Rochi es el truco definitivo para no dudar nunca de una tilde.",
+        "speech": "¡Hola! El método SEGA de La Profe Rochi es el truco definitivo para no dudar nunca de una tilde.",
         "action": "write",
         "text": "TÉCNICA S.E.G.A. PARA TILDES",
         "target": "title",
@@ -3090,8 +3090,11 @@ const RAE_TOPICS = [
   }
 ];
 
-// Hacer accesible en entorno global
+// Hacer accesible en entorno global de forma inmediata y auto-poblar selector si ya existe
 if (typeof window !== "undefined") {
   window.RAE_TOPICS = RAE_TOPICS;
   window.PROFE_TOPICS = RAE_TOPICS;
+  if (typeof window.initTopicsSelector === "function") {
+    try { window.initTopicsSelector(); } catch (e) { console.error("Error al auto-poblar selector de temas:", e); }
+  }
 }

@@ -106,27 +106,42 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label for="sliderMarkerSound">🔊 Sonido de Marcador/Pizarra:</label>
-            <span id="labelSoundVol" style="font-size:0.75rem; color:#60a5fa; font-weight:700;">80%</span>
+        <!-- MEZCLADOR DE AUDIO Y VOLÚMENES CONFIGURABLES -->
+        <div class="form-group" style="background: rgba(15, 23, 42, 0.65); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.28); margin-top: 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <label style="font-size:0.8rem; color:#93c5fd; font-weight:800; letter-spacing: 0.3px;">🎛️ Mezclador de Audio:</label>
+            <span style="font-size:0.68rem; color:#60a5fa; background: rgba(59, 130, 246, 0.15); padding: 2px 6px; border-radius: 4px;">Configurable</span>
           </div>
-          <input type="range" id="sliderMarkerSound" min="0" max="100" value="80" class="form-control" style="cursor:pointer; height:6px; padding:0;">
-        </div>
 
-        <!-- MÚSICA SUAVE Y AGRADABLE DE FONDO -->
-        <div class="form-group" style="background: rgba(16, 185, 129, 0.08); padding: 10px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.28); margin-top: 6px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-            <label for="selectBgMusic" style="font-size:0.78rem; color:#34d399; font-weight:700;">🎵 Música Suave de Fondo:</label>
-            <span id="labelMusicVol" style="font-size:0.72rem; color:#6ee7b7; font-weight:700;">18%</span>
+          <!-- 1. VOLUMEN VOZ DOCENTE -->
+          <div style="margin-bottom: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎙️ Voz Docente:</span>
+              <span id="labelVoiceVol" style="font-size:0.72rem; color:#60a5fa; font-weight:700;">90%</span>
+            </div>
+            <input type="range" id="sliderVoiceVol" min="0" max="100" value="90" class="form-control" style="cursor:pointer; height:6px; padding:0;">
           </div>
-          <select id="selectBgMusic" class="form-control" style="font-size: 0.8rem; margin-bottom: 6px;">
-            <option value="suave" selected>🎶 Acústica Suave y Agradable (Daily Beetle)</option>
-            <option value="none">🔇 Sin música de fondo</option>
-          </select>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:0.7rem; color:#9ca3af;">Vol:</span>
-            <input type="range" id="sliderMusicVol" min="0" max="100" value="18" class="form-control" style="cursor:pointer; height:6px; padding:0; flex-grow:1;">
+
+          <!-- 2. MÚSICA SUAVE DE FONDO -->
+          <div style="margin-bottom: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">🎵 Música Suave (Fondo):</span>
+              <span id="labelMusicVol" style="font-size:0.72rem; color:#34d399; font-weight:700;">12%</span>
+            </div>
+            <select id="selectBgMusic" class="form-control" style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 5px;">
+              <option value="suave" selected>🎶 Acústica Suave y Agradable (Daily Beetle)</option>
+              <option value="none">🔇 Sin música de fondo</option>
+            </select>
+            <input type="range" id="sliderMusicVol" min="0" max="100" value="12" class="form-control" style="cursor:pointer; height:6px; padding:0;">
+          </div>
+
+          <!-- 3. EFECTO MARCADOR PIZARRA -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#e2e8f0; font-weight:600;">✏️ Sonido Marcador/Pizarra:</span>
+              <span id="labelSoundVol" style="font-size:0.72rem; color:#fbbf24; font-weight:700;">35%</span>
+            </div>
+            <input type="range" id="sliderMarkerSound" min="0" max="100" value="35" class="form-control" style="cursor:pointer; height:6px; padding:0;">
           </div>
         </div>
       </div>
@@ -210,6 +225,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

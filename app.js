@@ -13,7 +13,7 @@ class WhiteboardSoundEngine {
     this.sourceNode = null;
     this.gainNode = null;
     this.isWriting = false;
-    this.volume = 0.85;
+    this.volume = 0.35;
     this.isLoaded = false;
   }
 
@@ -112,12 +112,14 @@ const state = {
   theme: "classroom",
   cameraMode: "director",
   format: "9:16",
-  soundVolume: 0.8,
+  soundVolume: 0.35,
   musicTrack: "suave",
-  musicVolume: 0.18,
+  musicVolume: 0.12,
+  voiceVolume: 0.90,
   bgMusicAudio: null,
   bgMusicSourceNode: null,
   bgMusicGainNode: null,
+  voiceGainNode: null,
   steps: [],
   isPlaying: false,
   isRecording: false,
@@ -334,6 +336,8 @@ const selectCameraMode = document.getElementById("selectCameraMode");
 const selectFormat = document.getElementById("selectFormat");
 const aiTopicInput = document.getElementById("aiTopicInput");
 const btnAiGenerate = document.getElementById("btnAiGenerate");
+const sliderVoiceVol = document.getElementById("sliderVoiceVol");
+const labelVoiceVol = document.getElementById("labelVoiceVol");
 const sliderMarkerSound = document.getElementById("sliderMarkerSound");
 const labelSoundVol = document.getElementById("labelSoundVol");
 const selectBgMusic = document.getElementById("selectBgMusic");
@@ -514,6 +518,21 @@ function setupEventListeners() {
   // Botón para descargar miniatura de portada
   if (btnDownloadThumbnail) {
     btnDownloadThumbnail.addEventListener("click", downloadThumbnailCover);
+  }
+
+  // Control de volumen de voz del docente
+  if (sliderVoiceVol) {
+    sliderVoiceVol.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.voiceVolume = val / 100;
+      if (labelVoiceVol) labelVoiceVol.textContent = `${val}%`;
+      if (state.audioElement) {
+        state.audioElement.volume = state.voiceVolume;
+      }
+      if (state.voiceGainNode && state.audioContext) {
+        state.voiceGainNode.gain.setTargetAtTime(state.voiceVolume, state.audioContext.currentTime, 0.04);
+      }
+    });
   }
 
   if (sliderMarkerSound) {
@@ -844,6 +863,7 @@ function initAudio() {
 
   if (!state.audioElement) {
     state.audioElement = new Audio();
+    state.audioElement.volume = state.voiceVolume;
     state.audioElement.addEventListener("timeupdate", () => {
       state.currentTime = state.audioElement.currentTime;
       updateTimeBadge();
@@ -2694,8 +2714,11 @@ async function startRecording() {
 
     if (!state.audioElementSourceNode) {
       state.audioElementSourceNode = state.audioContext.createMediaElementSource(state.audioElement);
-      state.audioElementSourceNode.connect(state.destAudioStreamNode);
-      state.audioElementSourceNode.connect(state.audioContext.destination);
+      state.voiceGainNode = state.audioContext.createGain();
+      state.voiceGainNode.gain.setValueAtTime(state.voiceVolume, state.audioContext.currentTime);
+      state.audioElementSourceNode.connect(state.voiceGainNode);
+      state.voiceGainNode.connect(state.destAudioStreamNode);
+      state.voiceGainNode.connect(state.audioContext.destination);
     }
 
     if (soundEngine && soundEngine.masterGain) {

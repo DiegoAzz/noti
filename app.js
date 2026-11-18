@@ -1157,6 +1157,105 @@ function initTopicsSelector() {
       }
     });
   }
+
+  setupYoutubeCopyButtons();
+  if (topics.length > 0) {
+    updateYoutubeCopy(topics[0]);
+  }
+}
+
+function updateYoutubeCopy(topic) {
+  const ytTitleInput = document.getElementById("ytCopyTitle");
+  const ytDescInput = document.getElementById("ytCopyDesc");
+  if (!ytTitleInput || !ytDescInput) return;
+
+  const titleText = topic ? topic.name : getLessonTitle();
+  const summaryText = topic ? (topic.summary || "") : "Explicación interactiva en pizarra con La Profe Rochi.";
+  const categoryText = topic ? (topic.category || "Educación") : "Educación";
+
+  // 1. Título Viral optimizado para YouTube / Shorts / Reels / TikTok
+  const cleanTitle = titleText.replace(/^¿/, "").replace(/\?$/, "").trim();
+  const viralTitle = `🔥 ${titleText} ¡Aprende la regla en 1 minuto! | La Profe Rochi 🎓 #Shorts`;
+
+  // 2. Extraer puntos clave de la pizarra
+  const keyPoints = [];
+  if (state.steps && state.steps.length > 0) {
+    state.steps.forEach(s => {
+      if (s.text && s.text.trim().length > 0 && s.target !== "title") {
+        keyPoints.push(`✍️ En la pizarra: "${s.text.trim()}"`);
+      }
+    });
+  }
+  const keyPointsStr = keyPoints.length > 0 
+    ? keyPoints.join("\n") 
+    : `✍️ Regla explicada paso a paso en la pizarra interactiva.`;
+
+  // 3. Descripción completa profesional para YouTube
+  const viralDescription = `¿Tienes dudas con "${cleanTitle}"? ¡En esta clase rápida de 1 minuto, La Profe Rochi te lo explica de forma súper sencilla y entretenida en la pizarra animada!
+
+📚 REGLA RÁPIDA:
+${summaryText}
+
+🎯 PUNTOS CLAVE VISTOS EN LA PIZARRA:
+${keyPointsStr}
+
+🔔 ¡Suscríbete al canal de La Profe Rochi para no perderte ninguna lección de ortografía, matemáticas, ciencias y curiosidades!
+💬 Déjame en los comentarios: ¿qué otro tema te gustaría que explique en la pizarra?
+👍 Dale like y comparte con alguien a quien le sirva este video.
+
+----------------------------------------
+📌 Asignatura: ${categoryText}
+#LaProfeRochi #Educacion #AprendeEnTikTok #Shorts #Reels #WhiteboardAnimation #ProfePizarra #ClasesOnline #RAE`;
+
+  ytTitleInput.value = viralTitle;
+  ytDescInput.value = viralDescription;
+}
+
+function setupYoutubeCopyButtons() {
+  const btnCopyAll = document.getElementById("btnCopyAllYoutube");
+  const btnCopyTitle = document.getElementById("btnCopyYtTitle");
+  const btnCopyDesc = document.getElementById("btnCopyYtDesc");
+  const ytTitleInput = document.getElementById("ytCopyTitle");
+  const ytDescInput = document.getElementById("ytCopyDesc");
+
+  const copyText = (text, msg) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        updateStatus(msg);
+        alert(msg);
+      }).catch(() => fallbackCopy(text, msg));
+    } else {
+      fallbackCopy(text, msg);
+    }
+  };
+
+  const fallbackCopy = (text, msg) => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    updateStatus(msg);
+    alert(msg);
+  };
+
+  if (btnCopyAll) {
+    btnCopyAll.addEventListener("click", () => {
+      const full = `${ytTitleInput ? ytTitleInput.value : ""}\n\n${ytDescInput ? ytDescInput.value : ""}`;
+      copyText(full, "✅ ¡Título y Descripción completa para YouTube copiados al portapapeles!");
+    });
+  }
+  if (btnCopyTitle) {
+    btnCopyTitle.addEventListener("click", () => {
+      copyText(ytTitleInput ? ytTitleInput.value : "", "✅ ¡Título de YouTube copiado al portapapeles!");
+    });
+  }
+  if (btnCopyDesc) {
+    btnCopyDesc.addEventListener("click", () => {
+      copyText(ytDescInput ? ytDescInput.value : "", "✅ ¡Descripción de YouTube copiada al portapapeles!");
+    });
+  }
 }
 
 function loadTopicLesson(topicId) {
@@ -1166,6 +1265,9 @@ function loadTopicLesson(topicId) {
 
   state.steps = JSON.parse(JSON.stringify(topic.steps));
   renderStepsUI();
+
+  // Actualizar automáticamente el Copy de YouTube con este tema
+  updateYoutubeCopy(topic);
 
   state.currentTime = 0;
   state.duration = 0;
@@ -1991,22 +2093,36 @@ function drawBoardContent(w, h, currentStep, time) {
           isWritingNow = true;
         }
       } else if (subStep.action === "highlight") {
-        ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+        // DETECCIÓN INTELIGENTE DE FILA: Si el texto a resaltar es diferente a s.text,
+        // pertenece a la FILA 2 (yPos + rowHeight) para que NUNCA se monte sobre la fila 1
+        const isDifferentText = Boolean(subStep.text && s.text && subStep.text.trim() !== s.text.trim());
+        const targetRowY = isDifferentText ? (yPos + rowHeight) : yPos;
+
+        let hlFontSize = fontSize;
+        ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
         const hlText = subStep.text || s.text || "";
-        const hlTotalW = ctx.measureText(hlText).width;
+        let hlTotalW = ctx.measureText(hlText).width;
+        if (hlTotalW > 740) {
+          hlFontSize = Math.max(38, Math.floor(fontSize * (740 / hlTotalW)));
+          ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+          hlTotalW = ctx.measureText(hlText).width;
+        }
         const hlStartX = (w / 2) - (hlTotalW / 2);
         const textW = hlTotalW * subProg;
 
+        // Cuadro de resaltador amarillo suave en su propia fila independiente
         ctx.fillStyle = "rgba(250, 204, 21, 0.45)";
-        ctx.fillRect(hlStartX, yPos - 52, textW, 58);
+        ctx.fillRect(hlStartX - 6, targetRowY - 52, textW + 12, 60);
 
+        // Trazo del texto nítido en su fila
         ctx.fillStyle = blueInk;
         ctx.textAlign = "left";
-        ctx.fillText(hlText, hlStartX, yPos);
+        const charSubCount = Math.floor(hlText.length * subProg);
+        ctx.fillText(hlText.substring(0, charSubCount), hlStartX, targetRowY);
 
         if (isSubDrawing) {
           handTargetX = hlStartX + textW;
-          handTargetY = yPos - 22;
+          handTargetY = targetRowY - 22;
           handAngle = -0.05;
           isWritingNow = true;
         }

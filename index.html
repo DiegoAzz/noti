@@ -198,6 +198,38 @@
           </div>
         </div>
 
+        <!-- CAJA DE COPY VIRAL PARA YOUTUBE / SHORTS / REELS / TIKTOK -->
+        <div class="section" style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid #ef4444; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:1.1rem;">📺</span>
+              <label class="section-title" style="margin:0; color:#fca5a5; font-size:0.85rem; font-weight:800;">Copy para YouTube (Título y Descripción)</label>
+            </div>
+            <button class="btn-sm" id="btnCopyAllYoutube" style="background:#ef4444; color:#fff; font-weight:700; font-size:0.7rem; cursor:pointer;" title="Copiar Título y Descripción completa">
+              📋 Copiar Todo
+            </button>
+          </div>
+          <p class="section-hint" style="margin-bottom:8px; font-size:0.7rem; color:#cbd5e1;">
+            Título viral y descripción completa con resumen, puntos de la pizarra y hashtags listos para publicar:
+          </p>
+
+          <div style="margin-bottom: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#94a3b8; font-weight:700;">📌 Título Viral de YouTube:</span>
+              <button class="btn-sm" id="btnCopyYtTitle" style="padding:1px 6px; font-size:0.65rem; background:#374151; color:#f3f4f6; cursor:pointer;">Copiar Título</button>
+            </div>
+            <input type="text" id="ytCopyTitle" class="form-control" style="font-size:0.8rem; font-weight:700; background:#0f172a; color:#fef08a; border: 1px solid #475569;" readonly>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#94a3b8; font-weight:700;">📝 Descripción con Hashtags:</span>
+              <button class="btn-sm" id="btnCopyYtDesc" style="padding:1px 6px; font-size:0.65rem; background:#374151; color:#f3f4f6; cursor:pointer;">Copiar Descripción</button>
+            </div>
+            <textarea id="ytCopyDesc" class="form-control" rows="5" style="font-size:0.75rem; font-family:inherit; background:#0f172a; color:#e2e8f0; border: 1px solid #475569;" readonly></textarea>
+          </div>
+        </div>
+
         <!-- EDITOR DE SECUENCIA / PASOS -->
         <div class="section flex-grow">
           <div class="section-header-inline">

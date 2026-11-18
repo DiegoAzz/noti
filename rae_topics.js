@@ -97,7 +97,7 @@ const RAE_TOPICS = [
       },
       {
         speech: "Y 'allá' con tilde final indica lugar o distancia: 'mira hacia allá en el horizonte'.",
-        action: "highlight",
+        action: "write",
         text: "allá = lugar",
         target: "example2",
         camera: "board"

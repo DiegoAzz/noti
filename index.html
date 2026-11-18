@@ -51,34 +51,29 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="selectAvatar">Personaje:</label>
-            <select id="selectAvatar" class="form-control">
-              <option value="bellum" selected>🔥 Señorita Bellum (Sprites Animados Limpios: Habla + Gestos + Pizarra)</option>
-              <option value="bellum_full">💃 Señorita Bellum (Ilustración clásica con Lip-Sync)</option>
-              <option value="custom_3d">💃 Avatar 3D (Modelo GLB)</option>
-              <option value="monica">Profe Mónica (Clásica)</option>
-              <option value="carlos">Prof. Carlos (Formal)</option>
-              <option value="pizarra_only">Solo Pizarra y Mano</option>
-            </select>
+            <label>Docente Predeterminado:</label>
+            <div style="background: rgba(220, 38, 38, 0.12); border: 1.5px solid #ef4444; border-radius: 8px; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.25rem;">🔥</span>
+                <div>
+                  <div style="font-weight: 800; font-size: 0.82rem; color: #fca5a5;">La Profe Rochi (Animada)</div>
+                  <div style="font-size: 0.66rem; color: #94a3b8;">Sprites Limpios: Habla + Gestos + Pizarra</div>
+                </div>
+              </div>
+              <span style="background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 10px;">OFICIAL</span>
+            </div>
+            <input type="hidden" id="selectAvatar" value="bellum">
           </div>
           <div class="form-group">
             <label for="selectTheme">Estilo Pizarra:</label>
             <select id="selectTheme" class="form-control">
-              <option value="classroom" selected>🏫 Aula Animada (Pizarra Amarilla y Aula Completa)</option>
+              <option value="classroom" selected>🏫 Aula Animada (Pizarra Amarilla)</option>
               <option value="whiteboard_grid">Pizarra Blanca Cuadriculada</option>
               <option value="whiteboard_clean">Pizarra Blanca Lisa</option>
               <option value="blackboard_green">Pizarra Verde Tiza</option>
               <option value="blackboard_dark">Pizarra Oscura Moderna</option>
             </select>
           </div>
-        </div>
-
-        <div class="form-group" style="background: rgba(59, 130, 246, 0.08); padding: 8px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label for="customGlbInput" style="font-size:0.75rem; color:#60a5fa; font-weight:700;">📁 Probar otro avatar 3D (.glb):</label>
-            <span id="label3dStatus" style="font-size:0.7rem; color:#10b981;">Listo</span>
-          </div>
-          <input type="file" id="customGlbInput" accept=".glb,.gltf" class="form-control" style="font-size: 0.75rem; padding: 4px; margin-top: 4px;">
         </div>
 
         <!-- LOGO OFICIAL DEL CANAL: LA PROFE ROCHI -->
@@ -123,10 +118,35 @@
       <!-- EDITOR DE SECUENCIA / PASOS -->
       <div class="section flex-grow">
         <div class="section-header-inline">
-          <label class="section-title">📝 Guion y Acciones de Pizarra</label>
-          <button class="btn-sm" id="btnAddStep">+ Añadir Paso</button>
+          <label class="section-title">📝 Guion y Pasos</label>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-sm" id="btnTogglePasteScript" style="background:#4f46e5; color:#fff;" title="Pegar texto o guion completo">📋 Pegar Guion</button>
+            <button class="btn-sm" id="btnAddStep">+ Añadir</button>
+          </div>
         </div>
-        <p class="section-hint">Define lo que explica el profe y lo que la mano va escribiendo/marcando en la pizarra.</p>
+        <p class="section-hint">Define lo que explica el docente y lo que se escribe en pizarra.</p>
+
+        <!-- CAJA DESPLEGABLE PARA PEGAR TEXTO COMPLETO -->
+        <div id="pasteScriptPanel" style="display:none; background:#1e1b4b; border:1px solid #6366f1; border-radius:8px; padding:10px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:0.75rem; font-weight:700; color:#c7d2fe;">📋 Pegar Texto o Guion Completo:</span>
+            <button class="btn-sm" id="btnClosePasteScript" style="padding:1px 6px; font-size:0.7rem;">✕</button>
+          </div>
+          <p style="font-size:0.68rem; color:#a5b4fc; margin-bottom:6px;">
+            Formato con etiquetas (o pega cualquier texto largo y el sistema lo divide solo):<br>
+            <code>TÍTULO: Los Palíndromos<br>
+            HABLA: ¡Hola! Hoy te enseño qué son los palíndromos.<br>
+            PIZARRA: reconocer<br>
+            HABLA: Fíjate cómo se lee igual al revés.<br>
+            PIZARRA: somos<br>
+            HABLA: ¿Conoces otro palíndromo? ¡Comenta!</code>
+          </p>
+          <textarea id="rawScriptText" class="form-control" rows="6" style="font-size:0.75rem; font-family:monospace;" placeholder="Pega aquí tu guion o texto..."></textarea>
+          <button id="btnProcessRawScript" class="btn btn-primary btn-sm" style="width:100%; margin-top:6px; font-weight:700;">
+            ⚡ Auto-Dividir y Cargar en Pasos
+          </button>
+        </div>
+
         <div id="stepsList" class="steps-container"></div>
       </div>
 
@@ -146,6 +166,9 @@
         </button>
         <button id="btnRecord" class="btn btn-accent btn-large">
           ⏺ Grabar y Descargar Video MP4
+        </button>
+        <button id="btnDownloadThumbnail" class="btn btn-secondary btn-large" style="margin-top: 6px; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1); color: #fde047;">
+          📸 Guardar Miniatura HD (Cover)
         </button>
       </div>
       <div id="statusNotice" class="status-notice">Listo para crear tu lección interactiva.</div>
@@ -171,6 +194,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

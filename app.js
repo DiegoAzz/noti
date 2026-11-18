@@ -331,6 +331,12 @@ const aiTopicInput = document.getElementById("aiTopicInput");
 const btnAiGenerate = document.getElementById("btnAiGenerate");
 const sliderMarkerSound = document.getElementById("sliderMarkerSound");
 const labelSoundVol = document.getElementById("labelSoundVol");
+const btnDownloadThumbnail = document.getElementById("btnDownloadThumbnail");
+const btnTogglePasteScript = document.getElementById("btnTogglePasteScript");
+const btnClosePasteScript = document.getElementById("btnClosePasteScript");
+const btnProcessRawScript = document.getElementById("btnProcessRawScript");
+const pasteScriptPanel = document.getElementById("pasteScriptPanel");
+const rawScriptText = document.getElementById("rawScriptText");
 const customGlbInput = document.getElementById("customGlbInput");
 const label3dStatus = document.getElementById("label3dStatus");
 
@@ -463,44 +469,43 @@ function setupEventListeners() {
     renderStepsUI();
   });
 
-  selectVoice.addEventListener("change", (e) => state.voice = e.target.value);
-  selectAvatar.addEventListener("change", (e) => state.avatar = e.target.value);
-  selectTheme.addEventListener("change", (e) => state.theme = e.target.value);
-  selectCameraMode.addEventListener("change", (e) => state.cameraMode = e.target.value);
-  selectFormat.addEventListener("change", (e) => {
-    state.format = e.target.value;
-    resizeCanvas();
-  });
-
-  if (customGlbInput) {
-    customGlbInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (label3dStatus) label3dStatus.textContent = "Leyendo modelo...";
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const loader = new THREE.GLTFLoader();
-        loader.parse(
-          evt.target.result,
-          "",
-          (gltf) => {
-            setup3DCharacter(gltf.scene);
-            threeLoaded = true;
-            state.avatar = "custom_3d";
-            selectAvatar.value = "custom_3d";
-            if (label3dStatus) label3dStatus.textContent = `✅ ${file.name.slice(0, 16)}...`;
-            updateStatus(`Avatar 3D "${file.name}" cargado exitosamente.`);
-          },
-          (err) => {
-            console.error("Error al cargar GLB:", err);
-            if (label3dStatus) label3dStatus.textContent = "Error de formato";
-            alert("No se pudo leer el archivo 3D. Asegúrate de que sea un .glb o .gltf válido.");
-          }
-        );
-      };
-      reader.readAsArrayBuffer(file);
+  if (selectVoice) selectVoice.addEventListener("change", (e) => state.voice = e.target.value);
+  if (selectAvatar && selectAvatar.tagName === "SELECT") {
+    selectAvatar.addEventListener("change", (e) => state.avatar = e.target.value);
+  } else {
+    state.avatar = "bellum";
+  }
+  if (selectTheme) selectTheme.addEventListener("change", (e) => state.theme = e.target.value);
+  if (selectCameraMode) selectCameraMode.addEventListener("change", (e) => state.cameraMode = e.target.value);
+  if (selectFormat) {
+    selectFormat.addEventListener("change", (e) => {
+      state.format = e.target.value;
+      resizeCanvas();
     });
+  }
+
+  // Panel para pegar texto completo y dividir pasos automáticamente
+  if (btnTogglePasteScript) {
+    btnTogglePasteScript.addEventListener("click", () => {
+      if (pasteScriptPanel) {
+        pasteScriptPanel.style.display = (pasteScriptPanel.style.display === "none" || !pasteScriptPanel.style.display) ? "block" : "none";
+      }
+    });
+  }
+  if (btnClosePasteScript) {
+    btnClosePasteScript.addEventListener("click", () => {
+      if (pasteScriptPanel) pasteScriptPanel.style.display = "none";
+    });
+  }
+  if (btnProcessRawScript) {
+    btnProcessRawScript.addEventListener("click", () => {
+      if (rawScriptText) parseScriptText(rawScriptText.value);
+    });
+  }
+
+  // Botón para descargar miniatura de portada
+  if (btnDownloadThumbnail) {
+    btnDownloadThumbnail.addEventListener("click", downloadThumbnailCover);
   }
 
   if (sliderMarkerSound) {
@@ -544,6 +549,11 @@ function renderStepsUI() {
   state.steps.forEach((step, idx) => {
     const card = document.createElement("div");
     card.className = "step-card";
+    const speechLen = (step.speech || "").length;
+    const textLen = (step.text || "").length;
+    const speechCounterClass = speechLen > 130 ? "char-counter danger" : (speechLen > 110 ? "char-counter warning" : "char-counter");
+    const textCounterClass = textLen > 28 ? "char-counter danger" : (textLen > 22 ? "char-counter warning" : "char-counter");
+
     card.innerHTML = `
       <div class="step-card-header">
         <span class="step-number">Paso ${idx + 1}</span>
@@ -552,8 +562,11 @@ function renderStepsUI() {
         </div>
       </div>
       <div class="form-group">
-        <label>Lo que dice el docente:</label>
-        <textarea class="form-control" onchange="updateStepSpeech(${idx}, this.value)">${escapeHtml(step.speech)}</textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label>Lo que dice el docente:</label>
+          <span class="${speechCounterClass}" id="speech-counter-${idx}">${speechLen}/140</span>
+        </div>
+        <textarea class="form-control" maxlength="140" oninput="onStepSpeechInput(${idx}, this)" onchange="updateStepSpeech(${idx}, this.value)">${escapeHtml(step.speech)}</textarea>
       </div>
       <div class="step-card-footer">
         <div class="form-group">
@@ -562,17 +575,169 @@ function renderStepsUI() {
             <option value="write" ${step.action === "write" ? "selected" : ""}>✍️ Escribir texto</option>
             <option value="arc" ${step.action === "arc" ? "selected" : ""}>🔗 Flecha de unión</option>
             <option value="highlight" ${step.action === "highlight" ? "selected" : ""}>🟡 Resaltar</option>
+            <option value="talk" ${step.action === "talk" ? "selected" : ""}>💬 Solo hablar</option>
             <option value="clear" ${step.action === "clear" ? "selected" : ""}>🧹 Borrar pizarra</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Contenido / Texto:</label>
-          <input type="text" class="form-control" value="${escapeHtml(step.text || '')}" onchange="updateStepText(${idx}, this.value)">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>Texto pizarra:</label>
+            <span class="${textCounterClass}" id="text-counter-${idx}">${textLen}/30</span>
+          </div>
+          <input type="text" class="form-control" maxlength="30" value="${escapeHtml(step.text || '')}" oninput="onStepTextInput(${idx}, this)" onchange="updateStepText(${idx}, this.value)">
         </div>
       </div>
     `;
     stepsListEl.appendChild(card);
   });
+}
+
+window.onStepSpeechInput = (idx, el) => {
+  if (state.steps[idx]) state.steps[idx].speech = el.value;
+  const counter = document.getElementById(`speech-counter-${idx}`);
+  if (counter) {
+    const len = el.value.length;
+    counter.textContent = `${len}/140`;
+    counter.className = len > 130 ? "char-counter danger" : (len > 110 ? "char-counter warning" : "char-counter");
+  }
+};
+
+window.onStepTextInput = (idx, el) => {
+  if (state.steps[idx]) state.steps[idx].text = el.value;
+  const counter = document.getElementById(`text-counter-${idx}`);
+  if (counter) {
+    const len = el.value.length;
+    counter.textContent = `${len}/30`;
+    counter.className = len > 28 ? "char-counter danger" : (len > 22 ? "char-counter warning" : "char-counter");
+  }
+};
+
+function splitIntoChunks(text, maxChars = 135) {
+  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+  const chunks = [];
+  let cur = "";
+  for (const w of words) {
+    if (!cur) {
+      cur = w;
+    } else if ((cur + " " + w).length <= maxChars) {
+      cur += " " + w;
+    } else {
+      chunks.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
+function parseScriptText(raw) {
+  if (!raw || !raw.trim()) {
+    alert("Pega primero el texto o guion en el cuadro.");
+    return;
+  }
+  const lines = raw.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  const newSteps = [];
+  let explicitTitle = "";
+
+  const hasTags = lines.some(l => /^(T[ÍI]TULO|HABLA|PROFE|DOCENTE|PIZARRA|TEXTO|ESCRIBE|ARCO|FLECHA):/i.test(l));
+
+  if (hasTags) {
+    let pendingText = "";
+    let pendingAction = "talk";
+
+    for (const line of lines) {
+      if (/^(T[ÍI]TULO):/i.test(line)) {
+        explicitTitle = line.replace(/^(T[ÍI]TULO):/i, "").trim().slice(0, 30);
+      } else if (/^(PIZARRA|TEXTO|ESCRIBE):/i.test(line)) {
+        pendingText = line.replace(/^(PIZARRA|TEXTO|ESCRIBE):/i, "").trim().slice(0, 30);
+        pendingAction = "write";
+        if (newSteps.length > 0 && newSteps[newSteps.length - 1].action === "talk") {
+          newSteps[newSteps.length - 1].action = "write";
+          newSteps[newSteps.length - 1].text = pendingText;
+          newSteps[newSteps.length - 1].camera = "board";
+          pendingText = "";
+          pendingAction = "talk";
+        }
+      } else if (/^(HABLA|PROFE|DOCENTE):/i.test(line)) {
+        const speech = line.replace(/^(HABLA|PROFE|DOCENTE):/i, "").trim();
+        const chunks = splitIntoChunks(speech, 135);
+        chunks.forEach((chunk, cIdx) => {
+          newSteps.push({
+            speech: chunk,
+            action: (cIdx === 0 && pendingText) ? pendingAction : "talk",
+            text: (cIdx === 0 && pendingText) ? pendingText : "",
+            camera: (cIdx === 0 && pendingText) ? "board" : "teacher"
+          });
+          pendingText = "";
+          pendingAction = "talk";
+        });
+      } else if (/^(ARCO|FLECHA):/i.test(line)) {
+        const text = line.replace(/^(ARCO|FLECHA):/i, "").trim().slice(0, 30);
+        newSteps.push({
+          speech: "Observa con atención cómo coinciden.",
+          action: "arc",
+          text: text,
+          camera: "board"
+        });
+      }
+    }
+  } else {
+    // Texto libre sin etiquetas
+    const sentences = raw.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [raw];
+    sentences.forEach((sent, sIdx) => {
+      const clean = sent.trim();
+      if (!clean) return;
+      const chunks = splitIntoChunks(clean, 135);
+      chunks.forEach((chunk, cIdx) => {
+        if (sIdx === 0 && cIdx === 0) {
+          explicitTitle = chunk.slice(0, 26).toUpperCase();
+          newSteps.push({
+            speech: chunk,
+            action: "write",
+            text: explicitTitle,
+            target: "title",
+            camera: "board"
+          });
+        } else {
+          const isWrite = (sIdx % 2 === 1 && cIdx === 0);
+          newSteps.push({
+            speech: chunk,
+            action: isWrite ? "write" : "talk",
+            text: isWrite ? chunk.split(/\s+/).slice(0, 3).join(" ").slice(0, 28) : "",
+            camera: isWrite ? "board" : "teacher"
+          });
+        }
+      });
+    });
+  }
+
+  if (newSteps.length > 0) {
+    if (explicitTitle) {
+      newSteps[0].text = explicitTitle;
+      newSteps[0].target = "title";
+      newSteps[0].action = "write";
+    }
+    state.steps = newSteps;
+    renderStepsUI();
+    if (pasteScriptPanel) pasteScriptPanel.style.display = "none";
+    updateStatus(`✅ ¡Guion importado! Se generaron ${newSteps.length} pasos respetando los límites.`);
+  }
+}
+
+function downloadThumbnailCover() {
+  try {
+    const dataUrl = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `miniatura_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    updateStatus("📸 ¡Miniatura HD guardada con éxito!");
+  } catch (err) {
+    console.error("Error al guardar miniatura:", err);
+    alert("No se pudo descargar la miniatura.");
+  }
 }
 
 window.removeStep = (idx) => {
@@ -818,6 +983,12 @@ function renderLoop(time) {
   const w = canvas.width;
   const h = canvas.height;
 
+  // Sincronización continua de alta precisión (60 FPS) entre audio y fotogramas visuales
+  if (state.audioElement && !state.audioElement.paused) {
+    state.currentTime = state.audioElement.currentTime;
+    updateTimeBadge();
+  }
+
   const currentStep = getCurrentStep();
   const cameraType = getEffectiveCamera(currentStep);
 
@@ -868,38 +1039,98 @@ const bgClassroomH = new Image();
 bgClassroomH.src = "/backgrounds/classroom_16_9.jpg";
 
 /* =========================================================
-   EMBLEMA OFICIAL: "LA PROFE ROCHI" (ZONA SUPERIOR DEL AULA)
+   EMBLEMA OFICIAL: "LA PROFE ROCHI" Y BANNER MINIATURA COVER
    ========================================================= */
 
 const logoProfeRochi = new Image();
 logoProfeRochi.src = "/assets/logo_profe_rochi.png";
 
+function getLessonTitle() {
+  const tStep = (state.steps && state.steps.find(s => s.target === "title" || (s.action === "write" && s.text)));
+  if (tStep && tStep.text) return tStep.text.toUpperCase();
+  return "CLASE CON LA PROFE ROCHI";
+}
+
 function drawChannelLogo(w, h, time) {
   // Solo se dibuja en formato vertical 9:16 donde está el espacio superior del aula
   if (state.format !== "9:16") return;
-  if (!logoProfeRochi.complete || logoProfeRochi.naturalWidth === 0) return;
 
   const cx = w / 2; // 540 (centrado en la pared superior)
-  const cy = 350;
-  const size = 480;
+  const cy = 255;
+  const size = 330;
 
   // Sutil flotación suave estilo caricatura
-  const bobY = Math.sin(time * 0.002) * 4;
+  const bobY = Math.sin(time * 0.002) * 3;
+
+  if (logoProfeRochi.complete && logoProfeRochi.naturalWidth > 0) {
+    ctx.save();
+    ctx.translate(cx, cy + bobY);
+
+    // Sombra suave en la pared morada del aula
+    ctx.save();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 10;
+    ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+    ctx.restore();
+
+    // Dibujar el logo oficial con sus bordes amarillos nítidos
+    ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+
+  // BANNER DE MINIATURA VIRAL CON EL TÍTULO DEL TEMA (ZONA SUPERIOR PARA PORTADA)
+  const lessonTitle = getLessonTitle();
+  const bannerY = 465 + bobY * 0.5;
+  const bannerW = Math.min(840, Math.max(500, lessonTitle.length * 28 + 120));
+  const bannerH = 68;
 
   ctx.save();
-  ctx.translate(cx, cy + bobY);
+  ctx.translate(cx, bannerY);
 
-  // Sombra suave en la pared morada del aula
+  // Sombra del banner
   ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-  ctx.shadowBlur = 26;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 12;
-  ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 8;
+
+  // Fondo gradiente dorado
+  const grad = ctx.createLinearGradient(-bannerW / 2, 0, bannerW / 2, 0);
+  grad.addColorStop(0, "#fbbf24");
+  grad.addColorStop(0.5, "#fef08a");
+  grad.addColorStop(1, "#f59e0b");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
+  ctx.fill();
   ctx.restore();
 
-  // Dibujar el logo oficial con sus bordes amarillos nítidos
-  ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+  // Borde oscuro marcado
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#78350f";
+  ctx.beginPath();
+  ctx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
+  ctx.stroke();
+
+  // Mini etiqueta superior "🔴 TEMA DE HOY"
+  const tagW = 150;
+  const tagH = 26;
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.roundRect(-tagW / 2, -bannerH / 2 - 13, tagW, tagH, 8);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 15px 'Inter', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("🔴 TEMA DE HOY", 0, -bannerH / 2);
+
+  // Texto del título
+  ctx.font = "900 36px 'Inter', sans-serif";
+  ctx.fillStyle = "#1e1b4b";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(lessonTitle, 0, 4);
 
   ctx.restore();
 }
@@ -992,104 +1223,133 @@ function drawBoardContent(w, h, currentStep, time) {
   let handAngle = -0.15;
   let isWritingNow = false;
 
-  const cameraType = getEffectiveCamera(currentStep);
+  // 1. TÍTULO DE LA LECCIÓN (FILA 0): Siempre visible y destacado en la cabecera de la pizarra
+  const titleStep = state.steps.find(s => s.target === "title") || state.steps[0];
+  if (titleStep && titleStep.action === "write") {
+    const isCurrentTitle = (currentIdx === 0);
+    const progressTitle = isCurrentTitle ? (currentStep.progress || 1) : 1;
+    const fullTitle = titleStep.text || "";
+    const charCount = Math.floor(fullTitle.length * progressTitle);
+    const textToShow = fullTitle.substring(0, charCount);
 
-  // Mapeo de filas lógicas en la pizarra para evitar superposiciones o duplicados
-  function getBoardRow(s, idx) {
-    if (s.target === "title" || idx === 0) return 0;
-    if (s.target === "example1" || s.action === "arc") return 1;
-    if (s.target === "example2") return 2;
-    if (s.target === "example3") return 3;
-    return Math.min(idx, 3);
+    let fontSize = 66;
+    ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let totalW = ctx.measureText(fullTitle).width;
+    if (totalW > 740) {
+      fontSize = Math.max(44, Math.floor(fontSize * (740 / totalW)));
+      ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      totalW = ctx.measureText(fullTitle).width;
+    }
+    const startX = (w / 2) - (totalW / 2);
+    ctx.fillStyle = blueInk;
+    ctx.textAlign = "left";
+    ctx.fillText(textToShow, startX, startY);
+
+    if (isCurrentTitle && progressTitle < 0.98 && fullTitle.length > 0 && state.isPlaying) {
+      const textW = ctx.measureText(textToShow).width;
+      handTargetX = startX + textW;
+      handTargetY = startY - 14;
+      handAngle = -0.12;
+      isWritingNow = true;
+    }
   }
 
-  // Dibujamos todos los trazos completados hasta el paso actual
-  for (let i = 0; i <= currentIdx; i++) {
-    const s = state.steps[i];
-    if (!s) continue;
-    // Las acciones de solo hablar ("talk") no agregan texto nuevo a la pizarra
-    if (s.action === "talk") continue;
+  // 2. CONTENIDO INFERIOR: Se auto-limpia con cada nuevo paso de escritura (no se sobreescribe)
+  let activeWriteIdx = -1;
+  for (let k = currentIdx; k >= 1; k--) {
+    if (state.steps[k] && state.steps[k].action === "write") {
+      activeWriteIdx = k;
+      break;
+    }
+  }
 
-    const isCurrent = (i === currentIdx);
+  // Si hay un paso de escritura activo posterior al título, dibujamos ese paso y sus derivados (arcos/resaltados)
+  if (activeWriteIdx >= 1) {
+    const s = state.steps[activeWriteIdx];
+    const isCurrent = (activeWriteIdx === currentIdx);
     const progress = isCurrent ? (currentStep.progress || 1) : 1;
-    const row = getBoardRow(s, i);
-    const yPos = startY + (row * rowHeight);
+    const yPos = startY + rowHeight; // Fila 1
 
-    if (s.action === "write") {
-      const fullText = s.text || "";
-      const charCount = Math.floor(fullText.length * progress);
-      const textToShow = fullText.substring(0, charCount);
+    const fullText = s.text || "";
+    const charCount = Math.floor(fullText.length * progress);
+    const textToShow = fullText.substring(0, charCount);
 
-      ctx.font = (row === 0) 
-        ? "bold 68px 'Caveat', 'Kalam', cursive, sans-serif" 
-        : "bold 74px 'Caveat', 'Kalam', cursive, sans-serif";
-      ctx.fillStyle = (row === 0) ? blueInk : mainInk;
+    let fontSize = 72;
+    ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let totalW = ctx.measureText(fullText).width;
+    if (totalW > 740) {
+      fontSize = Math.max(44, Math.floor(fontSize * (740 / totalW)));
+      ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      totalW = ctx.measureText(fullText).width;
+    }
+    const startX = (w / 2) - (totalW / 2);
 
-      const totalW = ctx.measureText(fullText).width;
-      // Centrado horizontal en la pizarra
-      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+    ctx.fillStyle = mainInk;
+    ctx.textAlign = "left";
+    ctx.fillText(textToShow, startX, yPos);
 
-      // Dibujar texto alineado a la izquierda para estabilidad visual letra por letra
-      ctx.textAlign = "left";
-      ctx.fillText(textToShow, startX, yPos);
+    if (isCurrent && progress < 0.98 && fullText.length > 0 && state.isPlaying) {
+      const textW = ctx.measureText(textToShow).width;
+      handTargetX = startX + textW;
+      handTargetY = yPos - 14;
+      handAngle = -0.12;
+      isWritingNow = true;
+    }
 
-      // Animación activa de escritura en el trazo actual
-      if (isCurrent && progress < 0.98 && fullText.length > 0 && state.isPlaying) {
-        const textWidth = ctx.measureText(textToShow).width;
-        handTargetX = startX + textWidth;
-        handTargetY = yPos - 14;
-        handAngle = -0.12;
-        isWritingNow = true;
-      }
-    } else if (s.action === "arc") {
-      ctx.font = "bold 74px 'Caveat', 'Kalam', cursive, sans-serif";
-      ctx.fillStyle = mainInk;
+    // Dibujar arcos o resaltados pertenecientes a este paso activo
+    for (let j = activeWriteIdx + 1; j <= currentIdx; j++) {
+      const subStep = state.steps[j];
+      if (!subStep) continue;
+      const isSubCurrent = (j === currentIdx);
+      const subProg = isSubCurrent ? (currentStep.progress || 1) : 1;
 
-      const text = s.text || "";
-      const totalW = ctx.measureText(text).width;
-      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+      if (subStep.action === "arc") {
+        const text = s.text || subStep.text || "";
+        ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+        const arcTotalW = ctx.measureText(text).width;
+        const arcStartX = (w / 2) - (arcTotalW / 2);
+        const charWidth = arcTotalW / Math.max(1, text.length);
 
-      // Si el texto base no fue dibujado previamente, dibujarlo; de lo contrario ya existe en la fila
-      const charWidth = totalW / Math.max(1, text.length);
-      const p1X = startX + (s.fromIdx || 0) * charWidth + charWidth / 2;
-      const p2X = startX + (s.toIdx !== undefined ? s.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
+        const p1X = arcStartX + (subStep.fromIdx || 0) * charWidth + charWidth / 2;
+        const p2X = arcStartX + (subStep.toIdx !== undefined ? subStep.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
 
-      drawCurvedArrow(ctx, p1X, yPos - 58, p2X, yPos - 58, -42, redInk, progress);
+        drawCurvedArrow(ctx, p1X, yPos - 58, p2X, yPos - 58, -42, redInk, subProg);
 
-      if (s.fromIdx2 !== undefined && s.toIdx2 !== undefined) {
-        const q1X = startX + s.fromIdx2 * charWidth + charWidth / 2;
-        const q2X = startX + s.toIdx2 * charWidth + charWidth / 2;
-        drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, progress);
-      }
+        if (subStep.fromIdx2 !== undefined && subStep.toIdx2 !== undefined) {
+          const q1X = arcStartX + subStep.fromIdx2 * charWidth + charWidth / 2;
+          const q2X = arcStartX + subStep.toIdx2 * charWidth + charWidth / 2;
+          drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, subProg);
+        }
 
-      if (isCurrent && progress < 0.98 && state.isPlaying) {
-        // La mano/puntero se mueve exactamente sobre la curva parabólica
-        const t = Math.min(1, progress);
-        const midX = (p1X + p2X) / 2;
-        const midY = (yPos - 58) - 42;
-        handTargetX = (1 - t) * (1 - t) * p1X + 2 * (1 - t) * t * midX + t * t * p2X;
-        handTargetY = (1 - t) * (1 - t) * (yPos - 58) + 2 * (1 - t) * t * midY + t * t * (yPos - 58);
-        handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
-        isWritingNow = true;
-      }
-    } else if (s.action === "highlight") {
-      ctx.font = "bold 68px 'Caveat', 'Kalam', cursive, sans-serif";
-      const totalW = ctx.measureText(s.text || "").width;
-      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+        if (isSubCurrent && subProg < 0.98 && state.isPlaying) {
+          const t = Math.min(1, subProg);
+          const midX = (p1X + p2X) / 2;
+          const midY = (yPos - 58) - 42;
+          handTargetX = (1 - t) * (1 - t) * p1X + 2 * (1 - t) * t * midX + t * t * p2X;
+          handTargetY = (1 - t) * (1 - t) * (yPos - 58) + 2 * (1 - t) * t * midY + t * t * (yPos - 58);
+          handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
+          isWritingNow = true;
+        }
+      } else if (subStep.action === "highlight") {
+        ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+        const hlText = subStep.text || s.text || "";
+        const hlTotalW = ctx.measureText(hlText).width;
+        const hlStartX = (w / 2) - (hlTotalW / 2);
+        const textW = hlTotalW * subProg;
 
-      const textW = totalW * progress;
-      ctx.fillStyle = "rgba(250, 204, 21, 0.45)";
-      ctx.fillRect(startX, yPos - 52, textW, 58);
+        ctx.fillStyle = "rgba(250, 204, 21, 0.45)";
+        ctx.fillRect(hlStartX, yPos - 52, textW, 58);
 
-      ctx.fillStyle = blueInk;
-      ctx.textAlign = "left";
-      ctx.fillText(s.text || "", startX, yPos);
+        ctx.fillStyle = blueInk;
+        ctx.textAlign = "left";
+        ctx.fillText(hlText, hlStartX, yPos);
 
-      if (isCurrent && progress < 0.98 && state.isPlaying) {
-        handTargetX = startX + textW;
-        handTargetY = yPos - 22;
-        handAngle = -0.05;
-        isWritingNow = true;
+        if (isSubCurrent && subProg < 0.98 && state.isPlaying) {
+          handTargetX = hlStartX + textW;
+          handTargetY = yPos - 22;
+          handAngle = -0.05;
+          isWritingNow = true;
+        }
       }
     }
   }
@@ -1500,7 +1760,12 @@ function drawBellumWritingOnBoard(ctx, time, targetX, targetY) {
   // ¡PIES SIEMPRE APOYADOS EN EL SUELO (1750)! Nunca queda flotando en el aire
   const teacherY = 1750;
   const drawY = teacherY - (targetH * (780 / 800));
-  const drawX = (targetX + microX) - (tip.x * scale);
+
+  // Clamping seguro para que NUNCA se salga de la pantalla hacia la izquierda ni derecha
+  const idealDrawX = (targetX + microX) - (tip.x * scale);
+  const minDrawX = 60;
+  const maxDrawX = Math.max(minDrawX, (ctx.canvas.width || 1080) - targetW - 60);
+  const drawX = Math.max(minDrawX, Math.min(maxDrawX, idealDrawX));
 
   ctx.save();
 
@@ -2200,50 +2465,80 @@ function drawMonicaAvatar(ctx, blink, mouthOpen, time) {
 }
 
 /* =========================================================
-   4. SUBTÍTULOS ESTILO TIKTOK / REELS CON KARAOKE
+   4. SUBTÍTULOS DINÁMICOS TIKTOK / REELS (KARAOKE EN CÁPSULA)
    ========================================================= */
 function drawViralCaptions(w, h, currentStep) {
   if (!currentStep) return;
 
-  const text = currentStep.speech || "";
+  const text = (currentStep.speech || "").trim();
   if (!text) return;
 
-  const yPos = h * 0.88;
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return;
+
+  const progress = Math.max(0, Math.min(0.999, currentStep.progress || 0));
+  const activeWordIdx = Math.min(words.length - 1, Math.floor(progress * words.length));
+
+  // Bloques dinámicos de 3 palabras para que nunca se desborde ni tape a la docente
+  const wordsPerChunk = 3;
+  const chunkIdx = Math.floor(activeWordIdx / wordsPerChunk);
+  const startIdx = chunkIdx * wordsPerChunk;
+  const endIdx = Math.min(words.length, startIdx + wordsPerChunk);
+  const chunkWords = words.slice(startIdx, endIdx);
+  const activeInChunk = activeWordIdx - startIdx;
 
   ctx.save();
-  ctx.font = "bold 44px 'Inter', sans-serif";
-  ctx.textAlign = "center";
+  ctx.font = "900 46px 'Inter', sans-serif";
+  ctx.textBaseline = "middle";
 
-  const words = text.split(" ");
-  let lines = [];
-  let currentLine = "";
+  const wordWidths = chunkWords.map(w => ctx.measureText(w).width);
+  const spaceW = ctx.measureText(" ").width;
+  const totalChunkW = wordWidths.reduce((a, b) => a + b, 0) + (spaceW * Math.max(0, chunkWords.length - 1));
 
-  words.forEach(word => {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (ctx.measureText(testLine).width > w * 0.8) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  });
-  if (currentLine) lines.push(currentLine);
+  const pillPadX = 30;
+  const pillW = Math.max(220, totalChunkW + (pillPadX * 2));
+  const pillH = 72;
+  const pillY = h * 0.88; // 1689px en 1080x1920
 
-  lines.forEach((line, lIdx) => {
-    const lineY = yPos + (lIdx * 56) - ((lines.length - 1) * 28);
-    const lineW = ctx.measureText(line).width + 40;
+  // Fondo cápsula oscura traslúcida con sombra
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "rgba(10, 15, 30, 0.88)";
+  ctx.beginPath();
+  ctx.roundRect((w / 2) - (pillW / 2), pillY - (pillH / 2), pillW, pillH, 20);
+  ctx.fill();
+  ctx.restore();
 
-    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-    ctx.beginPath();
-    ctx.roundRect((w / 2) - (lineW / 2), lineY - 40, lineW, 52, 14);
-    ctx.fill();
+  // Borde sutil brillante
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  ctx.beginPath();
+  ctx.roundRect((w / 2) - (pillW / 2), pillY - (pillH / 2), pillW, pillH, 20);
+  ctx.stroke();
 
-    ctx.lineWidth = 4;
+  // Renderizar palabras con efecto karaoke activo
+  let curX = (w / 2) - (totalChunkW / 2);
+  chunkWords.forEach((word, wIdx) => {
+    const isCurrent = (wIdx === activeInChunk && state.isPlaying);
+    ctx.textAlign = "left";
+
+    // Borde negro grueso para contraste absoluto
+    ctx.lineWidth = 6;
     ctx.strokeStyle = "#000000";
-    ctx.strokeText(line, w / 2, lineY);
+    ctx.strokeText(word, curX, pillY);
 
-    ctx.fillStyle = "#fef08a";
-    ctx.fillText(line, w / 2, lineY);
+    if (isCurrent) {
+      // Palabra que se está pronunciando en este instante: Amarillo eléctrico estilo TikTok
+      ctx.fillStyle = "#facc15";
+    } else {
+      // Resto de palabras del fragmento: Blanco brillante
+      ctx.fillStyle = "#ffffff";
+    }
+    ctx.fillText(word, curX, pillY);
+
+    curX += wordWidths[wIdx] + spaceW;
   });
 
   ctx.restore();
@@ -2261,14 +2556,16 @@ function toggleRecording() {
 }
 
 async function startRecording() {
-  if (!state.audioElement || !state.audioElement.src) {
-    alert("Primero genera y reproduce la lección antes de grabar.");
-    return;
-  }
-
   if (state.isRecording) {
     stopRecording();
     return;
+  }
+
+  // Si no se ha generado el audio aún, generarlo primero automáticamente
+  if (!state.audioElement || !state.audioElement.src) {
+    updateStatus("🎙️ Sintetizando lección primero para iniciar la grabación...");
+    await generateAndPlay();
+    await new Promise(r => setTimeout(r, 600));
   }
 
   state.isRecording = true;
@@ -2361,8 +2658,12 @@ async function startRecording() {
 
   // Auto-detener y descargar automáticamente cuando finalice el audio de la lección
   state.audioElement.onended = () => {
+    state.isPlaying = false;
+    btnTogglePlay.textContent = "▶";
     if (state.isRecording) {
-      stopRecording();
+      setTimeout(() => {
+        stopRecording();
+      }, 500);
     }
   };
 

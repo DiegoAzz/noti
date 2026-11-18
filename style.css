@@ -219,6 +219,22 @@ body {
   border-radius: 4px;
 }
 
+.char-counter {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  float: right;
+  transition: color 0.2s;
+}
+
+.char-counter.warning {
+  color: #fbbf24;
+}
+
+.char-counter.danger {
+  color: #f87171;
+}
+
 .step-actions {
   display: flex;
   gap: 4px;

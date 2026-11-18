@@ -993,22 +993,40 @@ function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
 }
 
 function assignTimestampsToSteps() {
-  if (state.wordsTimeline.length === 0) return;
+  if (!state.wordsTimeline || state.wordsTimeline.length === 0) return;
 
   const totalWords = state.wordsTimeline.length;
   let currentWordIdx = 0;
-  state.steps.forEach((step, idx) => {
-    const stepWordCount = Math.max(1, step.speech.split(/\s+/).length);
-    const startWord = state.wordsTimeline[Math.min(currentWordIdx, totalWords - 1)];
-    currentWordIdx += stepWordCount;
-    const endWord = state.wordsTimeline[Math.min(currentWordIdx, totalWords - 1)];
 
+  state.steps.forEach((step, idx) => {
+    const stepWords = step.speech.trim().split(/\s+/).filter(w => w.length > 0);
+    const stepWordCount = Math.max(1, stepWords.length);
+
+    const startIdx = Math.min(currentWordIdx, totalWords - 1);
+    const endIdx = Math.min(currentWordIdx + stepWordCount - 1, totalWords - 1);
+
+    const startWord = state.wordsTimeline[startIdx];
+    const endWord = state.wordsTimeline[endIdx];
+
+    currentWordIdx += stepWordCount;
+
+    // Tiempo de inicio del paso (cuando empieza la primera palabra)
     step.startTime = startWord ? startWord.start : (idx * 3);
-    step.endTime = endWord ? endWord.start + endWord.duration : ((idx + 1) * 3);
+
+    // Momento exacto en que termina de pronunciarse la última palabra hablada del paso
+    step.speechEndTime = endWord ? (endWord.start + endWord.duration) : (step.startTime + 2.5);
+
+    // El paso concluye cuando empieza la primera palabra del paso siguiente, o tras una pausa natural
+    const nextStartWord = (currentWordIdx < totalWords) ? state.wordsTimeline[currentWordIdx] : null;
+    if (nextStartWord) {
+      step.endTime = nextStartWord.start;
+    } else {
+      step.endTime = endWord ? (endWord.start + endWord.duration + 0.4) : ((idx + 1) * 3);
+    }
   });
 
   const lastWord = state.wordsTimeline[totalWords - 1];
-  state.duration = (lastWord.start + lastWord.duration) || 15;
+  state.duration = lastWord ? (lastWord.start + lastWord.duration + 0.5) : 15;
 }
 
 function restartPlayback() {
@@ -1118,17 +1136,39 @@ function renderLoop(time) {
 function getCurrentStep() {
   if (!state.steps || state.steps.length === 0) return null;
   const t = state.currentTime;
+
   for (let i = 0; i < state.steps.length; i++) {
     const s = state.steps[i];
-    if (t >= (s.startTime || 0) && t <= (s.endTime || 9999)) {
+    if (t >= (s.startTime || 0) && t < (s.endTime || 9999)) {
+      const stepStart = s.startTime || 0;
+      const stepEnd = s.endTime || (stepStart + 3);
+      const stepDur = Math.max(0.1, stepEnd - stepStart);
+      const speechEnd = s.speechEndTime || stepEnd;
+      const speechDur = Math.max(0.1, speechEnd - stepStart);
+
+      // Progreso 1:1 de la voz: va exactamente a la velocidad con que se pronuncian las palabras
+      const speechProgress = Math.min(1.0, Math.max(0.0, (t - stepStart) / speechDur));
+
+      // Progreso global del paso (incluyendo la pausa de lectura antes del siguiente)
+      const overallProgress = Math.min(1.0, Math.max(0.0, (t - stepStart) / stepDur));
+
       return {
         ...s,
         index: i,
-        progress: Math.min(1, Math.max(0, (t - (s.startTime || 0)) / Math.max(0.1, (s.endTime - s.startTime) || 1)))
+        progress: overallProgress,
+        speechProgress: speechProgress,
+        isSpeakingPhase: (t <= speechEnd + 0.1)
       };
     }
   }
-  return { ...state.steps[state.steps.length - 1], index: state.steps.length - 1, progress: 1 };
+
+  return {
+    ...state.steps[state.steps.length - 1],
+    index: state.steps.length - 1,
+    progress: 1.0,
+    speechProgress: 1.0,
+    isSpeakingPhase: false
+  };
 }
 
 function getEffectiveCamera(step) {
@@ -1332,9 +1372,8 @@ function drawBoardContent(w, h, currentStep, time) {
   const titleStep = state.steps.find(s => s.target === "title") || state.steps[0];
   if (titleStep && titleStep.action === "write") {
     const isCurrentTitle = (currentIdx === 0);
-    const rawProgTitle = isCurrentTitle ? (currentStep.progress || 0) : 1;
-    // La escritura se realiza en el primer 45% del paso; el 55% restante es para que el usuario lea libremente
-    const writeProgTitle = isCurrentTitle ? Math.min(1.0, rawProgTitle / 0.45) : 1;
+    // Sincronización exacta 1:1 con la voz: avanza al mismo ritmo que la docente habla
+    const writeProgTitle = isCurrentTitle ? (currentStep.speechProgress || 0) : 1;
     const fullTitle = titleStep.text || "";
     const charCount = Math.floor(fullTitle.length * writeProgTitle);
     const textToShow = fullTitle.substring(0, charCount);
@@ -1352,8 +1391,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, startY);
 
-    // Solo se considera en escritura activa durante la primera mitad (rawProgTitle < 0.45)
-    if (isCurrentTitle && rawProgTitle < 0.45 && fullTitle.length > 0 && state.isPlaying) {
+    // Escribe activamente mientras habla la frase del título
+    if (isCurrentTitle && currentStep.isSpeakingPhase && writeProgTitle < 0.98 && fullTitle.length > 0 && state.isPlaying) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = startY - 14;
@@ -1375,9 +1414,8 @@ function drawBoardContent(w, h, currentStep, time) {
   if (activeWriteIdx >= 1) {
     const s = state.steps[activeWriteIdx];
     const isCurrent = (activeWriteIdx === currentIdx);
-    const rawProg = isCurrent ? (currentStep.progress || 0) : 1;
-    // La escritura se completa en el primer 45% del paso; el 55% restante es tiempo para que el usuario lea
-    const writeProg = isCurrent ? Math.min(1.0, rawProg / 0.45) : 1;
+    // Sincronización exacta 1:1 con la voz: avanza al mismo ritmo que la docente habla
+    const writeProg = isCurrent ? (currentStep.speechProgress || 0) : 1;
     const yPos = startY + rowHeight; // Fila 1
 
     const fullText = s.text || "";
@@ -1398,8 +1436,8 @@ function drawBoardContent(w, h, currentStep, time) {
     ctx.textAlign = "left";
     ctx.fillText(textToShow, startX, yPos);
 
-    // Solo escribe activamente con la mano durante el primer 45% del paso
-    if (isCurrent && rawProg < 0.45 && fullText.length > 0 && state.isPlaying) {
+    // Escribe activamente mientras la docente está pronunciando la explicación
+    if (isCurrent && currentStep.isSpeakingPhase && writeProg < 0.98 && fullText.length > 0 && state.isPlaying) {
       const textW = ctx.measureText(textToShow).width;
       handTargetX = startX + textW;
       handTargetY = yPos - 14;
@@ -1809,7 +1847,6 @@ function drawTeacher(w, h, cameraType, time, currentStep) {
   const headBob = Math.sin(time * 0.004) * 4;
   const sway = Math.sin(time * 0.0025) * 3;
 
-  const rawProg = currentStep ? (currentStep.progress || 0) : 0;
   const currentStepIdx = currentStep ? currentStep.index : 0;
   const hasBoardText = (state.steps && state.steps.some((s, idx) => s.action === "write" && idx <= currentStepIdx));
 
@@ -1819,14 +1856,8 @@ function drawTeacher(w, h, cameraType, time, currentStep) {
   let teacherY = 1750; // Pies firmes en el suelo
   let teacherScale = 0.92;
 
-  // Transición suave: al terminar de trazar la letra (entre 45% y 60% del paso),
-  // se aparta elegantemente hacia la derecha para revelar lo que escribió
-  if (currentStep && currentStep.action === "write" && rawProg >= 0.45 && rawProg < 0.60 && state.lastHandX) {
-    const slideT = (rawProg - 0.45) / 0.15; // 0.0 a 1.0
-    const startX = Math.min(targetSideX, state.lastHandX + 160);
-    teacherX = (1 - slideT) * startX + slideT * targetSideX;
-  } else if (!hasBoardText && currentStepIdx === 0 && rawProg < 0.45) {
-    // Si no se ha escrito nada en la pizarra aún, saludo inicial en el centro
+  // Si no se ha escrito nada en la pizarra aún y es el comienzo, saludo inicial en el centro
+  if (!hasBoardText && currentStepIdx === 0 && (currentStep ? (currentStep.speechProgress || 0) : 0) < 0.08) {
     teacherX = w / 2;
     teacherScale = 1.08;
   }
@@ -2594,7 +2625,7 @@ function drawViralCaptions(w, h, currentStep) {
   const words = text.split(/\s+/).filter(w => w.length > 0);
   if (words.length === 0) return;
 
-  const progress = Math.max(0, Math.min(0.999, currentStep.progress || 0));
+  const progress = Math.max(0, Math.min(0.999, (currentStep.speechProgress !== undefined) ? currentStep.speechProgress : (currentStep.progress || 0)));
   const activeWordIdx = Math.min(words.length - 1, Math.floor(progress * words.length));
 
   // Bloques dinámicos de 3 palabras para que nunca se desborde ni tape a la docente

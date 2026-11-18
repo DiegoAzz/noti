@@ -5,8 +5,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY index.html style.css app.js server.py ./
+COPY index.html style.css app.js server.py marker_sound.mp3 ./
 COPY avatars ./avatars
+COPY assets ./assets
+COPY backgrounds ./backgrounds
 
 ENV HOST=0.0.0.0
 ENV PORT=8090

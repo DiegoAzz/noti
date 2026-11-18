@@ -1,2668 +1,2351 @@
-(() => {
-  'use strict';
+/**
+ * PROFE PIZARRA IA - Motor de Animación Educativa
+ * Pizarra con mano hiperrealista, sonido de marcador acrílico, Profesor animado y Voz Neural
+ */
 
-  // =========================================================
-  // 1. REFERENCIAS DOM Y ESTADO GLOBAL
-  // =========================================================
-  const bgCanvas = document.getElementById('bgCanvas');
-  const bgCtx = bgCanvas.getContext('2d');
-  const glCanvas = document.getElementById('glCanvas');
-  const hudCanvas = document.getElementById('hudCanvas');
-  const hudCtx = hudCanvas.getContext('2d');
-  const stageWrapper = document.getElementById('stageWrapper');
-  const recIndicator = document.getElementById('recIndicator');
+// Motor de audio para sonido auténtico de marcador de pizarra
+class WhiteboardSoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.destStreamNode = null;
+    this.audioBuffer = null;
+    this.sourceNode = null;
+    this.gainNode = null;
+    this.isWriting = false;
+    this.volume = 0.85;
+    this.isLoaded = false;
+  }
 
-  const aspectSelect = document.getElementById('aspectSelect');
-  const cameraSelect = document.getElementById('cameraSelect');
-  const moodSelect = document.getElementById('moodSelect');
-  const avatarSelect = document.getElementById('avatarSelect');
-  const customAvatarInput = document.getElementById('customAvatarInput');
-  const capeToggle = document.getElementById('capeToggle');
-  const avatarStatus = document.getElementById('avatarStatus');
-  const heroNameInput = document.getElementById('heroNameInput');
-  const headlineInput = document.getElementById('headlineInput');
-  const contextInput = document.getElementById('contextInput');
-  const heroizeBtn = document.getElementById('heroizeBtn');
-  const screenModeSelect = document.getElementById('screenModeSelect');
-  const galleryStyleSelect = document.getElementById('galleryStyleSelect');
-  const imageFitSelect = document.getElementById('imageFitSelect');
-  const addImagesBtn = document.getElementById('addImagesBtn');
-  const newsImagesInput = document.getElementById('newsImagesInput');
-  const clearImagesBtn = document.getElementById('clearImagesBtn');
-  const imageThumbs = document.getElementById('imageThumbs');
-  const imagesStatus = document.getElementById('imagesStatus');
+  async init(sharedCtx, destStreamNode = null) {
+    if (this.ctx) return;
+    this.ctx = sharedCtx || new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
 
-  const voiceSelect = document.getElementById('voiceSelect');
-  const fxSelect = document.getElementById('fxSelect');
-  const pitchRange = document.getElementById('pitchRange');
-  const pitchVal = document.getElementById('pitchVal');
-  const rateRange = document.getElementById('rateRange');
-  const rateVal = document.getElementById('rateVal');
-  const musicSelect = document.getElementById('musicSelect');
-  const musicVolRange = document.getElementById('musicVolRange');
-  const musicVolVal = document.getElementById('musicVolVal');
-  const testMusicBtn = document.getElementById('testMusicBtn');
-  const audioFileInput = document.getElementById('audioFileInput');
-  const clearAudioBtn = document.getElementById('clearAudioBtn');
-  const audioStatus = document.getElementById('audioStatus');
+    this.masterGain.connect(this.ctx.destination);
+    if (destStreamNode) {
+      this.masterGain.connect(destStreamNode);
+      this.destStreamNode = destStreamNode;
+    }
 
-  const broadcastBtn = document.getElementById('broadcastBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const recordBtn = document.getElementById('recordBtn');
+    // Ganancia controladora de fade in / fade out de la escritura
+    this.gainNode = this.ctx.createGain();
+    this.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+    this.gainNode.connect(this.masterGain);
 
-  const MOODS = {
-    epic: {
-      label: 'TRANSMISIÓN HEROICA',
-      accent: '#00e5ff',
-      secondary: '#ffcc33',
-      bgTop: 0x07132c,
-      rimColor: 0x00e5ff,
-      eyeColor: 0x66ffff,
-      browAngle: 0.14,
-      capeSpeed: 3.4,
+    // Cargar el archivo de sonido real subido por el usuario (marker_sound.mp3)
+    try {
+      const res = await fetch("/marker_sound.mp3");
+      if (res.ok) {
+        const arrayBuf = await res.arrayBuffer();
+        this.audioBuffer = await this.ctx.decodeAudioData(arrayBuf);
+        this.isLoaded = true;
+        this.startLoop();
+      }
+    } catch (err) {
+      console.warn("Cargando sonido de marcador:", err);
+    }
+  }
+
+  startLoop() {
+    if (!this.audioBuffer || !this.ctx) return;
+    try {
+      if (this.sourceNode) {
+        try { this.sourceNode.stop(); } catch(e) {}
+      }
+      this.sourceNode = this.ctx.createBufferSource();
+      this.sourceNode.buffer = this.audioBuffer;
+      this.sourceNode.loop = true;
+      this.sourceNode.connect(this.gainNode);
+      this.sourceNode.start(0);
+    } catch (e) {
+      console.error("Error al iniciar bucle de audio de pizarra:", e);
+    }
+  }
+
+  setVolume(vol) {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.04);
+    }
+  }
+
+  updateWriting(isWritingNow, time = 0) {
+    if (!this.ctx || !this.gainNode) return;
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+
+    const t = this.ctx.currentTime;
+
+    if (isWritingNow && this.volume > 0.01) {
+      if (!this.isWriting) {
+        this.isWriting = true;
+        // Si no está corriendo el source, reiniciarlo
+        if (!this.sourceNode) {
+          this.startLoop();
+        }
+        // Subida suave (fade in) de 35ms
+        this.gainNode.gain.cancelScheduledValues(t);
+        this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, t);
+        this.gainNode.gain.linearRampToValueAtTime(1.0, t + 0.035);
+      }
+    } else {
+      if (this.isWriting) {
+        this.isWriting = false;
+        // Bajada suave (fade out) de 50ms
+        this.gainNode.gain.cancelScheduledValues(t);
+        this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, t);
+        this.gainNode.gain.linearRampToValueAtTime(0, t + 0.05);
+      }
+    }
+  }
+}
+
+const soundEngine = new WhiteboardSoundEngine();
+
+// Estado global de la aplicación
+const state = {
+  voice: "es-CO-SalomeNeural",
+  avatar: "bellum",
+  theme: "classroom",
+  cameraMode: "director",
+  format: "9:16",
+  soundVolume: 0.8,
+  steps: [],
+  isPlaying: false,
+  isRecording: false,
+  currentTime: 0,
+  duration: 0,
+  audioElement: null,
+  audioContext: null,
+  destAudioStreamNode: null,
+  wordsTimeline: [],
+  mediaRecorder: null,
+  recordedChunks: [],
+  lastHandX: null,
+  lastHandY: null,
+  isWritingNow: false
+};
+
+// Plantillas educativas iniciales
+const TEMPLATES = {
+  capicua: [
+    {
+      speech: "¡Hoy aprenderemos qué son los números capicúa!",
+      action: "write",
+      text: "NÚMEROS CAPICÚA",
+      target: "title",
+      camera: "board"
     },
-    alert: {
-      label: 'ALERTA ROJA',
-      accent: '#ff2e54',
-      secondary: '#ffae00',
-      bgTop: 0x260812,
-      rimColor: 0xff2e54,
-      eyeColor: 0xff5566,
-      browAngle: 0.34,
-      capeSpeed: 5.2,
+    {
+      speech: "¡Hola! ¿Sabías que hay números que se leen exactamente igual al derecho y al revés?",
+      action: "talk",
+      text: "",
+      target: "intro",
+      camera: "teacher"
     },
-    tech: {
-      label: 'REPORTE CYBER',
-      accent: '#00ffa6',
-      secondary: '#38bdf8',
-      bgTop: 0x051f24,
-      rimColor: 0x00ffa6,
-      eyeColor: 0x55ffcc,
-      browAngle: 0.08,
-      capeSpeed: 2.8,
+    {
+      speech: "A estos números tan curiosos se les llama números CAPICÚA.",
+      action: "write",
+      text: "1 2 2 1",
+      target: "example1",
+      camera: "board"
     },
-    chill: {
-      label: 'EDICIÓN ESPECIAL',
-      accent: '#a855f7',
-      secondary: '#fbbf24',
-      bgTop: 0x160c2e,
-      rimColor: 0xc084fc,
-      eyeColor: 0xffe066,
-      browAngle: -0.05,
-      capeSpeed: 2.2,
+    {
+      speech: "Fíjate muy bien: el uno de adelante es igual al uno del final, y los doses del centro coinciden.",
+      action: "arc",
+      text: "1 2 2 1",
+      target: "example1",
+      fromIdx: 0,
+      toIdx: 3,
+      fromIdx2: 1,
+      toIdx2: 2,
+      camera: "board"
     },
-  };
+    {
+      speech: "Otro ejemplo perfecto es el ochenta y siete mil setecientos ochenta y siete.",
+      action: "write",
+      text: "8 7 7 8",
+      target: "example2",
+      camera: "board"
+    },
+    {
+      speech: "¿Conoces otro número capicúa? ¡Déjalo aquí en los comentarios!",
+      action: "talk",
+      text: "",
+      target: "outro",
+      camera: "teacher"
+    }
+  ],
+  palindromos: [
+    {
+      speech: "¡Hoy aprenderemos qué son los palíndromos!",
+      action: "write",
+      text: "PALÍNDROMOS",
+      target: "title",
+      camera: "board"
+    },
+    {
+      speech: "Un palíndromo es una palabra o frase que se lee exactamente igual al derecho y al revés.",
+      action: "talk",
+      text: "",
+      target: "intro",
+      camera: "teacher"
+    },
+    {
+      speech: "Por ejemplo, fíjate en la palabra reconocer.",
+      action: "write",
+      text: "reconocer",
+      target: "example1",
+      camera: "board"
+    },
+    {
+      speech: "Mira cómo la R del inicio se une con la R del final, la E con la E, la C con la C, hasta la O central.",
+      action: "arc",
+      text: "reconocer",
+      target: "example1",
+      fromIdx: 0,
+      toIdx: 8,
+      camera: "board"
+    },
+    {
+      speech: "Y también ocurre con palabras largas como: sometemos o anilina.",
+      action: "write",
+      text: "sometemos",
+      target: "example2",
+      camera: "board"
+    },
+    {
+      speech: "¿Conoces otro palíndromo? ¡Déjalo aquí en los comentarios!",
+      action: "talk",
+      text: "",
+      target: "outro",
+      camera: "teacher"
+    }
+  ],
+  acentuacion: [
+    {
+      speech: "¡Aprende las palabras agudas en solo 30 segundos!",
+      action: "write",
+      text: "PALABRAS AGUDAS",
+      target: "title",
+      camera: "board"
+    },
+    {
+      speech: "¿Sabías cuándo una palabra aguda lleva tilde? ¡Es muy fácil!",
+      action: "talk",
+      text: "",
+      target: "intro",
+      camera: "teacher"
+    },
+    {
+      speech: "Llevan el acento en la última sílaba. Y llevan tilde cuando terminan en N, S o Vocal.",
+      action: "write",
+      text: "ca - mión",
+      target: "example1",
+      camera: "board"
+    },
+    {
+      speech: "Termina en N, por lo tanto lleva tilde en la O.",
+      action: "arc",
+      text: "ca - mión",
+      target: "example1",
+      fromIdx: 6,
+      toIdx: 7,
+      camera: "board"
+    },
+    {
+      speech: "Otro ejemplo clásico: ca - fé. Termina en vocal, ¡lleva tilde!",
+      action: "write",
+      text: "ca - fé",
+      target: "example2",
+      camera: "board"
+    },
+    {
+      speech: "¡Sigue la cuenta para no volver a dudar de tu ortografía!",
+      action: "talk",
+      text: "",
+      target: "outro",
+      camera: "teacher"
+    }
+  ],
+  mates: [
+    {
+      speech: "¡No le tengas miedo a las ecuaciones! Resolver esto es facilísimo.",
+      action: "write",
+      text: "ECUACIÓN DE PRIMER GRADO",
+      target: "title",
+      camera: "teacher"
+    },
+    {
+      speech: "Tenemos x más cinco igual a doce. El objetivo es dejar a la x completamente sola.",
+      action: "write",
+      text: "x + 5 = 12",
+      target: "example1",
+      camera: "board"
+    },
+    {
+      speech: "El cinco que está sumando en la izquierda, pasa al otro lado de la igualdad a restar.",
+      action: "write",
+      text: "x = 12 - 5",
+      target: "example2",
+      camera: "board"
+    },
+    {
+      speech: "Doce menos cinco nos da siete. ¡Y listo! La x vale siete.",
+      action: "write",
+      text: "x = 7 ✓",
+      target: "result",
+      camera: "board"
+    },
+    {
+      speech: "¿Ves qué fácil? ¡Comparte este truco con quien lo necesite!",
+      action: "highlight",
+      text: "x = 7",
+      camera: "teacher"
+    }
+  ]
+};
 
-  const state = {
-    aspect: '9:16',
-    width: 720,
-    height: 1280,
-    mood: 'epic',
-    cameraMode: 'auto',
-    isSpeaking: false,
-    isRecording: false,
-    speechEnergy: 0,
-    targetSpeechEnergy: 0,
-    speechPulseTime: 0,
-    currentSubtitle: '',
-    subtitleWords: [],
-    wordTimings: [],
-    activeWordIndex: -1,
-    tickerX: 0,
-    customAudioUrl: null,
-    customAudioName: '',
-    screenMode: 'backdrop',
-    galleryStyle: 'carousel',
-    imageFit: 'contain',
-    newsImages: [], // hasta 5: [{ id, url, name, img, blurCanvas }]
-    activeImageIndex: 0,
-    prevImageIndex: -1,
-    imageTransition: 1,
-    imageCycleTimer: 0,
-    blinkTimer: 2.5,
-    blinkProgress: 0,
-    gesturePhase: 0,
-    autoCamIndex: 0,
-    autoCamTimer: 0,
-  };
+// Elementos del DOM
+const canvas = document.getElementById("stageCanvas");
+const ctx = canvas.getContext("2d");
+const stepsListEl = document.getElementById("stepsList");
+const btnPlayPreview = document.getElementById("btnPlayPreview");
+const btnRecord = document.getElementById("btnRecord");
+const btnRestart = document.getElementById("btnRestart");
+const btnTogglePlay = document.getElementById("btnTogglePlay");
+const statusNotice = document.getElementById("statusNotice");
+const badgeTime = document.getElementById("badgeTime");
+const badgeRecording = document.getElementById("badgeRecording");
+const selectVoice = document.getElementById("selectVoice");
+const selectAvatar = document.getElementById("selectAvatar");
+const selectTheme = document.getElementById("selectTheme");
+const selectCameraMode = document.getElementById("selectCameraMode");
+const selectFormat = document.getElementById("selectFormat");
+const aiTopicInput = document.getElementById("aiTopicInput");
+const btnAiGenerate = document.getElementById("btnAiGenerate");
+const sliderMarkerSound = document.getElementById("sliderMarkerSound");
+const labelSoundVol = document.getElementById("labelSoundVol");
+const customGlbInput = document.getElementById("customGlbInput");
+const label3dStatus = document.getElementById("label3dStatus");
 
-  // =========================================================
-  // 2. ESCENA THREE.JS (ESTILO VIDEOJUEGO TOON / CEL-SHADING)
-  // =========================================================
-  const renderer = new THREE.WebGLRenderer({
-    canvas: glCanvas,
-    antialias: true,
+// =========================================================
+// MOTOR 3D THREE.JS (AVATAR GLB REALISTA)
+// =========================================================
+let threeScene = null;
+let threeCamera = null;
+let threeRenderer = null;
+let threeModel = null;
+let threeLoaded = false;
+let threeCanvas = null;
+
+function initThree3D() {
+  if (typeof THREE === "undefined") {
+    console.warn("Three.js cargando...");
+    return;
+  }
+
+  threeScene = new THREE.Scene();
+
+  // Cámara 3D con perspectiva para retrato/figura
+  threeCamera = new THREE.PerspectiveCamera(36, canvas.width / canvas.height, 0.1, 100);
+  threeCamera.position.set(0, 1.25, 3.8);
+
+  // Iluminación de estudio profesional
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
+  threeScene.add(ambientLight);
+
+  const mainLight = new THREE.DirectionalLight(0xfff5eb, 1.9);
+  mainLight.position.set(2.5, 4, 3.5);
+  threeScene.add(mainLight);
+
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  fillLight.position.set(-3, 2, 2.5);
+  threeScene.add(fillLight);
+
+  const rimLight = new THREE.DirectionalLight(0xf97316, 1.5);
+  rimLight.position.set(0, 3, -4);
+  threeScene.add(rimLight);
+
+  // Canvas WebGL offscreen de alta definición
+  threeCanvas = document.createElement("canvas");
+  threeCanvas.width = 1080;
+  threeCanvas.height = 1920;
+
+  threeRenderer = new THREE.WebGLRenderer({
+    canvas: threeCanvas,
     alpha: true,
-    preserveDrawingBuffer: true,
+    antialias: true,
+    preserveDrawingBuffer: true
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setClearColor(0x000000, 0);
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.94;
+  threeRenderer.setClearColor(0x000000, 0);
+  threeRenderer.outputEncoding = THREE.sRGBEncoding;
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(MOODS.epic.bgTop);
-  scene.fog = new THREE.FogExp2(0x07132c, 0.032);
+  loadDefault3DModel();
+}
 
-  const camera = new THREE.PerspectiveCamera(36, 9 / 16, 0.1, 100);
-  camera.position.set(0, 1.55, 5.2);
+function loadDefault3DModel() {
+  if (label3dStatus) label3dStatus.textContent = "Cargando 3D...";
 
-  // Textura gradiente de 4 tonos para efecto Cel-Shading (estilo cómic / videojuego)
-  function createToonGradient() {
-    const colors = new Uint8Array([
-      70, 70, 85, 255,
-      135, 135, 150, 255,
-      205, 205, 215, 255,
-      255, 255, 255, 255,
-    ]);
-    const tex = new THREE.DataTexture(colors, 4, 1, THREE.RGBAFormat);
-    tex.minFilter = THREE.NearestFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.needsUpdate = true;
-    return tex;
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    "/avatars/profe_3d.glb",
+    (gltf) => {
+      setup3DCharacter(gltf.scene);
+      threeLoaded = true;
+      if (label3dStatus) label3dStatus.textContent = "✅ Modelo 3D Activo";
+    },
+    (xhr) => {
+      if (xhr.lengthComputable && label3dStatus) {
+        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+        label3dStatus.textContent = `Cargando ${percent}%`;
+      }
+    },
+    (err) => {
+      console.warn("No se pudo cargar /avatars/profe_3d.glb automáticamente:", err);
+      if (label3dStatus) label3dStatus.textContent = "Sube tu .glb";
+    }
+  );
+}
+
+function setup3DCharacter(model) {
+  if (threeModel) {
+    threeScene.remove(threeModel);
   }
-  const toonGradient = createToonGradient();
+  threeModel = model;
 
-  function toonMat(color, emissive = 0x000000, emissiveIntensity = 0) {
-    return new THREE.MeshToonMaterial({
-      color,
-      gradientMap: toonGradient,
-      emissive,
-      emissiveIntensity,
+  // Centrar y escalar automáticamente
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const targetHeight = 2.4;
+  const scale = targetHeight / (maxDim || 1);
+  model.scale.setScalar(scale);
+
+  // Centrar la modelo en el encuadre
+  model.position.x = -center.x * scale;
+  model.position.y = (-center.y * scale) - 0.15;
+  model.position.z = -center.z * scale;
+
+  threeScene.add(model);
+}
+
+// Iniciar aplicación
+window.addEventListener("DOMContentLoaded", () => {
+  setupEventListeners();
+  loadTemplate("capicua");
+  initAudio();
+  initThree3D();
+  resizeCanvas();
+  requestAnimationFrame(renderLoop);
+});
+
+function setupEventListeners() {
+  document.getElementById("btnTplCapicua").addEventListener("click", (e) => switchActiveTemplate(e, "capicua"));
+  document.getElementById("btnTplPalindromos").addEventListener("click", (e) => switchActiveTemplate(e, "palindromos"));
+  document.getElementById("btnTplAcentuacion").addEventListener("click", (e) => switchActiveTemplate(e, "acentuacion"));
+  document.getElementById("btnTplMates").addEventListener("click", (e) => switchActiveTemplate(e, "mates"));
+
+  document.getElementById("btnAddStep").addEventListener("click", () => {
+    state.steps.push({
+      speech: "Escribe aquí la explicación de este paso.",
+      action: "write",
+      text: "Nuevo Texto",
+      camera: "board"
     });
-  }
-
-  // Luces del estudio (piel humana natural, sin sobreexposición)
-  const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.72);
-  scene.add(hemiLight);
-
-  const ambientLight = new THREE.AmbientLight(0xbcd0ff, 0.32);
-  scene.add(ambientLight);
-
-  const keyLight = new THREE.DirectionalLight(0xfff4e6, 1.02);
-  keyLight.position.set(2.2, 4.2, 4.5);
-  scene.add(keyLight);
-
-  const frontFillLight = new THREE.DirectionalLight(0xe0f2fe, 0.36);
-  frontFillLight.position.set(-2.0, 2.2, 3.8);
-  scene.add(frontFillLight);
-
-  const rimLight = new THREE.DirectionalLight(MOODS.epic.rimColor, 1.35);
-  rimLight.position.set(-3.0, 2.6, -2.5);
-  scene.add(rimLight);
-
-  const fillLight = new THREE.PointLight(0xffbb55, 0.45, 12);
-  fillLight.position.set(2.4, 1.6, 2.0);
-  scene.add(fillLight);
-
-  // =========================================================
-  // 3. PERSONAJE SUPERHÉROE 3D PROCEDURAL (SIEMPRE EL MISMO)
-  // =========================================================
-  const heroGroup = new THREE.Group();
-  scene.add(heroGroup);
-
-  const matSuitBlue = toonMat(0x1642a8);
-  const matSuitDark = toonMat(0x0d2152);
-  const matRed = toonMat(0xe11d48);
-  const matGold = toonMat(0xffc933, 0xaa6600, 0.2);
-  const matSkin = toonMat(0xf2be9b);
-  const matEyeGlow = new THREE.MeshBasicMaterial({ color: MOODS.epic.eyeColor });
-  const matEmblemGlow = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
-  const matMouthInside = new THREE.MeshBasicMaterial({ color: 0x260912 });
-  const matTeeth = new THREE.MeshBasicMaterial({ color: 0xffffff });
-
-  // Torso superior (pecho ancho heroico)
-  const bodyGroup = new THREE.Group();
-  heroGroup.add(bodyGroup);
-
-  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.44, 1.05, 8), matSuitBlue);
-  chest.position.set(0, 0.78, 0);
-  chest.scale.set(1.12, 1, 0.72);
-  bodyGroup.add(chest);
-
-  // Detalle lateral oscuro del traje
-  const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.48, 0.35, 8), matSuitDark);
-  waist.position.set(0, 0.12, 0);
-  waist.scale.set(1.06, 1, 0.72);
-  bodyGroup.add(waist);
-
-  // Cinturón dorado + hebilla brillante
-  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.14, 10), matGold);
-  belt.position.set(0, 0.25, 0);
-  belt.scale.set(1.08, 1, 0.75);
-  bodyGroup.add(belt);
-
-  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.17, 0.12), matEmblemGlow);
-  buckle.position.set(0, 0.25, 0.33);
-  bodyGroup.add(buckle);
-
-  // Emblema heroico en el pecho (escudo + rayo)
-  const emblemShield = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.16, 0.08, 6), matGold);
-  emblemShield.rotation.x = Math.PI / 2;
-  emblemShield.position.set(0, 0.94, 0.43);
-  bodyGroup.add(emblemShield);
-
-  const emblemCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.13, 0), matEmblemGlow);
-  emblemCore.scale.set(0.85, 1.15, 0.4);
-  emblemCore.position.set(0, 0.94, 0.47);
-  bodyGroup.add(emblemCore);
-
-  // Hombreras estilizadas
-  [-1, 1].forEach((side) => {
-    const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), matRed);
-    pauldron.scale.set(1.15, 0.85, 0.95);
-    pauldron.position.set(side * 0.74, 1.18, 0);
-    bodyGroup.add(pauldron);
-
-    const trim = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 6, 12), matGold);
-    trim.rotation.y = Math.PI / 2;
-    trim.position.set(side * 0.72, 1.14, 0);
-    bodyGroup.add(trim);
+    renderStepsUI();
   });
 
-  // Cuello
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.24, 8), matSuitDark);
-  neck.position.set(0, 1.38, 0);
-  bodyGroup.add(neck);
-
-  // Brazos articulados (para gesticular al dar noticias)
-  function createArm(side) {
-    const shoulderPivot = new THREE.Group();
-    shoulderPivot.position.set(side * 0.78, 1.12, 0);
-
-    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.42, 6, 8), matSuitBlue);
-    upperArm.position.set(0, -0.26, 0);
-    shoulderPivot.add(upperArm);
-
-    const elbowPivot = new THREE.Group();
-    elbowPivot.position.set(0, -0.52, 0);
-    shoulderPivot.add(elbowPivot);
-
-    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.36, 6, 8), matRed);
-    forearm.position.set(0, -0.22, 0.06);
-    forearm.rotation.x = -0.25;
-    elbowPivot.add(forearm);
-
-    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.07, 8), matGold);
-    cuff.position.set(0, -0.05, 0.02);
-    elbowPivot.add(cuff);
-
-    const fist = new THREE.Mesh(new THREE.DodecahedronGeometry(0.13, 0), matRed);
-    fist.position.set(0, -0.44, 0.14);
-    elbowPivot.add(fist);
-
-    return { shoulderPivot, elbowPivot };
-  }
-
-  const leftArm = createArm(-1);
-  const rightArm = createArm(1);
-  bodyGroup.add(leftArm.shoulderPivot);
-  bodyGroup.add(rightArm.shoulderPivot);
-
-  // Capa heroica animada con ondas de viento
-  const capeGeo = new THREE.PlaneGeometry(1.45, 1.85, 8, 10);
-  const capeBasePositions = capeGeo.attributes.position.array.slice();
-  const capeMat = new THREE.MeshToonMaterial({
-    color: 0xe11d48,
-    gradientMap: toonGradient,
-    side: THREE.DoubleSide,
-  });
-  const cape = new THREE.Mesh(capeGeo, capeMat);
-  cape.position.set(0, 0.42, -0.46);
-  cape.rotation.x = 0.14;
-  bodyGroup.add(cape);
-
-  // Cabeza + Máscara + Ojos brillantes + Boca animada (Lip-Sync)
-  const headGroup = new THREE.Group();
-  headGroup.position.set(0, 1.54, 0);
-  bodyGroup.add(headGroup);
-
-  // Cráneo / rostro inferior (piel)
-  const faceLower = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.46, 0.52), matSkin);
-  faceLower.position.set(0, 0.18, 0.02);
-  headGroup.add(faceLower);
-
-  // Mentón heroico marcado
-  const chin = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.48), matSkin);
-  chin.position.set(0, -0.05, 0.05);
-  headGroup.add(chin);
-
-  // Casco / Capucha azul de superhéroe (parte superior)
-  const cowlTop = new THREE.Mesh(new THREE.SphereGeometry(0.39, 12, 10), matSuitBlue);
-  cowlTop.scale.set(0.95, 1.0, 1.04);
-  cowlTop.position.set(0, 0.40, -0.02);
-  headGroup.add(cowlTop);
-
-  // Antifaz / Visor frontal del casco
-  const maskBand = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.24, 0.56), matSuitBlue);
-  maskBand.position.set(0, 0.34, 0.03);
-  headGroup.add(maskBand);
-
-  // Cresta dorada del casco
-  const crest = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.20, 0.55), matGold);
-  crest.position.set(0, 0.72, -0.02);
-  crest.rotation.x = -0.15;
-  headGroup.add(crest);
-
-  // Aletas aerodinámicas laterales en la máscara (estilo Flash / Capitán)
-  [-1, 1].forEach((side) => {
-    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.34, 4), matGold);
-    fin.position.set(side * 0.36, 0.40, -0.05);
-    fin.rotation.z = side * -0.45;
-    fin.rotation.x = -0.55;
-    headGroup.add(fin);
+  selectVoice.addEventListener("change", (e) => state.voice = e.target.value);
+  selectAvatar.addEventListener("change", (e) => state.avatar = e.target.value);
+  selectTheme.addEventListener("change", (e) => state.theme = e.target.value);
+  selectCameraMode.addEventListener("change", (e) => state.cameraMode = e.target.value);
+  selectFormat.addEventListener("change", (e) => {
+    state.format = e.target.value;
+    resizeCanvas();
   });
 
-  // Ojos brillantes + Cejas expresivas
-  const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.075, 0.05), matEyeGlow);
-  leftEye.position.set(-0.13, 0.34, 0.31);
-  headGroup.add(leftEye);
-
-  const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.075, 0.05), matEyeGlow);
-  rightEye.position.set(0.13, 0.34, 0.31);
-  headGroup.add(rightEye);
-
-  const leftBrow = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), matSuitDark);
-  leftBrow.position.set(-0.13, 0.42, 0.32);
-  headGroup.add(leftBrow);
-
-  const rightBrow = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), matSuitDark);
-  rightBrow.position.set(0.13, 0.42, 0.32);
-  headGroup.add(rightBrow);
-
-  // Nariz sutil estilizada
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.11, 4), matSkin);
-  nose.position.set(0, 0.22, 0.30);
-  nose.rotation.x = 0.2;
-  headGroup.add(nose);
-
-  // Boca animada (lip-sync)
-  const mouthGroup = new THREE.Group();
-  mouthGroup.position.set(0, 0.07, 0.285);
-  headGroup.add(mouthGroup);
-
-  const mouthOpening = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.04), matMouthInside);
-  mouthGroup.add(mouthOpening);
-
-  const upperTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.028, 0.045), matTeeth);
-  upperTeeth.position.set(0, 0.015, 0.005);
-  mouthGroup.add(upperTeeth);
-
-  // =========================================================
-  // 3B. AVATAR HUMANO 3D REALISTA (GLB + ARKit / VISEMES)
-  // =========================================================
-  const AVATAR_PRESETS = {
-    avatarsdk: { url: 'avatars/avatarsdk.glb', label: 'Hombre Realista 3D (Noticiero)' },
-    avaturn: { url: 'avatars/avaturn.glb', label: 'Mujer Realista 3D (Traje Ejecutivo)' },
-    brunette: { url: 'avatars/brunette.glb', label: 'Mujer Estilizada 3D (Presentadora)' },
-  };
-
-  const humanContainer = new THREE.Group();
-  scene.add(humanContainer);
-
-  // Capa heroica opcional detrás del avatar humano (carmesí oscuro estilizado)
-  const humanCapeGeo = new THREE.PlaneGeometry(1.18, 1.55, 8, 10);
-  const humanCapePosAttr = humanCapeGeo.attributes.position;
-  for (let i = 0; i < humanCapePosAttr.count; i++) {
-    const x = humanCapePosAttr.getX(i);
-    const y = humanCapePosAttr.getY(i);
-    // Forma trapezoidal: más angosta en hombros, más ancha abajo
-    const topFactor = Math.max(0, (y + 0.775) / 1.55);
-    humanCapePosAttr.setX(i, x * (1.15 - topFactor * 0.48));
-  }
-  const humanCapeBase = humanCapeGeo.attributes.position.array.slice();
-  const humanCapeMat = new THREE.MeshStandardMaterial({
-    color: 0x8f0f24,
-    roughness: 0.82,
-    metalness: 0.05,
-    side: THREE.DoubleSide,
-  });
-  const humanCape = new THREE.Mesh(humanCapeGeo, humanCapeMat);
-  humanCape.position.set(0, 0.38, -0.32);
-  humanCape.rotation.x = 0.16;
-  humanCape.visible = false;
-  humanContainer.add(humanCape);
-
-  const gltfLoader = typeof THREE.GLTFLoader !== 'undefined' ? new THREE.GLTFLoader() : null;
-  const humanState = {
-    mode: 'avatarsdk',
-    model: null,
-    morphMeshes: [],
-    bones: {},
-    restRot: {},
-    armDropRad: 1.22,
-    loadingId: 0,
-  };
-
-  function setHumanMorph(name, value) {
-    for (let i = 0; i < humanState.morphMeshes.length; i++) {
-      const m = humanState.morphMeshes[i];
-      const idx = m.morphTargetDictionary[name];
-      if (idx !== undefined) {
-        m.morphTargetInfluences[idx] = value;
-      }
-    }
-  }
-
-  function clearHumanModel() {
-    if (humanState.model) {
-      humanContainer.remove(humanState.model);
-      humanState.model.traverse((obj) => {
-        if (obj.isMesh) {
-          if (obj.geometry) obj.geometry.dispose();
-          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-          mats.forEach((mat) => mat && mat.dispose && mat.dispose());
-        }
-      });
-      humanState.model = null;
-    }
-    humanState.morphMeshes = [];
-    humanState.bones = {};
-    humanState.restRot = {};
-  }
-
-  function updateCapeVisibility() {
-    const showCape = capeToggle ? capeToggle.checked : true;
-    cape.visible = showCape;
-    humanCape.visible = showCape && humanState.mode !== 'procedural' && !!humanState.model;
-  }
-
-  function loadHumanAvatar(url, label) {
-    if (!gltfLoader) {
-      avatarStatus.textContent = 'GLTFLoader no disponible; usando héroe clásico.';
-      switchAvatarMode('procedural');
-      return;
-    }
-
-    const reqId = ++humanState.loadingId;
-    avatarStatus.textContent = `Cargando ${label}...`;
-
-    gltfLoader.load(
-      url,
-      (gltf) => {
-        if (reqId !== humanState.loadingId) return;
-
-        clearHumanModel();
-        const model = gltf.scene;
-        humanState.model = model;
-
-        // Recolectar morph targets faciales y huesos principales
-        model.traverse((obj) => {
-          if (obj.isMesh) {
-            obj.frustumCulled = false;
-            if (obj.morphTargetDictionary && obj.morphTargetInfluences) {
-              humanState.morphMeshes.push(obj);
-            }
-            // Evitar que la niebla azul apague la piel/rostro del humano
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach((mat) => {
-              if (mat) {
-                mat.fog = false;
-                if (mat.roughness !== undefined && mat.roughness < 0.25) {
-                  mat.roughness = 0.35;
-                }
-              }
-            });
-          }
-          if (obj.isBone) {
-            const n = obj.name;
-            if (/head$/i.test(n) && !humanState.bones.head) humanState.bones.head = obj;
-            else if (/neck$/i.test(n) && !humanState.bones.neck) humanState.bones.neck = obj;
-            else if (/spine2$/i.test(n) && !humanState.bones.spine2) humanState.bones.spine2 = obj;
-            else if (/spine1$/i.test(n) && !humanState.bones.spine1) humanState.bones.spine1 = obj;
-            else if (/leftarm$/i.test(n) && !humanState.bones.leftArm) humanState.bones.leftArm = obj;
-            else if (/rightarm$/i.test(n) && !humanState.bones.rightArm) humanState.bones.rightArm = obj;
-            else if (/leftforearm$/i.test(n) && !humanState.bones.leftForeArm) humanState.bones.leftForeArm = obj;
-            else if (/rightforearm$/i.test(n) && !humanState.bones.rightForeArm) humanState.bones.rightForeArm = obj;
-          }
-        });
-
-        // Escalar para plano medio tipo presentador de TV (pecho arriba bien nítido)
-        model.updateMatrixWorld(true);
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const targetHeight = 3.15;
-        const scale = size.y > 0.01 ? targetHeight / size.y : 1.75;
-        model.scale.setScalar(scale);
-
-        model.updateMatrixWorld(true);
-        const scaledBox = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        scaledBox.getCenter(center);
-
-        // Alinear la cabeza al nivel ideal del noticiero (y = 1.46)
-        let headY = scaledBox.max.y - 0.28;
-        if (humanState.bones.head) {
-          const headWorld = new THREE.Vector3();
-          humanState.bones.head.getWorldPosition(headWorld);
-          headY = headWorld.y;
-        }
-
-        model.position.set(-center.x, 1.46 - headY, 0.22 - center.z);
-        model.updateMatrixWorld(true);
-
-        // Detectar cuánto bajar los brazos (T-pose vs A-pose)
-        humanState.armDropRad = 1.24;
-        if (humanState.bones.leftArm && humanState.bones.leftForeArm) {
-          const aPos = new THREE.Vector3();
-          const fPos = new THREE.Vector3();
-          humanState.bones.leftArm.getWorldPosition(aPos);
-          humanState.bones.leftForeArm.getWorldPosition(fPos);
-          const armLen = Math.max(0.01, aPos.distanceTo(fPos));
-          const dropRatio = (aPos.y - fPos.y) / armLen;
-          if (dropRatio > 0.72) humanState.armDropRad = 0.25;
-          else if (dropRatio > 0.35) humanState.armDropRad = 0.55;
-          else humanState.armDropRad = 1.26;
-        }
-
-        // Guardar rotaciones base de huesos para animar encima sin deformar
-        Object.keys(humanState.bones).forEach((k) => {
-          const b = humanState.bones[k];
-          humanState.restRot[k] = b.rotation.clone();
-        });
-
-        humanContainer.add(model);
-        heroGroup.visible = false;
-        humanContainer.visible = true;
-        updateCapeVisibility();
-
-        const hasLipSync = humanState.morphMeshes.length > 0;
-        avatarStatus.textContent = hasLipSync
-          ? `Listo: ${label} (Lip-Sync facial real activado)`
-          : `Listo: ${label}`;
-      },
-      undefined,
-      (err) => {
-        console.error('Error cargando avatar GLB:', err);
-        if (reqId !== humanState.loadingId) return;
-        avatarStatus.textContent = 'No se pudo cargar el .glb; mostrando héroe clásico.';
-        switchAvatarMode('procedural');
-      }
-    );
-  }
-
-  function switchAvatarMode(mode) {
-    humanState.mode = mode;
-    if (mode === 'procedural') {
-      heroGroup.visible = true;
-      humanContainer.visible = false;
-      updateCapeVisibility();
-      avatarStatus.textContent = 'Usando Superhéroe Low-Poly clásico.';
-      return;
-    }
-
-    const preset = AVATAR_PRESETS[mode];
-    if (preset) {
-      loadHumanAvatar(preset.url, preset.label);
-    }
-  }
-
-  function animateHumanAvatar(t, dt, openAmt, blinkScale) {
-    if (!humanState.model || humanState.mode === 'procedural') return;
-
-    const mood = MOODS[state.mood];
-    const b = humanState.bones;
-    const r = humanState.restRot;
-
-    // 1) Lip-Sync realista y natural (apertura moderada sin exagerar la lengua)
-    const smoothOpen = Math.min(1, openAmt * 0.85);
-    const vowelA = Math.max(0, Math.sin(t * 11.5)) * smoothOpen;
-    const vowelO = Math.max(0, Math.sin(t * 8.3 + 2.0)) * smoothOpen;
-    const vowelE = Math.max(0, Math.cos(t * 13.0 + 1.0)) * smoothOpen;
-
-    setHumanMorph('jawOpen', Math.min(0.32, smoothOpen * 0.30));
-    setHumanMorph('mouthOpen', Math.min(0.24, smoothOpen * 0.22));
-    setHumanMorph('viseme_aa', Math.min(0.45, vowelA * 0.42));
-    setHumanMorph('viseme_O', Math.min(0.40, vowelO * 0.36));
-    setHumanMorph('viseme_E', Math.min(0.35, vowelE * 0.32));
-    setHumanMorph('viseme_I', Math.min(0.30, vowelE * 0.26));
-
-    // 2) Parpadeo natural humano
-    const blinkAmt = 1 - blinkScale;
-    setHumanMorph('eyeBlinkLeft', blinkAmt);
-    setHumanMorph('eyeBlinkRight', blinkAmt);
-    setHumanMorph('eyesClosed', blinkAmt);
-
-    // 3) Expresión facial según el estado / mood
-    const smileTarget = state.mood === 'chill' ? 0.42 : state.mood === 'alert' ? 0.0 : 0.16;
-    const browTarget = state.mood === 'alert' ? 0.42 : state.mood === 'epic' ? 0.14 : 0.0;
-    setHumanMorph('mouthSmile', smileTarget);
-    setHumanMorph('mouthSmileLeft', smileTarget);
-    setHumanMorph('mouthSmileRight', smileTarget);
-    setHumanMorph('browDownLeft', browTarget);
-    setHumanMorph('browDownRight', browTarget);
-    setHumanMorph('eyeWideLeft', state.mood === 'alert' ? 0.18 : 0.0);
-    setHumanMorph('eyeWideRight', state.mood === 'alert' ? 0.18 : 0.0);
-
-    // 4) Movimiento natural de cabeza, cuello y respiración corporal
-    if (b.head && r.head) {
-      b.head.rotation.y = r.head.y + Math.sin(t * (state.isSpeaking ? 2.1 : 0.8)) * (state.isSpeaking ? 0.12 : 0.05);
-      b.head.rotation.x = r.head.x + Math.sin(t * 2.8) * (state.isSpeaking ? 0.06 : 0.02);
-      b.head.rotation.z = r.head.z + Math.sin(t * 1.4) * (state.isSpeaking ? 0.045 : 0.015);
-    }
-    if (b.neck && r.neck) {
-      b.neck.rotation.y = r.neck.y + Math.sin(t * 1.1) * 0.04;
-    }
-    if (b.spine2 && r.spine2) {
-      b.spine2.rotation.x = r.spine2.x + Math.sin(t * 1.8) * 0.025;
-      b.spine2.rotation.y = r.spine2.y + Math.sin(t * (state.isSpeaking ? 1.5 : 0.6)) * 0.03;
-    }
-
-    // 5) Postura relajada de presentador (rotación en eje X local baja ambos brazos naturalmente)
-    const armDrop = humanState.armDropRad;
-    const speakGesture = state.isSpeaking ? Math.sin(t * 2.8) * 0.06 : 0;
-    if (b.leftArm && r.leftArm) {
-      b.leftArm.rotation.x = r.leftArm.x + armDrop - Math.abs(speakGesture);
-      b.leftArm.rotation.z = r.leftArm.z - 0.08;
-    }
-    if (b.rightArm && r.rightArm) {
-      b.rightArm.rotation.x = r.rightArm.x + armDrop - Math.abs(speakGesture * 0.8);
-      b.rightArm.rotation.z = r.rightArm.z + 0.08;
-    }
-    if (b.leftForeArm && r.leftForeArm) {
-      b.leftForeArm.rotation.z = r.leftForeArm.z + 0.22 + speakGesture;
-      b.leftForeArm.rotation.x = r.leftForeArm.x + 0.14;
-    }
-    if (b.rightForeArm && r.rightForeArm) {
-      b.rightForeArm.rotation.z = r.rightForeArm.z - 0.22 - speakGesture;
-      b.rightForeArm.rotation.x = r.rightForeArm.x + 0.14;
-    }
-
-    // 6) Capa heroica ondeando detrás del humano (si está activada)
-    if (humanCape.visible) {
-      const posAttr = humanCapeGeo.attributes.position;
-      for (let i = 0; i < posAttr.count; i++) {
-        const bx = humanCapeBase[i * 3];
-        const by = humanCapeBase[i * 3 + 1];
-        const bz = humanCapeBase[i * 3 + 2];
-        const weight = Math.max(0, (0.875 - by) / 1.75);
-        const wave = Math.sin(t * mood.capeSpeed + by * 3.0 + bx * 2.0) * 0.20 * weight;
-        posAttr.setZ(i, bz + wave - weight * 0.16);
-      }
-      posAttr.needsUpdate = true;
-      humanCapeGeo.computeVertexNormals();
-    }
-  }
-
-  // =========================================================
-  // 4. ESTUDIO DE NOTICIAS + CIUDAD NOCTURNA + HOLOGRAMA
-  // =========================================================
-  // Escritorio futurista de noticiero
-  const deskGroup = new THREE.Group();
-  deskGroup.position.set(0, -0.35, 1.05);
-  scene.add(deskGroup);
-
-  const deskTop = new THREE.Mesh(
-    new THREE.BoxGeometry(3.8, 0.14, 1.15),
-    toonMat(0x131d36)
-  );
-  deskTop.position.set(0, 0.45, 0);
-  deskGroup.add(deskTop);
-
-  const deskBody = new THREE.Mesh(
-    new THREE.BoxGeometry(3.4, 0.9, 0.9),
-    toonMat(0x0b1224)
-  );
-  deskBody.position.set(0, -0.05, 0);
-  deskGroup.add(deskBody);
-
-  const deskNeonMat = new THREE.MeshBasicMaterial({ color: MOODS.epic.rimColor });
-  const deskTrim = new THREE.Mesh(new THREE.BoxGeometry(3.84, 0.045, 1.18), deskNeonMat);
-  deskTrim.position.set(0, 0.45, 0.01);
-  deskGroup.add(deskTrim);
-
-  // Micrófono flotante/cyber en el escritorio
-  const micStand = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.42, 6), toonMat(0x334155));
-  micStand.position.set(0.75, 0.68, -0.1);
-  micStand.rotation.z = 0.25;
-  deskGroup.add(micStand);
-
-  const micHead = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.08, 4, 8), toonMat(0x1e293b));
-  micHead.position.set(0.68, 0.90, -0.1);
-  micHead.rotation.z = 0.45;
-  deskGroup.add(micHead);
-
-  // Pantalla TV / Holográfica detrás del héroe (HD 1024x640 para fotos reales nítidas)
-  const holoCanvas = document.createElement('canvas');
-  holoCanvas.width = 1024;
-  holoCanvas.height = 640;
-  const holoCtx = holoCanvas.getContext('2d');
-  const holoTexture = new THREE.CanvasTexture(holoCanvas);
-  holoTexture.encoding = THREE.sRGBEncoding;
-  holoTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-
-  const holoGroup = new THREE.Group();
-  scene.add(holoGroup);
-
-  const holoFrameMat = new THREE.MeshBasicMaterial({ color: 0x0b1328, fog: false });
-  const holoFrame = new THREE.Mesh(new THREE.BoxGeometry(2.44, 1.56, 0.06), holoFrameMat);
-  holoFrame.position.set(0, 0, -0.04);
-  holoGroup.add(holoFrame);
-
-  const holoMat = new THREE.MeshBasicMaterial({
-    map: holoTexture,
-    transparent: true,
-    opacity: 0.98,
-    fog: false,
-  });
-  const holoScreen = new THREE.Mesh(new THREE.PlaneGeometry(2.34, 1.46), holoMat);
-  holoGroup.add(holoScreen);
-
-  // Helpers responsivos + Galería Elegante (hasta 5 imágenes)
-  const MAX_NEWS_IMAGES = 5;
-
-  function easeOutCubic(x) {
-    return 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
-  }
-
-  function createBlurCanvas(img) {
-    const c = document.createElement('canvas');
-    c.width = 240;
-    c.height = 240;
-    const cctx = c.getContext('2d');
-    cctx.filter = 'blur(18px) brightness(0.42) saturate(1.15)';
-    drawImageCover(cctx, img, -20, -20, 280, 280, 1.12, 0.25);
-    cctx.filter = 'none';
-    return c;
-  }
-
-  function drawImageCover(ctx, img, x, y, w, h, zoom = 1.0, alignY = 0.08) {
-    const srcW = img.naturalWidth || img.width || 1;
-    const srcH = img.naturalHeight || img.height || 1;
-    const imgRatio = srcW / Math.max(1, srcH);
-    const boxRatio = w / Math.max(1, h);
-    let drawW, drawH;
-    if (imgRatio > boxRatio) {
-      drawH = h * zoom;
-      drawW = drawH * imgRatio;
-    } else {
-      drawW = w * zoom;
-      drawH = drawW / imgRatio;
-    }
-    const dx = x + (w - drawW) / 2;
-    const dy = y + (h - drawH) * alignY;
-    ctx.drawImage(img, dx, dy, drawW, drawH);
-  }
-
-  function computeContainRect(img, x, y, w, h, pad = 0) {
-    const innerW = Math.max(1, w - pad * 2);
-    const innerH = Math.max(1, h - pad * 2);
-    const srcW = img.naturalWidth || img.width || 1;
-    const srcH = img.naturalHeight || img.height || 1;
-    const imgRatio = srcW / Math.max(1, srcH);
-    const boxRatio = innerW / innerH;
-    let drawW, drawH;
-    if (imgRatio > boxRatio) {
-      drawW = innerW;
-      drawH = drawW / imgRatio;
-    } else {
-      drawH = innerH;
-      drawW = drawH * imgRatio;
-    }
-    const dx = x + (w - drawW) / 2;
-    const dy = y + (h - drawH) / 2;
-    return { dx, dy, drawW, drawH };
-  }
-
-  function drawBlurredBackdrop(ctx, item, x, y, w, h) {
-    if (item && item.blurCanvas) {
-      ctx.drawImage(item.blurCanvas, x, y, w, h);
-      return;
-    }
-    if (item && item.img) {
-      ctx.save();
-      ctx.filter = 'blur(24px) brightness(0.42)';
-      drawImageCover(ctx, item.img, x - 24, y - 24, w + 48, h + 48, 1.08, 0.25);
-      ctx.restore();
-    }
-  }
-
-  function drawPhotoCard(ctx, item, x, y, w, h, opts = {}) {
-    const {
-      radius = 14,
-      borderColor = '#00e5ff',
-      borderWidth = 3,
-      fitMode = 'contain',
-      alpha = 1,
-      zoom = 1.0,
-      shadow = true,
-      glowColor = null,
-    } = opts;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    let rx = x;
-    let ry = y;
-    let rw = w;
-    let rh = h;
-
-    if (fitMode === 'contain') {
-      const r = computeContainRect(item.img, x, y, w, h, 0);
-      rx = r.dx;
-      ry = r.dy;
-      rw = r.drawW;
-      rh = r.drawH;
-    }
-
-    if (shadow) {
-      ctx.save();
-      ctx.shadowColor = glowColor || 'rgba(0, 0, 0, 0.65)';
-      ctx.shadowBlur = glowColor ? 26 : 22;
-      ctx.shadowOffsetY = glowColor ? 0 : 8;
-      ctx.fillStyle = '#070c1a';
-      roundRect(ctx, rx, ry, rw, rh, radius);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    ctx.save();
-    roundRect(ctx, rx, ry, rw, rh, radius);
-    ctx.clip();
-    if (fitMode === 'contain') {
-      const zw = rw * zoom;
-      const zh = rh * zoom;
-      ctx.drawImage(item.img, rx + (rw - zw) / 2, ry + (rh - zh) / 2, zw, zh);
-    } else {
-      drawImageCover(ctx, item.img, rx, ry, rw, rh, zoom, 0.08);
-    }
-    ctx.restore();
-
-    if (borderWidth > 0) {
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = borderWidth;
-      roundRect(ctx, rx, ry, rw, rh, radius);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-    return { rx, ry, rw, rh };
-  }
-
-  function drawPaginationDots(ctx, centerX, y, total, activeIdx, mood) {
-    if (total <= 1) return;
-    const pillW = total * 22 + 24;
-    const pillH = 22;
-    ctx.save();
-    ctx.fillStyle = 'rgba(6, 12, 28, 0.78)';
-    roundRect(ctx, centerX - pillW / 2, y - pillH / 2, pillW, pillH, 11);
-    ctx.fill();
-
-    const startX = centerX - ((total - 1) * 20) / 2;
-    for (let i = 0; i < total; i++) {
-      const isAct = i === activeIdx;
-      ctx.fillStyle = isAct ? mood.secondary : 'rgba(255, 255, 255, 0.35)';
-      ctx.beginPath();
-      ctx.arc(startX + i * 20, y, isAct ? 5.5 : 3.8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function getMosaicSlots(count, x, y, w, h, gap) {
-    if (count === 1) return [{ x, y, w, h }];
-    if (count === 2) {
-      const cw = (w - gap) / 2;
-      return [
-        { x, y, w: cw, h },
-        { x: x + cw + gap, y, w: cw, h },
-      ];
-    }
-    if (count === 3) {
-      const topH = h * 0.56 - gap / 2;
-      const botH = h - topH - gap;
-      const cw = (w - gap) / 2;
-      return [
-        { x, y, w, h: topH },
-        { x, y: y + topH + gap, w: cw, h: botH },
-        { x: x + cw + gap, y: y + topH + gap, w: cw, h: botH },
-      ];
-    }
-    if (count === 4) {
-      const cw = (w - gap) / 2;
-      const ch = (h - gap) / 2;
-      return [
-        { x, y, w: cw, h: ch },
-        { x: x + cw + gap, y, w: cw, h: ch },
-        { x, y: y + ch + gap, w: cw, h: ch },
-        { x: x + cw + gap, y: y + ch + gap, w: cw, h: ch },
-      ];
-    }
-    // 5 imágenes: 2 protagonistas arriba + 3 elegantes abajo
-    const topH = h * 0.54 - gap / 2;
-    const botH = h - topH - gap;
-    const topW = (w - gap) / 2;
-    const botW = (w - gap * 2) / 3;
-    return [
-      { x, y, w: topW, h: topH },
-      { x: x + topW + gap, y, w: topW, h: topH },
-      { x, y: y + topH + gap, w: botW, h: botH },
-      { x: x + botW + gap, y: y + topH + gap, w: botW, h: botH },
-      { x: x + (botW + gap) * 2, y: y + topH + gap, w: botW, h: botH },
-    ];
-  }
-
-  function drawElegantGalleryInBox(ctx, boxX, boxY, boxW, boxH, mood, time) {
-    const imgs = state.newsImages;
-    const count = imgs.length;
-    if (count === 0) return;
-
-    const actIdx = state.activeImageIndex % count;
-    const activeItem = imgs[actIdx];
-    const prevItem =
-      state.prevImageIndex >= 0 && state.prevImageIndex < count ? imgs[state.prevImageIndex] : null;
-    const ease = easeOutCubic(state.imageTransition);
-    const style = state.galleryStyle;
-
-    // A) MOSAICO ELEGANTE (todas las 2..5 imágenes a la vez detrás del avatar)
-    if (style === 'mosaic' && count > 1) {
-      const gap = 12;
-      const slots = getMosaicSlots(count, boxX, boxY, boxW, boxH - 22, gap);
-
-      // Primero dibujar las no activas y al final la activa para que su brillo quede arriba
-      slots.forEach((slot, idx) => {
-        if (idx === actIdx) return;
-        drawPhotoCard(ctx, imgs[idx], slot.x, slot.y, slot.w, slot.h, {
-          radius: 13,
-          borderColor: 'rgba(255, 255, 255, 0.25)',
-          borderWidth: 2,
-          fitMode: 'cover-top',
-          alpha: 0.84,
-          zoom: 1.0,
-          shadow: true,
-        });
-      });
-
-      const actSlot = slots[actIdx];
-      const pop = 4 * ease;
-      drawPhotoCard(
-        ctx,
-        imgs[actIdx],
-        actSlot.x - pop,
-        actSlot.y - pop,
-        actSlot.w + pop * 2,
-        actSlot.h + pop * 2,
-        {
-          radius: 14,
-          borderColor: mood.secondary,
-          borderWidth: 4,
-          fitMode: state.imageFit === 'contain' && count <= 2 ? 'contain' : 'cover-top',
-          alpha: 1,
-          zoom: 1.02 + Math.sin(time * 0.8) * 0.015,
-          shadow: true,
-          glowColor: mood.secondary,
-        }
-      );
-
-      drawPaginationDots(ctx, boxX + boxW / 2, boxY + boxH - 4, count, actIdx, mood);
-      return;
-    }
-
-    // B) CARRUSEL ELEGANTE (con tarjetas laterales asomando + deslizamiento suave)
-    if (style === 'carousel') {
-      const cardAreaH = count > 1 ? boxH - 30 : boxH;
-      const sidePad = count > 1 ? Math.round(boxW * 0.11) : 0;
-      const mainX = boxX + sidePad;
-      const mainW = boxW - sidePad * 2;
-
-      // Tarjetas laterales tenues (previa a la izquierda, siguiente a la derecha)
-      if (count > 1) {
-        const leftIdx = (actIdx - 1 + count) % count;
-        const rightIdx = (actIdx + 1) % count;
-        const peekW = Math.round(mainW * 0.38);
-        const peekH = Math.round(cardAreaH * 0.72);
-        const peekY = boxY + (cardAreaH - peekH) / 2;
-
-        drawPhotoCard(ctx, imgs[leftIdx], boxX - 6, peekY, peekW, peekH, {
-          radius: 12,
-          borderColor: 'rgba(255,255,255,0.18)',
-          borderWidth: 2,
-          fitMode: 'cover-top',
-          alpha: 0.42,
-          shadow: false,
-        });
-
-        if (count > 2 || rightIdx !== leftIdx) {
-          drawPhotoCard(ctx, imgs[rightIdx], boxX + boxW - peekW + 6, peekY, peekW, peekH, {
-            radius: 12,
-            borderColor: 'rgba(255,255,255,0.18)',
-            borderWidth: 2,
-            fitMode: 'cover-top',
-            alpha: 0.42,
-            shadow: false,
-          });
-        }
-      }
-
-      const slideDist = Math.round(boxW * 0.18);
-      if (prevItem && state.imageTransition < 1) {
-        // Tarjeta anterior saliendo suavemente a la izquierda
-        drawPhotoCard(
-          ctx,
-          prevItem,
-          mainX - slideDist * ease,
-          boxY,
-          mainW,
-          cardAreaH,
-          {
-            radius: 16,
-            borderColor: mood.accent,
-            borderWidth: 2,
-            fitMode: state.imageFit,
-            alpha: Math.max(0, 1 - ease * 1.15),
-            zoom: 1.0,
-            shadow: false,
+  if (customGlbInput) {
+    customGlbInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (label3dStatus) label3dStatus.textContent = "Leyendo modelo...";
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const loader = new THREE.GLTFLoader();
+        loader.parse(
+          evt.target.result,
+          "",
+          (gltf) => {
+            setup3DCharacter(gltf.scene);
+            threeLoaded = true;
+            state.avatar = "custom_3d";
+            selectAvatar.value = "custom_3d";
+            if (label3dStatus) label3dStatus.textContent = `✅ ${file.name.slice(0, 16)}...`;
+            updateStatus(`Avatar 3D "${file.name}" cargado exitosamente.`);
+          },
+          (err) => {
+            console.error("Error al cargar GLB:", err);
+            if (label3dStatus) label3dStatus.textContent = "Error de formato";
+            alert("No se pudo leer el archivo 3D. Asegúrate de que sea un .glb o .gltf válido.");
           }
         );
-      }
-
-      // Tarjeta activa entrando suavemente desde la derecha con zoom sutil
-      const enterOffset = (1 - ease) * slideDist;
-      const subtleZoom = state.imageFit === 'contain' ? 1.0 : 1.02 + Math.sin(time * 0.5) * 0.02;
-      drawPhotoCard(ctx, activeItem, mainX + enterOffset, boxY, mainW, cardAreaH, {
-        radius: 16,
-        borderColor: mood.accent,
-        borderWidth: 3.5,
-        fitMode: state.imageFit,
-        alpha: Math.min(1, 0.25 + ease * 0.75),
-        zoom: subtleZoom,
-        shadow: true,
-      });
-
-      drawPaginationDots(ctx, boxX + boxW / 2, boxY + boxH - 8, count, actIdx, mood);
-      return;
-    }
-
-    // C) CINE (Fade suave 1 a 1)
-    const cardAreaH = count > 1 ? boxH - 28 : boxH;
-    if (prevItem && state.imageTransition < 1) {
-      drawPhotoCard(ctx, prevItem, boxX, boxY, boxW, cardAreaH, {
-        radius: 16,
-        borderColor: mood.accent,
-        borderWidth: 3,
-        fitMode: state.imageFit,
-        alpha: 1,
-        zoom: 1.0,
-        shadow: true,
-      });
-    }
-    drawPhotoCard(ctx, activeItem, boxX, boxY, boxW, cardAreaH, {
-      radius: 16,
-      borderColor: mood.accent,
-      borderWidth: 3,
-      fitMode: state.imageFit,
-      alpha: ease,
-      zoom: state.imageFit === 'contain' ? 1.0 : 1.03 + Math.sin(time * 0.45) * 0.025,
-      shadow: true,
+      };
+      reader.readAsArrayBuffer(file);
     });
-    drawPaginationDots(ctx, boxX + boxW / 2, boxY + boxH - 8, count, actIdx, mood);
   }
 
-  function updateScreenVisibility() {
-    const hasImages = state.newsImages.length > 0;
-    const useBackdrop = state.screenMode === 'backdrop' && hasImages;
-    holoGroup.visible = !useBackdrop;
-    cityGroup.visible = !useBackdrop;
+  if (sliderMarkerSound) {
+    sliderMarkerSound.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.soundVolume = val / 100;
+      if (labelSoundVol) labelSoundVol.textContent = `${val}%`;
+      soundEngine.setVolume(state.soundVolume);
+    });
+  }
 
-    if (useBackdrop) {
-      scene.background = null;
-    } else {
-      const mood = MOODS[state.mood];
-      scene.background = new THREE.Color(mood.bgTop);
-      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  btnPlayPreview.addEventListener("click", generateAndPlay);
+  btnRecord.addEventListener("click", toggleRecording);
+  btnRestart.addEventListener("click", restartPlayback);
+  btnTogglePlay.addEventListener("click", togglePausePlayback);
+
+  btnAiGenerate.addEventListener("click", generateAiTopic);
+
+  // Desbloquear audio en el primer clic de la página
+  document.body.addEventListener("click", () => {
+    if (!state.audioContext) {
+      initAudio();
     }
-  }
+  }, { once: true });
+}
 
-  function renderStudioScreens(time = 0) {
-    const mood = MOODS[state.mood];
-    const hasImages = state.newsImages.length > 0;
-    const activeItem = hasImages ? state.newsImages[state.activeImageIndex % state.newsImages.length] : null;
-    const prevItem =
-      hasImages && state.prevImageIndex >= 0 && state.prevImageIndex < state.newsImages.length
-        ? state.newsImages[state.prevImageIndex]
-        : null;
+function switchActiveTemplate(event, key) {
+  document.querySelectorAll(".template-chips .chip").forEach(btn => btn.classList.remove("active"));
+  event.target.classList.add("active");
+  loadTemplate(key);
+}
 
-    // 1) Modo Fondo TV (2D responsivo en bgCanvas, 100% libre de recortes 3D)
-    if (state.screenMode === 'backdrop' && activeItem) {
-      const bw = bgCanvas.width;
-      const bh = bgCanvas.height;
-      const isVertical = state.aspect === '9:16';
+function loadTemplate(key) {
+  state.steps = JSON.parse(JSON.stringify(TEMPLATES[key] || TEMPLATES.capicua));
+  renderStepsUI();
+  updateStatus(`Plantilla cargada: ${key.toUpperCase()}`);
+}
 
-      bgCtx.fillStyle = '#050814';
-      bgCtx.fillRect(0, 0, bw, bh);
-
-      // Si es 1 foto en modo Llenar (cover-top) con estilo Cine/Fade, llenar fondo completo anclado arriba
-      if (state.imageFit === 'cover-top' && state.galleryStyle === 'fade') {
-        if (prevItem && state.imageTransition < 1) {
-          drawImageCover(bgCtx, prevItem.img, 0, 0, bw, bh, 1.02, 0.06);
-          bgCtx.save();
-          bgCtx.globalAlpha = easeOutCubic(state.imageTransition);
-          drawImageCover(bgCtx, activeItem.img, 0, 0, bw, bh, 1.02, 0.06);
-          bgCtx.restore();
-        } else {
-          drawImageCover(bgCtx, activeItem.img, 0, 0, bw, bh, 1.02, 0.06);
-        }
-        const botGrad = bgCtx.createLinearGradient(0, bh * 0.62, 0, bh);
-        botGrad.addColorStop(0, 'rgba(5, 10, 24, 0)');
-        botGrad.addColorStop(1, 'rgba(5, 10, 24, 0.72)');
-        bgCtx.fillStyle = botGrad;
-        bgCtx.fillRect(0, bh * 0.62, bw, bh * 0.38);
-        drawPaginationDots(bgCtx, bw / 2, isVertical ? 108 : 96, state.newsImages.length, state.activeImageIndex, mood);
-        return;
-      }
-
-      // Fondo ambiental difuminado ultra-rápido (sin barras negras)
-      if (prevItem && state.imageTransition < 1) {
-        drawBlurredBackdrop(bgCtx, prevItem, 0, 0, bw, bh);
-        bgCtx.save();
-        bgCtx.globalAlpha = easeOutCubic(state.imageTransition);
-        drawBlurredBackdrop(bgCtx, activeItem, 0, 0, bw, bh);
-        bgCtx.restore();
-      } else {
-        drawBlurredBackdrop(bgCtx, activeItem, 0, 0, bw, bh);
-      }
-
-      // Zona segura elegante: en 9:16 arriba del presentador; en 16:9 mitad derecha limpia
-      const boxX = isVertical ? 22 : Math.round(bw * 0.46);
-      const boxY = isVertical ? 96 : 88;
-      const boxW = isVertical ? bw - 44 : Math.round(bw * 0.51);
-      const boxH = isVertical ? Math.round(bh * 0.43) : Math.round(bh * 0.68);
-
-      drawElegantGalleryInBox(bgCtx, boxX, boxY, boxW, boxH, mood, time);
-      return;
-    }
-
-    // Limpiar bgCanvas si estamos en modo monitor 3D
-    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-
-    // 2) Modo Pantalla TV 3D detrás del presentador
-    const w = holoCanvas.width;
-    const h = holoCanvas.height;
-    holoCtx.clearRect(0, 0, w, h);
-
-    if (activeItem) {
-      holoCtx.save();
-      holoCtx.beginPath();
-      holoCtx.rect(10, 10, w - 20, h - 20);
-      holoCtx.clip();
-
-      drawBlurredBackdrop(holoCtx, activeItem, 0, 0, w, h);
-      drawElegantGalleryInBox(holoCtx, 22, 22, w - 44, h - 44, mood, time);
-
-      // Etiqueta discreta arriba a la izquierda
-      const badgeLabel =
-        state.newsImages.length > 1
-          ? `● FOTO ${state.activeImageIndex + 1}/${state.newsImages.length}`
-          : '● IMAGEN EN VIVO';
-      holoCtx.fillStyle = 'rgba(6, 12, 28, 0.84)';
-      roundRect(holoCtx, 26, 26, 220, 40, 8);
-      holoCtx.fill();
-      holoCtx.fillStyle = mood.accent;
-      holoCtx.font = '900 19px Segoe UI, sans-serif';
-      holoCtx.fillText(badgeLabel, 40, 53);
-
-      holoCtx.restore();
-
-      holoCtx.strokeStyle = mood.accent;
-      holoCtx.lineWidth = 12;
-      holoCtx.strokeRect(6, 6, w - 12, h - 12);
-    } else {
-      // Sin imágenes cargadas: pantalla holográfica de texto por defecto
-      const grad = holoCtx.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, 'rgba(6, 20, 46, 0.88)');
-      grad.addColorStop(1, 'rgba(10, 32, 68, 0.78)');
-      holoCtx.fillStyle = grad;
-      holoCtx.fillRect(0, 0, w, h);
-
-      holoCtx.fillStyle = 'rgba(255,255,255,0.035)';
-      for (let y = 0; y < h; y += 12) {
-        holoCtx.fillRect(0, y, w, 3);
-      }
-
-      holoCtx.strokeStyle = mood.accent;
-      holoCtx.lineWidth = 14;
-      holoCtx.strokeRect(7, 7, w - 14, h - 14);
-
-      holoCtx.fillStyle = mood.accent;
-      holoCtx.fillRect(32, 32, w - 64, 86);
-      holoCtx.fillStyle = '#050814';
-      holoCtx.font = '900 44px Segoe UI, sans-serif';
-      holoCtx.fillText('⚡ ' + mood.label, 56, 90);
-
-      holoCtx.fillStyle = '#ffffff';
-      holoCtx.font = '800 60px Segoe UI, sans-serif';
-      const headline = (headlineInput.value || 'NOTICIA DE ÚLTIMA HORA').toUpperCase();
-      wrapCanvasText(holoCtx, headline, 56, 224, w - 112, 76, 4);
-
-      holoCtx.fillStyle = mood.secondary;
-      holoCtx.font = '700 32px Segoe UI, sans-serif';
-      holoCtx.fillText('HERO NEWS NETWORK // SAT-LINK 01', 56, h - 44);
-    }
-
-    holoTexture.needsUpdate = true;
-  }
-
-  function updateHoloTexture() {
-    renderStudioScreens(clock ? clock.elapsedTime : 0);
-  }
-
-  // Skyline de ciudad nocturna estilizada
-  const cityGroup = new THREE.Group();
-  scene.add(cityGroup);
-
-  const buildingMat = toonMat(0x0a1328);
-  const windowColors = [0x00e5ff, 0xffcc33, 0x38bdf8, 0xff4d6d];
-
-  for (let i = 0; i < 28; i++) {
-    const bw = 0.7 + Math.random() * 1.1;
-    const bh = 2.5 + Math.random() * 6.5;
-    const bd = 0.8 + Math.random() * 1.0;
-    const x = (i - 14) * 1.15 + (Math.random() - 0.5) * 0.4;
-    const z = -6.5 - Math.random() * 7.5;
-
-    const bMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), buildingMat);
-    bMesh.position.set(x, bh / 2 - 2.6, z);
-    cityGroup.add(bMesh);
-
-    // Ventanas brillantes en algunos edificios
-    const winCount = 3 + Math.floor(Math.random() * 5);
-    const winCol = windowColors[i % windowColors.length];
-    const winMat = new THREE.MeshBasicMaterial({ color: winCol });
-    for (let w = 0; w < winCount; w++) {
-      const win = new THREE.Mesh(new THREE.PlaneGeometry(bw * 0.65, 0.08), winMat);
-      win.position.set(
-        x,
-        -1.2 + Math.random() * (bh - 1.2),
-        z + bd / 2 + 0.02
-      );
-      cityGroup.add(win);
-    }
-  }
-
-  // Partículas flotantes de energía
-  const particleCount = 70;
-  const pGeo = new THREE.BufferGeometry();
-  const pPositions = new Float32Array(particleCount * 3);
-  for (let i = 0; i < particleCount; i++) {
-    pPositions[i * 3] = (Math.random() - 0.5) * 10;
-    pPositions[i * 3 + 1] = Math.random() * 6 - 1;
-    pPositions[i * 3 + 2] = -4 + Math.random() * 6;
-  }
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-  const pMat = new THREE.PointsMaterial({
-    color: MOODS.epic.rimColor,
-    size: 0.07,
-    transparent: true,
-    opacity: 0.75,
+function renderStepsUI() {
+  stepsListEl.innerHTML = "";
+  state.steps.forEach((step, idx) => {
+    const card = document.createElement("div");
+    card.className = "step-card";
+    card.innerHTML = `
+      <div class="step-card-header">
+        <span class="step-number">Paso ${idx + 1}</span>
+        <div class="step-actions">
+          <button class="btn-icon-danger" onclick="removeStep(${idx})" title="Eliminar">✕</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Lo que dice el docente:</label>
+        <textarea class="form-control" onchange="updateStepSpeech(${idx}, this.value)">${escapeHtml(step.speech)}</textarea>
+      </div>
+      <div class="step-card-footer">
+        <div class="form-group">
+          <label>Acción pizarra:</label>
+          <select class="form-control" onchange="updateStepAction(${idx}, this.value)">
+            <option value="write" ${step.action === "write" ? "selected" : ""}>✍️ Escribir texto</option>
+            <option value="arc" ${step.action === "arc" ? "selected" : ""}>🔗 Flecha de unión</option>
+            <option value="highlight" ${step.action === "highlight" ? "selected" : ""}>🟡 Resaltar</option>
+            <option value="clear" ${step.action === "clear" ? "selected" : ""}>🧹 Borrar pizarra</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Contenido / Texto:</label>
+          <input type="text" class="form-control" value="${escapeHtml(step.text || '')}" onchange="updateStepText(${idx}, this.value)">
+        </div>
+      </div>
+    `;
+    stepsListEl.appendChild(card);
   });
-  const particles = new THREE.Points(pGeo, pMat);
-  scene.add(particles);
+}
 
-  // =========================================================
-  // 5. PRESETS DE CÁMARA Y ASPECT RATIO
-  // =========================================================
-  const CAM_PRESETS = {
-    front: { pos: new THREE.Vector3(0.0, 1.55, 4.9), look: new THREE.Vector3(0.0, 1.32, 0) },
-    hero: { pos: new THREE.Vector3(-1.35, 1.38, 4.55), look: new THREE.Vector3(0.25, 1.48, 0) },
-    closeup: { pos: new THREE.Vector3(0.35, 1.72, 3.35), look: new THREE.Vector3(0.0, 1.62, 0) },
-  };
-  const AUTO_CAM_ORDER = ['front', 'hero', 'closeup'];
-  const currentCamPos = CAM_PRESETS.front.pos.clone();
-  const currentCamLook = CAM_PRESETS.front.look.clone();
+window.removeStep = (idx) => {
+  if (state.steps.length <= 1) return;
+  state.steps.splice(idx, 1);
+  renderStepsUI();
+};
 
-  function applyAspectRatio() {
-    state.aspect = aspectSelect.value;
-    if (state.aspect === '9:16') {
-      state.width = 720;
-      state.height = 1280;
-      stageWrapper.classList.remove('ratio-16-9');
-      stageWrapper.classList.add('ratio-9-16');
-      // Monitor TV nítido debajo del badge EN VIVO y encima de la cabeza del presentador
-      holoGroup.position.set(0.0, 2.48, -1.65);
-      holoGroup.rotation.y = 0.0;
-      holoGroup.scale.set(0.84, 0.84, 0.84);
-    } else {
-      state.width = 1280;
-      state.height = 720;
-      stageWrapper.classList.remove('ratio-9-16');
-      stageWrapper.classList.add('ratio-16-9');
-      // Monitor TV grande al lado derecho del héroe
-      holoGroup.position.set(1.92, 1.82, -1.35);
-      holoGroup.rotation.y = -0.26;
-      holoGroup.scale.set(1.1, 1.1, 1.1);
-    }
+window.updateStepSpeech = (idx, val) => state.steps[idx].speech = val;
+window.updateStepAction = (idx, val) => state.steps[idx].action = val;
+window.updateStepText = (idx, val) => state.steps[idx].text = val;
 
-    renderer.setSize(state.width, state.height, false);
-    camera.aspect = state.width / state.height;
-    camera.updateProjectionMatrix();
-
-    bgCanvas.width = state.width;
-    bgCanvas.height = state.height;
-    hudCanvas.width = state.width;
-    hudCanvas.height = state.height;
-    updateScreenVisibility();
-    renderStudioScreens(0);
+function resizeCanvas() {
+  if (state.format === "9:16") {
+    canvas.width = 1080;
+    canvas.height = 1920;
+    document.getElementById("badgeResolution").textContent = "1080 × 1920 (9:16 TikTok)";
+  } else {
+    canvas.width = 1920;
+    canvas.height = 1080;
+    document.getElementById("badgeResolution").textContent = "1920 × 1080 (16:9 YouTube)";
   }
 
-  function applyMood() {
-    state.mood = moodSelect.value;
-    const mood = MOODS[state.mood];
-    const useBackdrop = state.screenMode === 'backdrop' && state.newsImages.length > 0;
-    if (!useBackdrop) {
-      scene.background = new THREE.Color(mood.bgTop);
-    }
-    scene.fog.color.setHex(mood.bgTop);
-    rimLight.color.setHex(mood.rimColor);
-    matEyeGlow.color.setHex(mood.eyeColor);
-    matEmblemGlow.color.setHex(mood.rimColor);
-    deskNeonMat.color.setHex(mood.rimColor);
-    pMat.color.setHex(mood.rimColor);
-    updateHoloTexture();
+  if (threeCamera && threeRenderer && threeCanvas) {
+    threeCanvas.width = canvas.width;
+    threeCanvas.height = canvas.height;
+    threeCamera.aspect = canvas.width / canvas.height;
+    threeCamera.updateProjectionMatrix();
+    threeRenderer.setSize(canvas.width, canvas.height);
   }
+}
 
-  // =========================================================
-  // 6. HUD DE VIDEOJUEGO EN CANVAS 2D (SUBTÍTULOS + TICKER)
-  // =========================================================
-  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
-    const words = text.split(/\s+/);
-    let line = '';
-    let lineCount = 0;
+function updateStatus(msg) {
+  statusNotice.textContent = msg;
+}
 
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line ? line + ' ' + words[i] : words[i];
-      if (ctx.measureText(testLine).width > maxWidth && line) {
-        ctx.fillText(line, x, y + lineCount * lineHeight);
-        line = words[i];
-        lineCount++;
-        if (lineCount >= maxLines - 1) {
-          // Última línea
-          const rest = [line, ...words.slice(i + 1)].join(' ');
-          ctx.fillText(rest.slice(0, 38) + (rest.length > 38 ? '…' : ''), x, y + lineCount * lineHeight);
-          return;
-        }
-      } else {
-        line = testLine;
+function escapeHtml(str) {
+  return (str || "").replace(/"/g, '&quot;');
+}
+
+/* AUDIO & SÍNTESIS CON EDGE-TTS */
+function initAudio() {
+  if (!state.audioContext) {
+    state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  soundEngine.init(state.audioContext);
+
+  if (!state.audioElement) {
+    state.audioElement = new Audio();
+    state.audioElement.addEventListener("timeupdate", () => {
+      state.currentTime = state.audioElement.currentTime;
+      updateTimeBadge();
+    });
+    state.audioElement.addEventListener("ended", () => {
+      state.isPlaying = false;
+      btnTogglePlay.textContent = "▶";
+      soundEngine.updateWriting(false);
+      if (state.isRecording) {
+        stopRecording();
       }
-    }
-    if (line) {
-      ctx.fillText(line, x, y + lineCount * lineHeight);
-    }
+    });
+  }
+}
+
+function updateTimeBadge() {
+  const cur = formatTime(state.currentTime);
+  const dur = formatTime(state.duration);
+  badgeTime.textContent = `${cur} / ${dur}`;
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60).toString().padStart(2, "0");
+  const s = Math.floor(sec % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+async function generateAndPlay() {
+  btnPlayPreview.disabled = true;
+  updateStatus("🎙️ Sintetizando voz con Inteligencia Artificial...");
+
+  if (!state.audioContext) {
+    initAudio();
+  }
+  if (state.audioContext.state === "suspended") {
+    await state.audioContext.resume();
   }
 
-  function drawHUD(time, dt) {
-    const w = hudCanvas.width;
-    const h = hudCanvas.height;
-    const isVertical = state.aspect === '9:16';
-    const mood = MOODS[state.mood];
-    const ctx = hudCtx;
+  const fullScript = state.steps.map(s => s.speech.trim()).join(" ... ");
 
-    ctx.clearRect(0, 0, w, h);
-
-    // Marco sutil estilo HUD de videojuego en las esquinas
-    const pad = isVertical ? 24 : 28;
-    ctx.strokeStyle = mood.accent;
-    ctx.globalAlpha = 0.55;
-    ctx.lineWidth = 3;
-    const corner = 26;
-
-    // Esquina sup-izq
-    ctx.beginPath();
-    ctx.moveTo(pad, pad + corner);
-    ctx.lineTo(pad, pad);
-    ctx.lineTo(pad + corner, pad);
-    ctx.stroke();
-
-    // Esquina sup-der
-    ctx.beginPath();
-    ctx.moveTo(w - pad - corner, pad);
-    ctx.lineTo(w - pad, pad);
-    ctx.lineTo(w - pad, pad + corner);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    // Badge EN VIVO + Nombre del canal
-    const topY = isVertical ? 44 : 36;
-    ctx.fillStyle = '#ff2e54';
-    roundRect(ctx, pad + 10, topY, 118, 38, 8);
-    ctx.fill();
-
-    // Punto parpadeante
-    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
-    ctx.fillStyle = `rgba(255,255,255,${0.35 + pulse * 0.65})`;
-    ctx.beginPath();
-    ctx.arc(pad + 30, topY + 19, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 18px Segoe UI, sans-serif';
-    ctx.fillText('EN VIVO', pad + 44, topY + 25);
-
-    // Etiqueta del Mood junto a EN VIVO
-    ctx.fillStyle = 'rgba(8, 16, 36, 0.82)';
-    roundRect(ctx, pad + 136, topY, 240, 38, 8);
-    ctx.fill();
-    ctx.strokeStyle = mood.accent;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = mood.accent;
-    ctx.font = '800 15px Segoe UI, sans-serif';
-    ctx.fillText(mood.label, pad + 150, topY + 24);
-
-    // Ecualizador de voz (arriba a la derecha)
-    const eqX = w - pad - 110;
-    const eqY = topY + 34;
-    for (let i = 0; i < 10; i++) {
-      const wave = state.isSpeaking
-        ? 6 + Math.abs(Math.sin(time * 12 + i * 0.9)) * (26 * (0.35 + state.speechEnergy))
-        : 4 + Math.abs(Math.sin(time * 2 + i)) * 4;
-      ctx.fillStyle = i % 2 === 0 ? mood.accent : mood.secondary;
-      ctx.fillRect(eqX + i * 10, eqY - wave, 6, wave);
-    }
-
-    // Subtítulos dinámicos estilo juego / Shorts (cuando habla, con palabra activa resaltada)
-    if (state.isSpeaking && state.subtitleWords.length > 0) {
-      const idx = Math.max(0, state.activeWordIndex);
-      const chunkSize = isVertical ? 4 : 6;
-      const chunkStart = Math.floor(idx / chunkSize) * chunkSize;
-      const chunk = state.subtitleWords.slice(chunkStart, chunkStart + chunkSize);
-      const localActive = idx - chunkStart;
-
-      const subY = isVertical ? h - 250 : h - 185;
-      const boxW = Math.min(w - 56, isVertical ? 650 : 900);
-      const boxX = (w - boxW) / 2;
-
-      ctx.fillStyle = 'rgba(6, 11, 26, 0.86)';
-      roundRect(ctx, boxX, subY - 46, boxW, 84, 14);
-      ctx.fill();
-      ctx.strokeStyle = mood.secondary;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      const fontSize = isVertical ? 30 : 32;
-      ctx.font = `900 ${fontSize}px Segoe UI, sans-serif`;
-      const upperWords = chunk.map((word) => word.toUpperCase());
-      const spaceW = ctx.measureText(' ').width;
-      const wordWidths = upperWords.map((word) => ctx.measureText(word).width);
-      const totalW =
-        wordWidths.reduce((acc, ww) => acc + ww, 0) +
-        Math.max(0, upperWords.length - 1) * spaceW;
-
-      const scale = Math.min(1, (boxW - 40) / Math.max(1, totalW));
-      ctx.save();
-      ctx.translate(w / 2, subY + 8);
-      ctx.scale(scale, scale);
-
-      let cursorX = -totalW / 2;
-      ctx.shadowColor = 'rgba(0,0,0,0.9)';
-      ctx.shadowBlur = 8;
-      upperWords.forEach((word, i) => {
-        ctx.fillStyle = i === localActive ? mood.secondary : '#ffffff';
-        ctx.fillText(word, cursorX, 0);
-        cursorX += wordWidths[i] + spaceW;
-      });
-      ctx.restore();
-      ctx.shadowBlur = 0;
-    }
-
-    // Lower-third / Cintillo de Noticias estilo videojuego
-    const barH = isVertical ? 132 : 108;
-    const barY = h - barH - 22;
-    const barX = 22;
-    const barW = w - 44;
-
-    // Fondo del cintillo
-    ctx.fillStyle = 'rgba(8, 14, 30, 0.9)';
-    roundRect(ctx, barX, barY, barW, barH, 14);
-    ctx.fill();
-    ctx.strokeStyle = mood.accent;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Etiqueta del nombre del superhéroe
-    const heroName = (heroNameInput.value || 'CAPITÁN NOVA').toUpperCase();
-    ctx.fillStyle = mood.secondary;
-    roundRect(ctx, barX + 16, barY - 18, 220, 32, 7);
-    ctx.fill();
-    ctx.fillStyle = '#080c18';
-    ctx.font = '900 16px Segoe UI, sans-serif';
-    ctx.fillText('⚡ ' + heroName, barX + 28, barY + 4);
-
-    // Titular principal
-    const headline = (headlineInput.value || 'ÚLTIMA HORA').toUpperCase();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${isVertical ? 24 : 28}px Segoe UI, sans-serif`;
-    ctx.fillText(headline, barX + 20, barY + (isVertical ? 54 : 52), barW - 40);
-
-    // Banda inferior deslizante (ticker)
-    const tickerY = barY + barH - 36;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(barX + 12, tickerY, barW - 24, 28);
-    ctx.clip();
-
-    ctx.fillStyle = 'rgba(0, 229, 255, 0.14)';
-    ctx.fillRect(barX + 12, tickerY, barW - 24, 28);
-
-    const tickerText = `  ★ ÚLTIMA HORA: ${headline}   ★ TRANSMITIENDO DESDE LA BASE CENTRAL   ★ ${heroName} EN VIVO   `;
-    ctx.font = '700 15px Segoe UI, sans-serif';
-    ctx.fillStyle = mood.accent;
-    const textWidth = ctx.measureText(tickerText).width;
-    state.tickerX -= dt * 85;
-    if (state.tickerX < -textWidth) state.tickerX = 0;
-
-    ctx.fillText(tickerText, barX + 16 + state.tickerX, tickerY + 20);
-    ctx.fillText(tickerText, barX + 16 + state.tickerX + textWidth, tickerY + 20);
-    ctx.restore();
-  }
-
-  function roundRect(ctx, x, y, width, height, radius) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  }
-
-  // =========================================================
-  // 7. MOTOR DE VOZ NEURAL IA + EFECTOS SUPERHÉROE + LIP-SYNC
-  // =========================================================
-  let audioEl = null;
-  let audioCtx = null;
-  let analyser = null;
-  let freqData = null;
-  let mediaDest = null;
-  let subtitleInterval = null;
-  const ttsCache = new Map();
-
-  // Transformar cualquier contexto normal en guion con tono de superhéroe
-  heroizeBtn.addEventListener('click', () => {
-    const raw = contextInput.value.trim();
-    if (!raw) return;
-    const heroName = (heroNameInput.value || 'Capitán Nova').trim();
-    const cleaned = raw.replace(/\s+/g, ' ');
-    const intros = [
-      `¡Atención ciudadanos! Aquí ${heroName} interrumpiendo la señal con un reporte urgente.`,
-      `¡Escuchen bien, metrópolis! ${heroName} en línea directa desde la torre de vigilancia.`,
-      `¡Alerta informativa! Les habla ${heroName} con noticias que nadie puede ignorar.`,
-    ];
-    const outros = [
-      `¡Manténganse firmes y atentos! ${heroName} fuera.`,
-      `¡La verdad nunca duerme! Nos vemos en la próxima transmisión heroica.`,
-      `¡Sigan en sintonía y nunca bajen la guardia!`,
-    ];
-    const intro = intros[Math.floor(Math.random() * intros.length)];
-    const outro = outros[Math.floor(Math.random() * outros.length)];
-    contextInput.value = `${intro} ${cleaned} ${outro}`;
-  });
-
-  // Manejo de audio externo (MP3 / WAV)
-  audioFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (state.customAudioUrl) URL.revokeObjectURL(state.customAudioUrl);
-    state.customAudioUrl = URL.createObjectURL(file);
-    state.customAudioName = file.name;
-    audioStatus.textContent = `Audio propio cargado: ${file.name} (lip-sync real)`;
-  });
-
-  clearAudioBtn.addEventListener('click', () => {
-    if (state.customAudioUrl) URL.revokeObjectURL(state.customAudioUrl);
-    state.customAudioUrl = null;
-    state.customAudioName = '';
-    audioFileInput.value = '';
-    audioStatus.textContent = 'Listo: Voz Neural IA + Lip-Sync real + Audio incluido en video.';
-  });
-
-  function base64ToBlobUrl(b64, mime = 'audio/mpeg') {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return URL.createObjectURL(new Blob([bytes], { type: mime }));
-  }
-
-  async function fetchNeuralTTS(text) {
-    const voice = voiceSelect.value || 'es-MX-JorgeNeural';
-    const pitchHz = parseInt(pitchRange.value, 10) || -10;
-    const ratePct = parseInt(rateRange.value, 10) || 5;
-    const cacheKey = `${voice}|${pitchHz}|${ratePct}|${text}`;
-
-    if (ttsCache.has(cacheKey)) {
-      return ttsCache.get(cacheKey);
-    }
-
-    audioStatus.textContent = 'Generando voz neural de superhéroe...';
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice, pitchHz, ratePct }),
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: fullScript,
+        voice: state.voice,
+        pitchHz: 0,
+        ratePct: 2
+      })
     });
 
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      const err = await res.json();
+      throw new Error(err.error || "Error al sintetizar voz");
     }
 
     const data = await res.json();
-    const audioUrl = base64ToBlobUrl(data.audioBase64, 'audio/mpeg');
-    const result = { audioUrl, words: data.words || [] };
-    ttsCache.set(cacheKey, result);
-    return result;
+    state.wordsTimeline = data.words || [];
+
+    assignTimestampsToSteps();
+
+    const audioBlob = b64toBlob(data.audioBase64, data.mimeType || "audio/mpeg");
+    const audioUrl = URL.createObjectURL(audioBlob);
+    state.audioElement.src = audioUrl;
+
+    await state.audioElement.play();
+    state.isPlaying = true;
+    state.duration = state.audioElement.duration || 10;
+    btnTogglePlay.textContent = "⏸";
+    btnRecord.disabled = false;
+    updateStatus("▶ Reproduciendo lección sincronizada con sonido de pizarra.");
+  } catch (err) {
+    console.error(err);
+    alert("Hubo un error: " + err.message);
+    updateStatus("Error en la síntesis.");
+  } finally {
+    btnPlayPreview.disabled = false;
+  }
+}
+
+function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+  const byteCharacters = atob(b64Data);
+  const byteArrays = [];
+  for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    const slice = byteCharacters.slice(offset, offset + sliceSize);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+  return new Blob(byteArrays, { type: contentType });
+}
+
+function assignTimestampsToSteps() {
+  if (state.wordsTimeline.length === 0) return;
+
+  const totalWords = state.wordsTimeline.length;
+  let currentWordIdx = 0;
+  state.steps.forEach((step, idx) => {
+    const stepWordCount = Math.max(1, step.speech.split(/\s+/).length);
+    const startWord = state.wordsTimeline[Math.min(currentWordIdx, totalWords - 1)];
+    currentWordIdx += stepWordCount;
+    const endWord = state.wordsTimeline[Math.min(currentWordIdx, totalWords - 1)];
+
+    step.startTime = startWord ? startWord.start : (idx * 3);
+    step.endTime = endWord ? endWord.start + endWord.duration : ((idx + 1) * 3);
+  });
+
+  const lastWord = state.wordsTimeline[totalWords - 1];
+  state.duration = (lastWord.start + lastWord.duration) || 15;
+}
+
+function restartPlayback() {
+  if (state.audioElement) {
+    state.audioElement.currentTime = 0;
+    state.audioElement.play();
+    state.isPlaying = true;
+    btnTogglePlay.textContent = "⏸";
+  }
+}
+
+function togglePausePlayback() {
+  if (!state.audioElement) return;
+  if (state.isPlaying) {
+    state.audioElement.pause();
+    state.isPlaying = false;
+    btnTogglePlay.textContent = "▶";
+    soundEngine.updateWriting(false);
+  } else {
+    state.audioElement.play();
+    state.isPlaying = true;
+    btnTogglePlay.textContent = "⏸";
+  }
+}
+
+function generateAiTopic() {
+  const topic = aiTopicInput.value.trim();
+  if (!topic) {
+    alert("Por favor ingresa un tema educativo (ej: Reglas de la B y la V).");
+    return;
   }
 
-  function buildVoiceEffectsChain(ctx, sourceNode, fxMode) {
-    if (fxMode === 'heroic') {
-      // Graves profundos + claridad de locutor + compresor épico
-      const lowShelf = ctx.createBiquadFilter();
-      lowShelf.type = 'lowshelf';
-      lowShelf.frequency.value = 135;
-      lowShelf.gain.value = 6.5;
+  updateStatus(`💡 Generando lección interactiva para: "${topic}"...`);
 
-      const presence = ctx.createBiquadFilter();
-      presence.type = 'peaking';
-      presence.frequency.value = 2800;
-      presence.Q.value = 1.1;
-      presence.gain.value = 3.2;
+  setTimeout(() => {
+    state.steps = [
+      {
+        speech: `¡Hola a todos! Hoy vamos a aprender de forma super fácil todo sobre: ${topic}.`,
+        action: "write",
+        text: topic.toUpperCase(),
+        camera: "teacher"
+      },
+      {
+        speech: "Presta mucha atención a la pizarra para que no se te olvide este concepto clave.",
+        action: "write",
+        text: "Regla Principal",
+        camera: "board"
+      },
+      {
+        speech: "Fíjate en este primer ejemplo práctico y cómo se conectan los elementos.",
+        action: "arc",
+        text: "Ejemplo 1",
+        fromIdx: 0,
+        toIdx: 8,
+        camera: "board"
+      },
+      {
+        speech: "Si aplicas esta regla, jamás volverás a equivocarte en tus exámenes o trabajos.",
+        action: "highlight",
+        text: "¡Aprobado! ✓",
+        camera: "board"
+      },
+      {
+        speech: "¿Te ha quedado claro? ¡Dale me gusta y comparte este video con tus compañeros!",
+        action: "highlight",
+        text: "¡Comparte!",
+        camera: "teacher"
+      }
+    ];
 
-      const comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -20;
-      comp.knee.value = 12;
-      comp.ratio.value = 4.5;
-      comp.attack.value = 0.005;
-      comp.release.value = 0.14;
+    renderStepsUI();
+    updateStatus(`Lección para "${topic}" lista. Presiona 'Generar y Reproducir'.`);
+  }, 400);
+}
 
-      const gain = ctx.createGain();
-      gain.gain.value = 1.25;
+/* =========================================================
+   SISTEMA DE RENDERIZADO VISUAL EN CANVAS (60 FPS)
+   ========================================================= */
 
-      sourceNode.connect(lowShelf);
-      lowShelf.connect(presence);
-      presence.connect(comp);
-      comp.connect(gain);
-      return gain;
+function renderLoop(time) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  const currentStep = getCurrentStep();
+  const cameraType = getEffectiveCamera(currentStep);
+
+  // 1. Dibujar Fondo de la Pizarra
+  drawWhiteboardBackground(w, h);
+
+  // 1.5. Emblema Oficial del Canal ("La Profe Rochi") en la pared superior
+  drawChannelLogo(w, h, time);
+
+  // 2. Renderizar Contenido de la Pizarra y la Mano con Marcador
+  drawBoardContent(w, h, currentStep, time);
+
+  // 3. Renderizar Docente (Siempre presente: explicando al frente o escribiendo de espaldas)
+  drawTeacher(w, h, cameraType, time, currentStep);
+
+  // 4. Subtítulos dinámicos estilo TikTok
+  drawViralCaptions(w, h, currentStep);
+
+  requestAnimationFrame(renderLoop);
+}
+
+function getCurrentStep() {
+  if (!state.steps || state.steps.length === 0) return null;
+  const t = state.currentTime;
+  for (let i = 0; i < state.steps.length; i++) {
+    const s = state.steps[i];
+    if (t >= (s.startTime || 0) && t <= (s.endTime || 9999)) {
+      return {
+        ...s,
+        index: i,
+        progress: Math.min(1, Math.max(0, (t - (s.startTime || 0)) / Math.max(0.1, (s.endTime - s.startTime) || 1)))
+      };
     }
+  }
+  return { ...state.steps[state.steps.length - 1], index: state.steps.length - 1, progress: 1 };
+}
 
-    if (fxMode === 'comms') {
-      // Efecto comunicador / radio de casco de videojuego
-      const highPass = ctx.createBiquadFilter();
-      highPass.type = 'highpass';
-      highPass.frequency.value = 260;
+function getEffectiveCamera(step) {
+  if (state.cameraMode === "board_focus") return "board";
+  if (state.cameraMode === "split") return "split";
+  return step ? (step.camera || "board") : "teacher";
+}
 
-      const lowPass = ctx.createBiquadFilter();
-      lowPass.type = 'lowpass';
-      lowPass.frequency.value = 3600;
+const bgClassroomV = new Image();
+bgClassroomV.src = "/backgrounds/classroom_9_16.jpg";
 
-      const midPeak = ctx.createBiquadFilter();
-      midPeak.type = 'peaking';
-      midPeak.frequency.value = 1450;
-      midPeak.Q.value = 1.6;
-      midPeak.gain.value = 5.5;
+const bgClassroomH = new Image();
+bgClassroomH.src = "/backgrounds/classroom_16_9.jpg";
 
-      const comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -24;
-      comp.ratio.value = 6;
+/* =========================================================
+   EMBLEMA OFICIAL: "LA PROFE ROCHI" (ZONA SUPERIOR DEL AULA)
+   ========================================================= */
 
-      const gain = ctx.createGain();
-      gain.gain.value = 1.3;
+const logoProfeRochi = new Image();
+logoProfeRochi.src = "/assets/logo_profe_rochi.png";
 
-      sourceNode.connect(highPass);
-      highPass.connect(lowPass);
-      lowPass.connect(midPeak);
-      midPeak.connect(comp);
-      comp.connect(gain);
-      return gain;
+function drawChannelLogo(w, h, time) {
+  // Solo se dibuja en formato vertical 9:16 donde está el espacio superior del aula
+  if (state.format !== "9:16") return;
+  if (!logoProfeRochi.complete || logoProfeRochi.naturalWidth === 0) return;
+
+  const cx = w / 2; // 540 (centrado en la pared superior)
+  const cy = 350;
+  const size = 480;
+
+  // Sutil flotación suave estilo caricatura
+  const bobY = Math.sin(time * 0.002) * 4;
+
+  ctx.save();
+  ctx.translate(cx, cy + bobY);
+
+  // Sombra suave en la pared morada del aula
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+  ctx.shadowBlur = 26;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 12;
+  ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+  ctx.restore();
+
+  // Dibujar el logo oficial con sus bordes amarillos nítidos
+  ctx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+
+  ctx.restore();
+}
+
+/* 1. FONDO DE PIZARRA Y AULA */
+function drawWhiteboardBackground(w, h) {
+  // Fondo de Aula Ilustrada oficial (Pizarra con marco amarillo, reloj y pupitres)
+  if (state.theme === "classroom") {
+    const isLandscape = (w > h);
+    const bg = isLandscape ? bgClassroomH : bgClassroomV;
+    if (bg && bg.complete && bg.naturalWidth > 0) {
+      ctx.drawImage(bg, 0, 0, w, h);
+      return;
     }
-
-    return sourceNode;
+    // Fallback mientras carga la imagen
+    ctx.fillStyle = "#81399d";
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  if (state.theme === "blackboard_green") {
+    ctx.fillStyle = "#1e3d2f";
+    ctx.fillRect(0, 0, w, h);
+    ctx.lineWidth = 24;
+    ctx.strokeStyle = "#8b5a2b";
+    ctx.strokeRect(12, 12, w - 24, h - 24);
+    return;
   }
 
-  // =========================================================
-  // 7B. MÚSICA DE FONDO SUAVE (100% SIN COPYRIGHT - WEB AUDIO)
-  // =========================================================
-  const MUSIC_THEMES = {
-    modern: {
-      bpm: 98,
-      // Cmaj9 -> Am9 -> Fmaj9 -> G6 (suave, elegante y profesional)
-      chords: [
-        [261.63, 329.63, 392.0, 493.88, 587.33],
-        [220.0, 329.63, 392.0, 493.88, 523.25],
-        [174.61, 261.63, 329.63, 392.0, 440.0],
-        [196.0, 293.66, 329.63, 440.0, 493.88],
-      ],
-      bass: [130.81, 110.0, 87.31, 98.0],
-      pluckPattern: [0, 2, 4, 2, 1, 3, 2, 0],
-      cutoff: 1250,
-    },
-    breaking: {
-      bpm: 108,
-      // Dm9 -> Bbmaj7 -> C6 -> Am7 (pulso informativo suave)
-      chords: [
-        [293.66, 349.23, 440.0, 523.25, 659.25],
-        [233.08, 349.23, 440.0, 587.33],
-        [261.63, 329.63, 392.0, 440.0],
-        [220.0, 329.63, 392.0, 523.25],
-      ],
-      bass: [146.83, 116.54, 130.81, 110.0],
-      pluckPattern: [0, 1, 2, 3, 2, 1, 2, 0],
-      cutoff: 1400,
-    },
-    chill: {
-      bpm: 86,
-      // Fmaj7 -> Em7 -> Dm9 -> Cmaj9 (agradable para tendencias / resumen)
-      chords: [
-        [174.61, 220.0, 261.63, 329.63, 392.0],
-        [164.81, 196.0, 246.94, 293.66, 392.0],
-        [146.83, 220.0, 261.63, 329.63, 349.23],
-        [130.81, 196.0, 246.94, 293.66, 329.63],
-      ],
-      bass: [87.31, 82.41, 73.42, 65.41],
-      pluckPattern: [0, 3, 2, 4, 1, 3, 2, 1],
-      cutoff: 1050,
-    },
+  if (state.theme === "blackboard_dark") {
+    ctx.fillStyle = "#1a1e24";
+    ctx.fillRect(0, 0, w, h);
+    ctx.lineWidth = 20;
+    ctx.strokeStyle = "#374151";
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    return;
+  }
+
+  // Pizarra Blanca Acrílica (Estilo Profe Mónica)
+  ctx.fillStyle = "#fafafa";
+  ctx.fillRect(0, 0, w, h);
+
+  // Cuadrícula sutil de pizarra de aula
+  if (state.theme === "whiteboard_grid") {
+    ctx.strokeStyle = "rgba(215, 225, 238, 0.55)";
+    ctx.lineWidth = 1.6;
+    const gridSize = 48;
+    for (let x = 24; x < w - 24; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 24);
+      ctx.lineTo(x, h - 24);
+      ctx.stroke();
+    }
+    for (let y = 24; y < h - 24; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(24, y);
+      ctx.lineTo(w - 24, y);
+      ctx.stroke();
+    }
+  }
+
+  // Marco de aluminio anodizado
+  ctx.lineWidth = 18;
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.strokeRect(9, 9, w - 18, h - 18);
+
+  // Reflejo realista de luz superior en el acrílico
+  const grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, "rgba(255, 255, 255, 0.75)");
+  grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(20, 20, w - 40, 240);
+}
+
+/* 2. CONTENIDO ESCRITO Y ANIMACIÓN DE LA MANO */
+function drawBoardContent(w, h, currentStep, time) {
+  if (!state.steps || state.steps.length === 0) return;
+
+  const currentIdx = currentStep ? currentStep.index : 0;
+  const isDark = state.theme.includes("blackboard");
+  const mainInk = isDark ? "#ffffff" : "#111827";
+  const blueInk = isDark ? "#60a5fa" : "#1d4ed8";
+  const redInk = isDark ? "#f87171" : "#b91c1c";
+
+  const isClassroom = (state.theme === "classroom");
+  const startY = isClassroom ? 760 : (h * 0.18);
+  const rowHeight = isClassroom ? 115 : (h * 0.115);
+
+  let handTargetX = null;
+  let handTargetY = null;
+  let handAngle = -0.15;
+  let isWritingNow = false;
+
+  const cameraType = getEffectiveCamera(currentStep);
+
+  // Mapeo de filas lógicas en la pizarra para evitar superposiciones o duplicados
+  function getBoardRow(s, idx) {
+    if (s.target === "title" || idx === 0) return 0;
+    if (s.target === "example1" || s.action === "arc") return 1;
+    if (s.target === "example2") return 2;
+    if (s.target === "example3") return 3;
+    return Math.min(idx, 3);
+  }
+
+  // Dibujamos todos los trazos completados hasta el paso actual
+  for (let i = 0; i <= currentIdx; i++) {
+    const s = state.steps[i];
+    if (!s) continue;
+    // Las acciones de solo hablar ("talk") no agregan texto nuevo a la pizarra
+    if (s.action === "talk") continue;
+
+    const isCurrent = (i === currentIdx);
+    const progress = isCurrent ? (currentStep.progress || 1) : 1;
+    const row = getBoardRow(s, i);
+    const yPos = startY + (row * rowHeight);
+
+    if (s.action === "write") {
+      const fullText = s.text || "";
+      const charCount = Math.floor(fullText.length * progress);
+      const textToShow = fullText.substring(0, charCount);
+
+      ctx.font = (row === 0) 
+        ? "bold 68px 'Caveat', 'Kalam', cursive, sans-serif" 
+        : "bold 74px 'Caveat', 'Kalam', cursive, sans-serif";
+      ctx.fillStyle = (row === 0) ? blueInk : mainInk;
+
+      const totalW = ctx.measureText(fullText).width;
+      // Centrado horizontal en la pizarra
+      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+
+      // Dibujar texto alineado a la izquierda para estabilidad visual letra por letra
+      ctx.textAlign = "left";
+      ctx.fillText(textToShow, startX, yPos);
+
+      // Animación activa de escritura en el trazo actual
+      if (isCurrent && progress < 0.98 && fullText.length > 0 && state.isPlaying) {
+        const textWidth = ctx.measureText(textToShow).width;
+        handTargetX = startX + textWidth;
+        handTargetY = yPos - 14;
+        handAngle = -0.12;
+        isWritingNow = true;
+      }
+    } else if (s.action === "arc") {
+      ctx.font = "bold 74px 'Caveat', 'Kalam', cursive, sans-serif";
+      ctx.fillStyle = mainInk;
+
+      const text = s.text || "";
+      const totalW = ctx.measureText(text).width;
+      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+
+      // Si el texto base no fue dibujado previamente, dibujarlo; de lo contrario ya existe en la fila
+      const charWidth = totalW / Math.max(1, text.length);
+      const p1X = startX + (s.fromIdx || 0) * charWidth + charWidth / 2;
+      const p2X = startX + (s.toIdx !== undefined ? s.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
+
+      drawCurvedArrow(ctx, p1X, yPos - 58, p2X, yPos - 58, -42, redInk, progress);
+
+      if (s.fromIdx2 !== undefined && s.toIdx2 !== undefined) {
+        const q1X = startX + s.fromIdx2 * charWidth + charWidth / 2;
+        const q2X = startX + s.toIdx2 * charWidth + charWidth / 2;
+        drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, progress);
+      }
+
+      if (isCurrent && progress < 0.98 && state.isPlaying) {
+        // La mano/puntero se mueve exactamente sobre la curva parabólica
+        const t = Math.min(1, progress);
+        const midX = (p1X + p2X) / 2;
+        const midY = (yPos - 58) - 42;
+        handTargetX = (1 - t) * (1 - t) * p1X + 2 * (1 - t) * t * midX + t * t * p2X;
+        handTargetY = (1 - t) * (1 - t) * (yPos - 58) + 2 * (1 - t) * t * midY + t * t * (yPos - 58);
+        handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
+        isWritingNow = true;
+      }
+    } else if (s.action === "highlight") {
+      ctx.font = "bold 68px 'Caveat', 'Kalam', cursive, sans-serif";
+      const totalW = ctx.measureText(s.text || "").width;
+      const startX = (cameraType === "split" && row > 0) ? (w * 0.40) - (totalW / 2) : (w / 2) - (totalW / 2);
+
+      const textW = totalW * progress;
+      ctx.fillStyle = "rgba(250, 204, 21, 0.45)";
+      ctx.fillRect(startX, yPos - 52, textW, 58);
+
+      ctx.fillStyle = blueInk;
+      ctx.textAlign = "left";
+      ctx.fillText(s.text || "", startX, yPos);
+
+      if (isCurrent && progress < 0.98 && state.isPlaying) {
+        handTargetX = startX + textW;
+        handTargetY = yPos - 22;
+        handAngle = -0.05;
+        isWritingNow = true;
+      }
+    }
+  }
+
+  // Notificar al motor de sonido sobre el estado de escritura
+  soundEngine.updateWriting(isWritingNow, time);
+  state.lastHandX = handTargetX;
+  state.lastHandY = handTargetY;
+  state.isWritingNow = isWritingNow;
+}
+
+/* FLECHA / ARCO CURVO DE UNIÓN ENTRE LETRAS */
+function drawCurvedArrow(ctx, x1, y1, x2, y2, curveOffset, color, progress) {
+  if (progress <= 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 6.5;
+  ctx.lineCap = "round";
+
+  const midX = (x1 + x2) / 2;
+  const midY = ((y1 + y2) / 2) + curveOffset;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+
+  const t = Math.min(1, progress);
+  const curX = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * midX + t * t * x2;
+  const curY = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * midY + t * t * y2;
+
+  ctx.quadraticCurveTo(midX, midY, curX, curY);
+  ctx.stroke();
+
+  if (progress > 0.8) {
+    const angle = Math.atan2(y2 - midY, x2 - midX);
+    ctx.beginPath();
+    ctx.moveTo(curX, curY);
+    ctx.lineTo(curX - 20 * Math.cos(angle - Math.PI / 6), curY - 20 * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(curX - 20 * Math.cos(angle + Math.PI / 6), curY - 20 * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+/* =========================================================
+   DIBUJO HIPERREALISTA DE LA MANO Y EL MARCADOR DE PIZARRA
+   Inspirado en la toma real de "La Profe Mónica"
+   ========================================================= */
+function drawUltraRealisticHand(ctx, x, y, time, tiltAngle = 0, isTouching = true) {
+  ctx.save();
+
+  // Micro-movimientos orgánicos al escribir (letras, curvas, trazos)
+  const microX = isTouching ? Math.sin(time * 0.045) * 2.5 : 0;
+  const microY = isTouching ? Math.cos(time * 0.06) * 3 : 0;
+
+  ctx.translate(x + microX, y + microY);
+  ctx.rotate(tiltAngle);
+
+  // 1. SOMBRA DIRECCIONAL EN EL ACRÍLICO DE LA PIZARRA
+  ctx.save();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
+  ctx.shadowBlur = isTouching ? 14 : 26;
+  ctx.shadowOffsetX = isTouching ? 16 : 28;
+  ctx.shadowOffsetY = isTouching ? 20 : 36;
+
+  // Silueta de sombra de contacto
+  ctx.fillStyle = "rgba(15, 23, 42, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(4, 6, isTouching ? 9 : 18, isTouching ? 5 : 12, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 2. PUNTA DE FIELTRO BISELADA DEL MARCADOR (CHISEL NIB)
+  ctx.save();
+  ctx.rotate(-0.65); // Ángulo natural ergonómico hacia arriba a la derecha
+
+  // Fieltro oscuro
+  ctx.fillStyle = "#181b20";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(14, -22);
+  ctx.lineTo(26, -18);
+  ctx.lineTo(10, 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bisel con brillo de tinta fresca
+  const nibGrad = ctx.createLinearGradient(0, 0, 14, -22);
+  nibGrad.addColorStop(0, "#0f172a");
+  nibGrad.addColorStop(0.5, "#334155");
+  nibGrad.addColorStop(1, "#0f172a");
+  ctx.fillStyle = nibGrad;
+  ctx.fill();
+
+  // Anillo negro de sujeción de la punta
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(8, -25, 22, 12);
+
+  // 3. CUERPO DEL MARCADOR (CILINDRO 3D CON DEGRADADO REALISTA)
+  const markerW = 38;
+  const markerL = 190;
+  const barrelX = 2;
+  const barrelY = -34;
+
+  const barrelGrad = ctx.createLinearGradient(barrelX, barrelY, barrelX + markerW, barrelY);
+  barrelGrad.addColorStop(0, "#cbd5e1");    // Sombra izquierda
+  barrelGrad.addColorStop(0.3, "#ffffff");  // Brillo especular central
+  barrelGrad.addColorStop(0.7, "#f8fafc");  // Blanco puro
+  barrelGrad.addColorStop(1, "#94a3b8");    // Sombra derecha
+
+  ctx.fillStyle = barrelGrad;
+  ctx.beginPath();
+  ctx.roundRect(barrelX, barrelY, markerW, markerL, 6);
+  ctx.fill();
+
+  // Línea sutil de contorno
+  ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Banda de color de la marca (Azul Expo profesional)
+  const bandGrad = ctx.createLinearGradient(barrelX, barrelY + 45, barrelX + markerW, barrelY + 45);
+  bandGrad.addColorStop(0, "#1d4ed8");
+  bandGrad.addColorStop(0.4, "#60a5fa");
+  bandGrad.addColorStop(1, "#1e40af");
+  ctx.fillStyle = bandGrad;
+  ctx.fillRect(barrelX, barrelY + 45, markerW, 35);
+
+  // Tipografía pequeña en el marcador
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 8px sans-serif";
+  ctx.fillText("EXPO", barrelX + 7, barrelY + 66);
+
+  // Tapa trasera azul
+  ctx.fillStyle = "#1d4ed8";
+  ctx.beginPath();
+  ctx.roundRect(barrelX, barrelY + markerL - 10, markerW, 20, [0, 0, 8, 8]);
+  ctx.fill();
+
+  ctx.restore();
+
+  // 4. LA MANO HUMANA (ANATOMÍA, PIEL, SOMBREADO Y MANICURA)
+  const isRedTeacher = (state.avatar === "bellum" || state.avatar === "bellum_full" || state.avatar === "scarlet");
+  const skinBase = isRedTeacher ? "#fcd34d" : "#f2c5a2";
+  const skinShadow = isRedTeacher ? "#f59e0b" : "#d69871";
+  const skinHighlight = isRedTeacher ? "#fef08a" : "#fce8d7";
+  const nailPink = isRedTeacher ? "#dc2626" : "#fbcfe8";
+
+  // A. Dedo medio (debajo del marcador dándole soporte)
+  ctx.save();
+  const midFingerGrad = ctx.createLinearGradient(20, 20, 60, 60);
+  midFingerGrad.addColorStop(0, skinShadow);
+  midFingerGrad.addColorStop(1, skinBase);
+  ctx.fillStyle = midFingerGrad;
+  ctx.beginPath();
+  ctx.ellipse(36, 42, 16, 32, 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // B. Dedo índice (arqueado sobre el marcador con nudillos y manicura)
+  ctx.save();
+  const indexGrad = ctx.createLinearGradient(10, -5, 55, 35);
+  indexGrad.addColorStop(0, skinHighlight);
+  indexGrad.addColorStop(0.5, skinBase);
+  indexGrad.addColorStop(1, skinShadow);
+  ctx.fillStyle = indexGrad;
+
+  // Falange distal y media del índice
+  ctx.beginPath();
+  ctx.ellipse(22, 14, 15, 34, 0.32, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Líneas de pliegues en los nudillos
+  ctx.strokeStyle = "rgba(180, 110, 80, 0.4)";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(26, 20, 8, -0.6, 0.6);
+  ctx.stroke();
+
+  // Uña con manicura francesa elegante (como en el video)
+  ctx.fillStyle = nailPink;
+  ctx.beginPath();
+  ctx.ellipse(12, 0, 5.5, 9, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Punta blanca de la manicura
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(10.5, -3.5, 4, 3.5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Reflejo de brillo en la uña
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.beginPath();
+  ctx.ellipse(13, 1, 1.5, 5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // C. Dedo pulgar (sujetando el cuerpo del marcador)
+  ctx.save();
+  const thumbGrad = ctx.createLinearGradient(35, 20, 75, 60);
+  thumbGrad.addColorStop(0, skinHighlight);
+  thumbGrad.addColorStop(0.6, skinBase);
+  thumbGrad.addColorStop(1, skinShadow);
+  ctx.fillStyle = thumbGrad;
+
+  ctx.beginPath();
+  ctx.ellipse(48, 38, 18, 38, 0.85, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Uña del pulgar
+  ctx.fillStyle = nailPink;
+  ctx.beginPath();
+  ctx.ellipse(32, 28, 6, 8, 0.85, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(29, 25, 4, 3, 0.85, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // D. Palma y dorso de la mano (conexión fluida hacia la muñeca)
+  ctx.save();
+  const palmGrad = ctx.createLinearGradient(40, 50, 140, 130);
+  palmGrad.addColorStop(0, skinBase);
+  palmGrad.addColorStop(0.5, skinShadow);
+  palmGrad.addColorStop(1, "#c4835b");
+  ctx.fillStyle = palmGrad;
+
+  ctx.beginPath();
+  ctx.moveTo(35, 45);
+  ctx.quadraticCurveTo(80, 60, 120, 110);
+  ctx.quadraticCurveTo(100, 150, 55, 115);
+  ctx.quadraticCurveTo(30, 85, 35, 45);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // E. Muñeca y Manga de Chaqueta (Roja para Bellum, Negra para clásica)
+  ctx.save();
+  const sleeveGrad = ctx.createLinearGradient(70, 90, 160, 180);
+  if (isRedTeacher) {
+    sleeveGrad.addColorStop(0, "#ef4444");
+    sleeveGrad.addColorStop(0.4, "#dc2626");
+    sleeveGrad.addColorStop(1, "#991b1b");
+  } else {
+    sleeveGrad.addColorStop(0, "#27272a");
+    sleeveGrad.addColorStop(0.4, "#18181b");
+    sleeveGrad.addColorStop(1, "#09090b");
+  }
+  ctx.fillStyle = sleeveGrad;
+
+  ctx.beginPath();
+  ctx.moveTo(75, 95);
+  ctx.lineTo(190, 175);
+  ctx.lineTo(135, 260);
+  ctx.lineTo(35, 145);
+  ctx.closePath();
+  ctx.fill();
+
+  // Borde de la manga / puño con textura
+  ctx.strokeStyle = isRedTeacher ? "#000000" : "rgba(255, 255, 255, 0.15)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(75, 95);
+  ctx.lineTo(35, 145);
+  ctx.stroke();
+
+  ctx.restore();
+
+  ctx.restore();
+}
+
+const bellumImg = new Image();
+bellumImg.src = "/avatars/bellum_exact.png";
+
+// SPRITES ANIMADOS PROFESIONALES (Extraídos de la hoja de sprites original)
+const bellumSprites = {
+  talk: [],
+  write: [],
+  turn: [],
+  base: new Image()
+};
+
+bellumSprites.base.src = "/avatars/sprites/base_pose.png";
+
+// 8 frames de animación explicando con gestos expresivos (hablando, apuntando, sonriendo)
+for (let i = 1; i <= 8; i++) {
+  const img = new Image();
+  img.src = `/avatars/sprites/talk_${i}.png`;
+  bellumSprites.talk.push(img);
+}
+
+// 6 frames de animación escribiendo en la pizarra
+for (let i = 1; i <= 6; i++) {
+  const img = new Image();
+  img.src = `/avatars/sprites/write_${i}.png`;
+  bellumSprites.write.push(img);
+}
+
+// 6 frames de giro hacia la pizarra
+for (let i = 1; i <= 6; i++) {
+  const img = new Image();
+  img.src = `/avatars/sprites/turn_${i}.png`;
+  bellumSprites.turn.push(img);
+}
+
+// Coordenadas milimétricas de la punta del marcador en write_1..write_6 (tamaño 500x800)
+const WRITE_MARKER_TIPS = [
+  { x: 420, y: 262 }, // write_1
+  { x: 470, y: 240 }, // write_2
+  { x: 499, y: 203 }, // write_3
+  { x: 499, y: 140 }, // write_4
+  { x: 432, y: 107 }, // write_5
+  { x: 488, y: 56 }   // write_6
+];
+
+/* =========================================================
+   3. PROFESOR ANIMADO (SEÑORITA BELLUM 2D CON SPRITES O 3D)
+   ========================================================= */
+function drawTeacher(w, h, cameraType, time, currentStep) {
+  if (state.avatar === "pizarra_only") return;
+
+  if (state.avatar === "custom_3d" && threeLoaded && threeModel) {
+    draw3DTeacher(w, h, cameraType, time);
+    return;
+  }
+
+  const isSpeaking = state.isPlaying;
+  const isWriting = (state.isWritingNow && isSpeaking && state.lastHandX !== null && state.lastHandY !== null);
+  const isPointing = (currentStep && (currentStep.action === "arc" || currentStep.action === "highlight"));
+
+  // ¡SI ESTÁ ESCRIBIENDO: La Señorita Bellum se ancla directamente con su marcador sobre la letra activa!
+  if (isWriting && (state.avatar === "bellum" || state.avatar === "bellum_sprites")) {
+    drawBellumWritingOnBoard(ctx, time, state.lastHandX, state.lastHandY);
+    return;
+  }
+
+  ctx.save();
+
+  const blink = Math.sin(time * 0.003) > 0.96;
+  const mouthOpen = isSpeaking ? (Math.sin(time * 0.02) * 0.5 + 0.5) : 0;
+  const headBob = Math.sin(time * 0.004) * 4;
+  const sway = Math.sin(time * 0.0025) * 3;
+
+  let teacherX = w / 2;
+  let teacherY = 1750; // Pies firmes en el suelo
+  let teacherScale = 1.08;
+
+  if (isPointing) {
+    // Si está señalando fórmulas o arcos, situarla elegantemente a la derecha
+    teacherX = w * 0.78;
+    teacherScale = 0.88;
+  } else if (cameraType === "split") {
+    teacherX = w * 0.78;
+    teacherScale = 0.82;
+  } else {
+    // En plano docente de explicación frontal
+    teacherX = w / 2;
+    teacherScale = 1.10;
+  }
+
+  ctx.translate(teacherX, teacherY + headBob);
+  ctx.scale(teacherScale, teacherScale);
+
+  if (state.avatar === "bellum" || state.avatar === "bellum_sprites") {
+    drawBellumAnimatedSprites(ctx, blink, mouthOpen, time, sway, cameraType, isWriting, isPointing);
+  } else if (state.avatar === "bellum_full") {
+    drawBellumFullBody(ctx, blink, mouthOpen, time, sway);
+  } else if (state.avatar === "scarlet") {
+    drawScarletAvatar(ctx, blink, mouthOpen, time, sway);
+  } else {
+    drawMonicaAvatar(ctx, blink, mouthOpen, time);
+  }
+
+  ctx.restore();
+}
+
+/* SEÑORITA BELLUM ESCRIBIENDO EN LA PIZARRA CON PUNTA DEL MARCADOR BLOQUEADA SOBRE LA LETRA */
+function drawBellumWritingOnBoard(ctx, time, targetX, targetY) {
+  if (!bellumSprites.write || bellumSprites.write.length === 0) return;
+
+  // Seleccionar frames acordes a la altura del texto en la pizarra (título alto, ejemplos medios)
+  let framePool = [0, 1, 2, 3, 4, 5];
+  if (targetY < 830) {
+    framePool = [4, 5]; // Título arriba: brazo estirado alcanzando la cabecera
+  } else if (targetY < 940) {
+    framePool = [3, 4, 5]; // Ejemplo 1 a media altura
+  } else {
+    framePool = [1, 2, 3]; // Ejemplo 2 más abajo
+  }
+
+  const writeIdx = framePool[Math.floor(time * 0.008) % framePool.length];
+  const img = bellumSprites.write[writeIdx];
+  if (!img || !img.complete || img.naturalWidth === 0) return;
+
+  const tip = WRITE_MARKER_TIPS[writeIdx] || { x: 480, y: 150 };
+
+  // Micro vibración realista del trazo
+  const microX = Math.sin(time * 0.045) * 2;
+  const microY = Math.cos(time * 0.06) * 1.5;
+
+  const targetH = 1080;
+  const scale = targetH / 800; // 1.35
+  const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
+
+  // ¡PIES SIEMPRE APOYADOS EN EL SUELO (1750)! Nunca queda flotando en el aire
+  const teacherY = 1750;
+  const drawY = teacherY - (targetH * (780 / 800));
+  const drawX = (targetX + microX) - (tip.x * scale);
+
+  ctx.save();
+
+  // Sombra suave proyectada en la pizarra
+  ctx.save();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.28)";
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetX = 12;
+  ctx.shadowOffsetY = 16;
+  ctx.drawImage(img, drawX, drawY, targetW, targetH);
+  ctx.restore();
+
+  // Dibujar la figura de espaldas trazando la letra en tiempo real
+  ctx.drawImage(img, drawX, drawY, targetW, targetH);
+
+  ctx.restore();
+}
+
+function draw3DTeacher(w, h, cameraType, time) {
+  if (!threeRenderer || !threeScene || !threeCamera || !threeModel) return;
+
+  const isSpeaking = state.isPlaying;
+  const swayY = Math.sin(time * 0.0018) * 0.12;
+  const bobY = Math.sin(time * 0.003) * 0.02;
+  const speakBounce = isSpeaking ? (Math.sin(time * 0.018) * 0.02) : 0;
+
+  threeModel.rotation.y = swayY;
+  threeModel.rotation.x = isSpeaking ? (Math.sin(time * 0.012) * 0.015) : 0;
+  threeModel.position.y = (-0.15) + bobY + speakBounce;
+
+  threeRenderer.render(threeScene, threeCamera);
+
+  if (cameraType === "split") {
+    ctx.drawImage(threeRenderer.domElement, 0, h * 0.38, w, h * 0.62);
+  } else {
+    ctx.drawImage(threeRenderer.domElement, 0, 0, w, h);
+  }
+}
+
+/* AVATAR: SEÑORITA SARA BELLUM (Sprites Animados Limpios: Habla + Gestos vivos + Pizarra) */
+function drawBellumAnimatedSprites(ctx, blink, mouthOpen, time, sway, cameraType, isWriting, isPointing) {
+  const isSpeaking = state.isPlaying;
+  const bobY = Math.sin(time * 0.0035) * 4;
+  const speakBounce = isSpeaking ? (Math.sin(time * 0.016) * 3) : 0;
+  const swayAngle = Math.sin(time * 0.002) * 0.012;
+
+  ctx.save();
+  ctx.translate(0, bobY + speakBounce);
+  ctx.rotate(swayAngle);
+
+  let img = null;
+  const currentStep = state.steps[state.currentStepIdx];
+  const progress = currentStep ? (currentStep.progress || 0) : 0;
+
+  // Lógica inteligente de eventos:
+  if (isWriting && bellumSprites.write.length > 0) {
+    // ¡ANIMACIÓN DE ESCRIBIR EN LA PIZARRA! (Fila 3 de los sprites limpios)
+    // Se muestra de espaldas sosteniendo el marcador y trazando en la pizarra
+    const writeIdx = Math.floor(time * 0.007) % bellumSprites.write.length;
+    img = bellumSprites.write[writeIdx];
+  } else if (isPointing && bellumSprites.turn.length > 0) {
+    // Pose de giro señalando hacia la pizarra
+    img = bellumSprites.turn[2] || bellumSprites.turn[1];
+  } else if (bellumSprites.talk.length > 0) {
+    if (isSpeaking) {
+      // 8 frames de animación explicando con gestos expresivos vivos (apuntando arriba, explicando, presentando)
+      const talkIdx = Math.floor(time * 0.0032) % bellumSprites.talk.length;
+      img = bellumSprites.talk[talkIdx];
+    } else {
+      // En reposo elegante: pose 1 (manos en cadera, atenta)
+      img = bellumSprites.talk[0];
+    }
+  }
+
+  // Fallback si aún están en carga
+  if (!img || !img.complete || img.naturalWidth === 0) {
+    img = bellumImg;
+  }
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    const targetH = 1000;
+    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
+    const drawX = -targetW / 2;
+    // Anclaje exacto de los pies al suelo
+    const drawY = -targetH * (780 / 800);
+
+    // Sombra suave proyectada en el suelo
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.25)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 14;
+    ctx.drawImage(img, drawX, drawY, targetW, targetH);
+    ctx.restore();
+
+    // Dibujar el frame del sprite 100% limpio y completo
+    ctx.drawImage(img, drawX, drawY, targetW, targetH);
+  }
+
+  ctx.restore();
+}
+
+/* AVATAR: SEÑORITA SARA BELLUM (Ilustración original de cuerpo entero con Lip-Sync) */
+function drawBellumFullBody(ctx, blink, mouthOpen, time, sway) {
+  if (!bellumImg.complete || bellumImg.naturalWidth === 0) return;
+
+  const isSpeaking = state.isPlaying;
+  const bobY = Math.sin(time * 0.0035) * 5;
+  const speakBounce = isSpeaking ? (Math.sin(time * 0.016) * 4) : 0;
+  const swayAngle = Math.sin(time * 0.002) * 0.015;
+
+  ctx.save();
+
+  // Escalar y centrar la muñeca original para encuadre vertical
+  const targetH = 1000;
+  const targetW = (564 / 1024) * targetH; // ~550px
+
+  ctx.translate(0, bobY + speakBounce);
+  ctx.rotate(swayAngle);
+
+  const drawX = -targetW / 2;
+  const drawY = -340;
+
+  // Sombra suave proyectada detrás para profundidad en la pizarra
+  ctx.save();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.32)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 16;
+  ctx.drawImage(bellumImg, drawX, drawY, targetW, targetH);
+  ctx.restore();
+
+  // Dibujar la ilustración original 100% idéntica
+  ctx.drawImage(bellumImg, drawX, drawY, targetW, targetH);
+
+  // Coordenadas exactas para boca y ojo en la ilustración
+  const lipX = drawX + (targetW * (281.5 / 564));
+  const lipY = drawY + (targetH * (221.0 / 1024));
+
+  // Animación de boca con Lip-Sync en tiempo real cuando habla
+  if (isSpeaking && mouthOpen > 0.16) {
+    const lipOpenH = Math.max(3.5, mouthOpen * 14);
+
+    ctx.save();
+    // Cavidad bucal oscura
+    ctx.fillStyle = "#4c0519";
+    ctx.beginPath();
+    ctx.ellipse(lipX, lipY, 11, lipOpenH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dientes blancos
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(lipX - 7, lipY - 3, 14, 4.5, 1.5);
+    ctx.fill();
+
+    // Contorno de labios rojos carmesí
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.ellipse(lipX, lipY, 11, lipOpenH, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Animación de parpadeo de ojos
+  if (blink) {
+    const eyeX = drawX + (targetW * (246.0 / 564));
+    const eyeY = drawY + (targetH * (170.0 / 1024));
+    ctx.save();
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3.8;
+    ctx.beginPath();
+    ctx.moveTo(eyeX - 12, eyeY);
+    ctx.quadraticCurveTo(eyeX, eyeY + 5, eyeX + 12, eyeY - 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+/* AVATAR: PROFE ESCARLATA (Pelirroja sensual con gafas de diseño y escote elegante) */
+function drawScarletAvatar(ctx, blink, mouthOpen, time, sway) {
+  // 1. CABELLO POSTERIOR (ONDAS ROJAS VOLUMINOSAS EN CASCADA)
+  ctx.save();
+  const hairBackGrad = ctx.createLinearGradient(-120, -60, 120, 260);
+  hairBackGrad.addColorStop(0, "#9a1c0b");   // Caoba intenso
+  hairBackGrad.addColorStop(0.35, "#c2410c"); // Cobre rojizo vibrante
+  hairBackGrad.addColorStop(0.7, "#ea580c");  // Bermellón dorado
+  hairBackGrad.addColorStop(1, "#7c2d12");    // Sombra profunda
+  ctx.fillStyle = hairBackGrad;
+
+  // Gran masa de cabello posterior con ondas
+  ctx.beginPath();
+  ctx.arc(0, 5, 125, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mechones largos que caen por detrás de los hombros
+  ctx.beginPath();
+  ctx.moveTo(-120, 50);
+  ctx.quadraticCurveTo(-145 + sway, 160, -90, 270);
+  ctx.lineTo(-40, 270);
+  ctx.quadraticCurveTo(-90, 160, -80, 50);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(120, 50);
+  ctx.quadraticCurveTo(145 - sway, 160, 90, 270);
+  ctx.lineTo(40, 270);
+  ctx.quadraticCurveTo(90, 160, 80, 50);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // 2. HOMBROS, BUSTO Y ESCOTE SENSUAL
+  const skinBase = "#fee2d5";
+  const skinShadow = "#e7a98e";
+  const skinCleavage = "#d08c6f";
+
+  // Base del pecho y hombros descubiertos
+  ctx.save();
+  const chestGrad = ctx.createLinearGradient(0, 90, 0, 220);
+  chestGrad.addColorStop(0, skinBase);
+  chestGrad.addColorStop(0.6, skinBase);
+  chestGrad.addColorStop(1, skinShadow);
+  ctx.fillStyle = chestGrad;
+
+  ctx.beginPath();
+  ctx.moveTo(-160, 280);
+  ctx.lineTo(160, 280);
+  ctx.lineTo(140, 140);
+  ctx.quadraticCurveTo(80, 125, 30, 120);
+  ctx.lineTo(-30, 120);
+  ctx.quadraticCurveTo(-80, 125, -140, 140);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sombreado anatómico de la clavícula (collarbone femenino)
+  ctx.strokeStyle = "rgba(208, 140, 111, 0.45)";
+  ctx.lineWidth = 2.2;
+  // Clavícula izquierda
+  ctx.beginPath();
+  ctx.moveTo(-22, 128);
+  ctx.quadraticCurveTo(-65, 126, -115, 138);
+  ctx.stroke();
+  // Clavícula derecha
+  ctx.beginPath();
+  ctx.moveTo(22, 128);
+  ctx.quadraticCurveTo(65, 126, 115, 138);
+  ctx.stroke();
+
+  // Curvas de busto y sombra suave de escote (cleavage)
+  ctx.save();
+  const cleavGrad = ctx.createLinearGradient(0, 140, 0, 205);
+  cleavGrad.addColorStop(0, "rgba(208, 140, 111, 0)");
+  cleavGrad.addColorStop(0.5, "rgba(185, 105, 80, 0.55)");
+  cleavGrad.addColorStop(1, "rgba(160, 80, 60, 0.7)");
+  ctx.strokeStyle = cleavGrad;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 148);
+  ctx.lineTo(0, 195);
+  ctx.stroke();
+
+  // Relieve de senos con sombreado sutil
+  ctx.fillStyle = "rgba(235, 160, 135, 0.18)";
+  ctx.beginPath();
+  ctx.arc(-38, 185, 42, 0.2, Math.PI * 0.9);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(38, 185, 42, 0.1, Math.PI * 0.8);
+  ctx.fill();
+  ctx.restore();
+
+  // Vestido verde esmeralda con profundo escote en corazón / V
+  const dressGrad = ctx.createLinearGradient(-150, 150, 150, 280);
+  dressGrad.addColorStop(0, "#064e3b");  // Verde esmeralda oscuro
+  dressGrad.addColorStop(0.4, "#047857"); // Esmeralda satinado
+  dressGrad.addColorStop(1, "#022c22");  // Profundidad
+  ctx.fillStyle = dressGrad;
+
+  ctx.beginPath();
+  ctx.moveTo(-160, 280);
+  ctx.lineTo(160, 280);
+  ctx.lineTo(135, 175);
+  // Escote corazón profundo
+  ctx.quadraticCurveTo(90, 175, 45, 170);
+  ctx.quadraticCurveTo(20, 168, 0, 198); // Punta inferior del escote
+  ctx.quadraticCurveTo(-20, 168, -45, 170);
+  ctx.quadraticCurveTo(-90, 175, -135, 175);
+  ctx.closePath();
+  ctx.fill();
+
+  // Borde dorado fino y seductor a lo largo del escote
+  ctx.strokeStyle = "#eab308";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(135, 175);
+  ctx.quadraticCurveTo(90, 175, 45, 170);
+  ctx.quadraticCurveTo(20, 168, 0, 198);
+  ctx.quadraticCurveTo(-20, 168, -45, 170);
+  ctx.quadraticCurveTo(-90, 175, -135, 175);
+  ctx.stroke();
+
+  // Fina cadena de oro y colgante de rubí/esmeralda descansando en el escote
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-35, 115);
+  ctx.quadraticCurveTo(0, 160, 35, 115);
+  ctx.stroke();
+  // Dije brillante
+  ctx.fillStyle = "#ef4444"; // Gema rubí rojo
+  ctx.beginPath();
+  ctx.arc(0, 148, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#fef08a";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+
+  // 3. CUELLO Y ROSTRO
+  ctx.save();
+  const neckGrad = ctx.createLinearGradient(0, 60, 0, 120);
+  neckGrad.addColorStop(0, skinShadow);
+  neckGrad.addColorStop(0.5, skinBase);
+  neckGrad.addColorStop(1, skinBase);
+  ctx.fillStyle = neckGrad;
+  ctx.beginPath();
+  ctx.roundRect(-24, 60, 48, 65, 10);
+  ctx.fill();
+
+  // Rostro estilizado femenino
+  const faceGrad = ctx.createLinearGradient(0, -20, 0, 85);
+  faceGrad.addColorStop(0, "#fff1eb");
+  faceGrad.addColorStop(0.6, skinBase);
+  faceGrad.addColorStop(1, skinShadow);
+  ctx.fillStyle = faceGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 28, 72, 88, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rubor rosado seductor en las mejillas
+  ctx.fillStyle = "rgba(244, 63, 94, 0.2)";
+  ctx.beginPath();
+  ctx.ellipse(-42, 40, 18, 12, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(42, 40, 18, 12, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lunar seductor (beauty mark) sobre el labio superior
+  ctx.fillStyle = "#271c19";
+  ctx.beginPath();
+  ctx.arc(26, 62, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 4. OJOS VERDES IMPACTANTES CON DELINEADO CAT-EYE
+  ctx.save();
+  const eyeY = 16;
+  const eyeDist = 28;
+
+  // Sombra de ojos cálida cobriza
+  ctx.fillStyle = "rgba(234, 88, 12, 0.22)";
+  ctx.beginPath();
+  ctx.ellipse(-eyeDist, eyeY - 6, 18, 10, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(eyeDist, eyeY - 6, 18, 10, 0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Esclerótica (blanco del ojo)
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(-eyeDist, eyeY, 15, blink ? 2 : 10, -0.06, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(eyeDist, eyeY, 15, blink ? 2 : 10, 0.06, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (!blink) {
+    // Iris verde esmeralda seductor
+    const irisGrad = ctx.createRadialGradient(-eyeDist, eyeY, 1, -eyeDist, eyeY, 8);
+    irisGrad.addColorStop(0, "#34d399"); // Verde brillante
+    irisGrad.addColorStop(0.7, "#059669"); // Esmeralda
+    irisGrad.addColorStop(1, "#064e3b"); // Borde oscuro
+    ctx.fillStyle = irisGrad;
+
+    ctx.beginPath();
+    ctx.arc(-eyeDist, eyeY, 7.5, 0, Math.PI * 2);
+    ctx.arc(eyeDist, eyeY, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pupila
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(-eyeDist, eyeY, 3.5, 0, Math.PI * 2);
+    ctx.arc(eyeDist, eyeY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Brillo de luz en la mirada
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(-eyeDist - 2, eyeY - 2.5, 1.8, 0, Math.PI * 2);
+    ctx.arc(eyeDist - 2, eyeY - 2.5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Delineado negro alado estilo "Cat-Eye" y pestañas
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(-eyeDist - 16, eyeY + 1);
+  ctx.quadraticCurveTo(-eyeDist, eyeY - 11, -eyeDist + 16, eyeY - 5);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(eyeDist - 16, eyeY - 5);
+  ctx.quadraticCurveTo(eyeDist, eyeY - 11, eyeDist + 16, eyeY + 1);
+  ctx.stroke();
+
+  // Cejas pelirrojas arqueadas y estilizadas
+  ctx.strokeStyle = "#9a3412";
+  ctx.lineWidth = 2.8;
+  ctx.beginPath();
+  ctx.moveTo(-eyeDist - 15, eyeY - 14);
+  ctx.quadraticCurveTo(-eyeDist, eyeY - 22, -eyeDist + 14, eyeY - 13);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(eyeDist - 14, eyeY - 13);
+  ctx.quadraticCurveTo(eyeDist, eyeY - 22, eyeDist + 15, eyeY - 14);
+  ctx.stroke();
+  ctx.restore();
+
+  // 5. GAFAS SENSUALES DE DISEÑO (CAT-EYE EN CAREY/NEGRO CON DETALLES DE ORO)
+  ctx.save();
+  const glassY = 14;
+  ctx.strokeStyle = "#18181b"; // Montura negra brillante
+  ctx.lineWidth = 3.8;
+  ctx.fillStyle = "rgba(240, 248, 255, 0.22)"; // Cristal con brillo
+
+  // Lente izquierdo Cat-Eye (puntas alzadas hacia afuera)
+  ctx.beginPath();
+  ctx.moveTo(-48, glassY - 14); // Punta alzada exterior
+  ctx.lineTo(-8, glassY - 5);
+  ctx.quadraticCurveTo(-10, glassY + 15, -28, glassY + 17);
+  ctx.quadraticCurveTo(-46, glassY + 15, -48, glassY - 14);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.fill();
+
+  // Lente derecho Cat-Eye
+  ctx.beginPath();
+  ctx.moveTo(48, glassY - 14); // Punta alzada exterior
+  ctx.lineTo(8, glassY - 5);
+  ctx.quadraticCurveTo(10, glassY + 15, 28, glassY + 17);
+  ctx.quadraticCurveTo(46, glassY + 15, 48, glassY - 14);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.fill();
+
+  // Puente dorado de las gafas
+  ctx.strokeStyle = "#f59e0b";
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-8, glassY - 2);
+  ctx.quadraticCurveTo(0, glassY - 6, 8, glassY - 2);
+  ctx.stroke();
+
+  // Remaches dorados en las esquinas de las gafas
+  ctx.fillStyle = "#f59e0b";
+  ctx.beginPath();
+  ctx.arc(-46, glassY - 12, 2.2, 0, Math.PI * 2);
+  ctx.arc(46, glassY - 12, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Reflejo diagonal de luz en los cristales
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-40, glassY - 6);
+  ctx.lineTo(-24, glassY + 12);
+  ctx.moveTo(24, glassY - 6);
+  ctx.lineTo(40, glassY + 12);
+  ctx.stroke();
+  ctx.restore();
+
+  // 6. NARIZ DELICADA
+  ctx.save();
+  ctx.strokeStyle = "#d08c6f";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 16);
+  ctx.lineTo(2, 38);
+  ctx.quadraticCurveTo(-2, 44, -5, 42);
+  ctx.stroke();
+  ctx.restore();
+
+  // 7. LABIOS ROJOS CARNOSOS CON GLOSS Y LIP-SYNC
+  ctx.save();
+  const lipY = 74;
+  const lipHeight = 6 + (mouthOpen * 19);
+
+  // Labio carmesí
+  ctx.fillStyle = "#be123c";
+  ctx.beginPath();
+  ctx.ellipse(0, lipY, 21, lipHeight, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cavidad bucal y dientes cuando habla
+  if (mouthOpen > 0.25) {
+    ctx.fillStyle = "#4c0519";
+    ctx.beginPath();
+    ctx.ellipse(0, lipY, 14, lipHeight * 0.65, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Dientes blancos
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.roundRect(-8, lipY - 3, 16, 4.5, 2);
+    ctx.fill();
+  }
+
+  // Brillo gloss seductor en el labio inferior
+  ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.beginPath();
+  ctx.ellipse(2, lipY + 3, 7, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 8. CABELLO FRONTAL (MECHONES ONDULADOS QUE CAEN SOBRE EL PECHO)
+  ctx.save();
+  const frontHairGrad = ctx.createLinearGradient(-100, -50, 100, 240);
+  frontHairGrad.addColorStop(0, "#ea580c");  // Cobre ardiente
+  frontHairGrad.addColorStop(0.5, "#c2410c"); // Rojo profundo
+  frontHairGrad.addColorStop(1, "#9a1c0b");  // Caoba
+
+  ctx.fillStyle = frontHairGrad;
+
+  // Flequillo lateral con volumen peinado hacia la izquierda
+  ctx.beginPath();
+  ctx.moveTo(-65, -15);
+  ctx.quadraticCurveTo(0, -65, 75, -25);
+  ctx.quadraticCurveTo(35, 10, -35, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mechón izquierdo cayendo sinuoso sobre el hombro y escote
+  ctx.beginPath();
+  ctx.moveTo(-60, 10);
+  ctx.quadraticCurveTo(-95, 90, -75, 165);
+  ctx.quadraticCurveTo(-65 + sway, 230, -45, 260);
+  ctx.quadraticCurveTo(-75, 190, -85, 130);
+  ctx.quadraticCurveTo(-80, 50, -55, 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mechón derecho ondeando sutilmente
+  ctx.beginPath();
+  ctx.moveTo(60, 10);
+  ctx.quadraticCurveTo(95, 90, 78, 165);
+  ctx.quadraticCurveTo(70 - sway, 230, 55, 260);
+  ctx.quadraticCurveTo(80, 190, 88, 130);
+  ctx.quadraticCurveTo(82, 50, 55, 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Pendientes colgantes dorados elegantes
+  ctx.strokeStyle = "#eab308";
+  ctx.lineWidth = 2.5;
+  // Pendiente izq
+  ctx.beginPath();
+  ctx.moveTo(-74, 45);
+  ctx.lineTo(-76, 75);
+  ctx.stroke();
+  ctx.fillStyle = "#fbbf24";
+  ctx.beginPath();
+  ctx.arc(-76, 78, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Pendiente der
+  ctx.beginPath();
+  ctx.moveTo(74, 45);
+  ctx.lineTo(76, 75);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(76, 78, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* AVATAR: PROFE MÓNICA (Clásico original) */
+function drawMonicaAvatar(ctx, blink, mouthOpen, time) {
+  // Cuerpo / Traje negro
+  ctx.fillStyle = "#1e1b2e";
+  ctx.beginPath();
+  ctx.moveTo(-160, 280);
+  ctx.lineTo(160, 280);
+  ctx.lineTo(120, 130);
+  ctx.lineTo(-120, 130);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#f6c8a2";
+  ctx.fillRect(-28, 70, 56, 70);
+
+  ctx.fillStyle = "#b58742";
+  ctx.beginPath();
+  ctx.arc(0, 10, 115, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fed7aa";
+  ctx.beginPath();
+  ctx.ellipse(0, 30, 78, 92, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Aretes dobles circulares
+  ctx.strokeStyle = "#eab308";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(-82, 60, 14, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-82, 95, 22, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(82, 60, 14, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(82, 95, 22, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Ojos
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(-28, 15, 14, blink ? 2 : 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(28, 15, 14, blink ? 2 : 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (!blink) {
+    ctx.fillStyle = "#451a03";
+    ctx.beginPath();
+    ctx.arc(-26, 15, 6, 0, Math.PI * 2);
+    ctx.arc(30, 15, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Gafas
+  ctx.strokeStyle = "#b45309";
+  ctx.lineWidth = 4;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.beginPath();
+  ctx.roundRect(-46, -2, 38, 34, 8);
+  ctx.stroke();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(8, -2, 38, 34, 8);
+  ctx.stroke();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, 10);
+  ctx.lineTo(8, 10);
+  ctx.stroke();
+
+  // Nariz
+  ctx.strokeStyle = "#d97706";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(0, 15);
+  ctx.lineTo(3, 40);
+  ctx.lineTo(-4, 45);
+  ctx.stroke();
+
+  // Boca
+  const lipHeight = 4 + (mouthOpen * 18);
+  ctx.fillStyle = "#be123c";
+  ctx.beginPath();
+  ctx.ellipse(0, 75, 18, lipHeight, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (mouthOpen > 0.3) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(-8, 72, 16, 4);
+  }
+
+  // Cabello frontal
+  ctx.fillStyle = "#ca8a04";
+  ctx.beginPath();
+  ctx.moveTo(-75, -20);
+  ctx.quadraticCurveTo(0, -60, 75, -20);
+  ctx.quadraticCurveTo(20, -10, -75, -20);
+  ctx.fill();
+}
+
+/* =========================================================
+   4. SUBTÍTULOS ESTILO TIKTOK / REELS CON KARAOKE
+   ========================================================= */
+function drawViralCaptions(w, h, currentStep) {
+  if (!currentStep) return;
+
+  const text = currentStep.speech || "";
+  if (!text) return;
+
+  const yPos = h * 0.88;
+
+  ctx.save();
+  ctx.font = "bold 44px 'Inter', sans-serif";
+  ctx.textAlign = "center";
+
+  const words = text.split(" ");
+  let lines = [];
+  let currentLine = "";
+
+  words.forEach(word => {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width > w * 0.8) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  });
+  if (currentLine) lines.push(currentLine);
+
+  lines.forEach((line, lIdx) => {
+    const lineY = yPos + (lIdx * 56) - ((lines.length - 1) * 28);
+    const lineW = ctx.measureText(line).width + 40;
+
+    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+    ctx.beginPath();
+    ctx.roundRect((w / 2) - (lineW / 2), lineY - 40, lineW, 52, 14);
+    ctx.fill();
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#000000";
+    ctx.strokeText(line, w / 2, lineY);
+
+    ctx.fillStyle = "#fef08a";
+    ctx.fillText(line, w / 2, lineY);
+  });
+
+  ctx.restore();
+}
+
+/* =========================================================
+   GRABACIÓN Y DESCARGA DIRECTA DE VIDEO (WEBM / MP4)
+   ========================================================= */
+function toggleRecording() {
+  if (state.isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+async function startRecording() {
+  if (!state.audioElement || !state.audioElement.src) {
+    alert("Primero genera y reproduce la lección antes de grabar.");
+    return;
+  }
+
+  state.isRecording = true;
+  state.recordedChunks = [];
+  btnRecord.classList.add("btn-accent");
+  btnRecord.textContent = "⏹ Detener y Guardar";
+  badgeRecording.style.display = "inline-block";
+
+  state.audioElement.currentTime = 0;
+
+  const canvasStream = canvas.captureStream(30);
+
+  let combinedStream = canvasStream;
+  try {
+    if (!state.audioContext) {
+      initAudio();
+    }
+    const dest = state.audioContext.createMediaStreamDestination();
+    state.destAudioStreamNode = dest;
+
+    // Conectar elemento de audio y sonido de marcador al destino de grabación
+    const source = state.audioContext.createMediaElementSource(state.audioElement);
+    source.connect(dest);
+    source.connect(state.audioContext.destination);
+
+    if (soundEngine.masterGain) {
+      soundEngine.masterGain.connect(dest);
+    }
+
+    combinedStream = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...dest.stream.getAudioTracks()
+    ]);
+  } catch (e) {
+    console.warn("Audio Context ya conectado o usando stream directo:", e);
+  }
+
+  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+    ? "video/webm;codecs=vp9,opus"
+    : "video/webm";
+
+  state.mediaRecorder = new MediaRecorder(combinedStream, {
+    mimeType: mimeType,
+    videoBitsPerSecond: 4500000
+  });
+
+  state.mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      state.recordedChunks.push(e.data);
+    }
   };
 
-  let musicBus = null;
-  let musicFilter = null;
-  let musicTimer = null;
-  let musicStep = 0;
-  let musicRunning = false;
-  let musicPreviewActive = false;
+  state.mediaRecorder.onstop = saveRecordedVideo;
 
-  function ensureAudioGraph() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (!mediaDest) {
-      mediaDest = audioCtx.createMediaStreamDestination();
-    }
-    if (!musicBus) {
-      musicFilter = audioCtx.createBiquadFilter();
-      musicFilter.type = 'lowpass';
-      musicFilter.frequency.value = 1250;
-      musicFilter.Q.value = 0.6;
+  state.mediaRecorder.start();
+  await state.audioElement.play();
+  state.isPlaying = true;
+  updateStatus("⏺ Grabando video en alta definición con audio de pizarra y voz...");
+}
 
-      musicBus = audioCtx.createGain();
-      musicBus.gain.value = 0.0001;
+function stopRecording() {
+  if (!state.isRecording) return;
+  state.isRecording = false;
+  badgeRecording.style.display = "none";
+  btnRecord.textContent = "⏺ Grabar y Descargar Video";
 
-      musicFilter.connect(musicBus);
-      musicBus.connect(audioCtx.destination);
-      musicBus.connect(mediaDest);
-    }
+  if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+    state.mediaRecorder.stop();
   }
-
-  function getTargetMusicGain() {
-    const pct = musicVolRange ? parseFloat(musicVolRange.value) : 22;
-    return Math.max(0.0001, (pct / 100) * 0.48);
-  }
-
-  function scheduleMusicNote(freq, startTime, duration, peakGain, type = 'sine') {
-    if (!audioCtx || !musicFilter) return;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, startTime);
-
-    const attack = Math.min(0.28, duration * 0.25);
-    const release = Math.min(0.65, duration * 0.45);
-    g.gain.setValueAtTime(0.0001, startTime);
-    g.gain.linearRampToValueAtTime(peakGain, startTime + attack);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peakGain * 0.55), startTime + Math.max(attack + 0.05, duration - release));
-    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-    osc.connect(g);
-    g.connect(musicFilter);
-    osc.start(startTime);
-    osc.stop(startTime + duration + 0.05);
-  }
-
-  function triggerMusicStep() {
-    if (!musicRunning || !audioCtx) return;
-    const themeKey = musicSelect ? musicSelect.value : 'modern';
-    const theme = MUSIC_THEMES[themeKey];
-    if (!theme) return;
-
-    const now = audioCtx.currentTime + 0.04;
-    const beatSec = 60 / theme.bpm;
-    const stepSec = beatSec / 2; // corcheas (8 pasos por compás)
-    const barIdx = Math.floor(musicStep / 8) % theme.chords.length;
-    const stepInBar = musicStep % 8;
-    const chord = theme.chords[barIdx];
-    const bassFreq = theme.bass[barIdx];
-
-    musicFilter.frequency.setTargetAtTime(theme.cutoff, now, 0.2);
-
-    // 1) Colchón armónico cálido al inicio de cada compás
-    if (stepInBar === 0) {
-      chord.forEach((freq, idx) => {
-        scheduleMusicNote(freq, now + idx * 0.025, beatSec * 4.1, 0.085, 'sine');
-        if (idx < 3) {
-          scheduleMusicNote(freq * 1.002, now + idx * 0.03, beatSec * 3.8, 0.024, 'triangle');
-        }
-      });
-    }
-
-    // 2) Bajo suave y cálido en tiempos 1 y 3
-    if (stepInBar === 0 || stepInBar === 4) {
-      scheduleMusicNote(bassFreq, now, beatSec * 1.9, 0.19, 'sine');
-    }
-
-    // 3) Pulso suave tipo estudio de noticias (discreto, agradable)
-    if (stepInBar === 0 || stepInBar === 3 || stepInBar === 6) {
-      const noteIdx = theme.pluckPattern[stepInBar % theme.pluckPattern.length] % chord.length;
-      const pluckFreq = chord[noteIdx] * (stepInBar === 3 ? 2 : 1);
-      scheduleMusicNote(pluckFreq, now, stepSec * 1.35, 0.042, 'sine');
-    }
-
-    musicStep++;
-  }
-
-  function startBackgroundMusic() {
-    const themeKey = musicSelect ? musicSelect.value : 'modern';
-    if (themeKey === 'none' || !MUSIC_THEMES[themeKey]) {
-      stopBackgroundMusic(true);
-      return;
-    }
-
-    ensureAudioGraph();
-    stopBackgroundMusic(true);
-
-    const theme = MUSIC_THEMES[themeKey];
-    const stepMs = (60 / theme.bpm / 2) * 1000;
-    musicStep = 0;
-    musicRunning = true;
-
-    const now = audioCtx.currentTime;
-    musicBus.gain.cancelScheduledValues(now);
-    musicBus.gain.setValueAtTime(0.0001, now);
-    musicBus.gain.linearRampToValueAtTime(getTargetMusicGain(), now + 0.5);
-
-    triggerMusicStep();
-    musicTimer = setInterval(triggerMusicStep, stepMs);
-  }
-
-  function stopBackgroundMusic(immediate = false) {
-    musicRunning = false;
-    if (musicTimer) {
-      clearInterval(musicTimer);
-      musicTimer = null;
-    }
-    if (audioCtx && musicBus) {
-      const now = audioCtx.currentTime;
-      musicBus.gain.cancelScheduledValues(now);
-      if (immediate) {
-        musicBus.gain.setValueAtTime(0.0001, now);
-      } else {
-        musicBus.gain.setValueAtTime(Math.max(0.0001, musicBus.gain.value), now);
-        musicBus.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-      }
-    }
-  }
-
-  function playAudioWithLipSync(audioUrl, wordTimings, onDoneCallback) {
-    ensureAudioGraph();
-
-    // Iniciar música de fondo suave mezclada en el mismo AudioContext / grabación
-    musicPreviewActive = false;
-    if (testMusicBtn) testMusicBtn.textContent = '🎵';
-    startBackgroundMusic();
-
-    audioEl = new Audio(audioUrl);
-    audioEl.crossOrigin = 'anonymous';
-
-    const source = audioCtx.createMediaElementSource(audioEl);
-    const processed = buildVoiceEffectsChain(audioCtx, source, fxSelect ? fxSelect.value : 'heroic');
-
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    freqData = new Uint8Array(analyser.frequencyBinCount);
-
-    processed.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    analyser.connect(mediaDest);
-
-    if (wordTimings && wordTimings.length > 0) {
-      state.wordTimings = wordTimings;
-      state.subtitleWords = wordTimings.map((w) => w.text);
-      state.activeWordIndex = 0;
-    } else {
-      state.wordTimings = [];
-      audioEl.onloadedmetadata = () => {
-        const dur = audioEl.duration || 10;
-        const totalWords = Math.max(1, state.subtitleWords.length);
-        const msPerWord = (dur * 1000) / totalWords;
-        subtitleInterval = setInterval(() => {
-          if (state.activeWordIndex < totalWords - 1) {
-            state.activeWordIndex++;
-          }
-        }, msPerWord);
-      };
-    }
-
-    audioEl.onended = () => {
-      finishBroadcast();
-      if (onDoneCallback) onDoneCallback();
-    };
-
-    audioEl.play().catch((err) => {
-      console.error('Error reproduciendo audio:', err);
-      finishBroadcast();
-      if (onDoneCallback) onDoneCallback();
-    });
-  }
-
-  function startBrowserFallbackTTS(text, onDoneCallback) {
-    if (!window.speechSynthesis) {
-      alert('No se pudo conectar al servidor de voz neural y este navegador no soporta TTS.');
-      finishBroadcast();
-      return;
-    }
-    audioStatus.textContent = 'Servidor neural no disponible: usando voz del navegador.';
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'es-ES';
-    utter.pitch = 0.72;
-    utter.rate = 1.0;
-
-    const estWordsPerSec = 2.6;
-    subtitleInterval = setInterval(() => {
-      if (state.isSpeaking && state.activeWordIndex < state.subtitleWords.length - 1) {
-        state.activeWordIndex++;
-      }
-    }, Math.max(180, 1000 / estWordsPerSec));
-
-    utter.onend = () => {
-      finishBroadcast();
-      if (onDoneCallback) onDoneCallback();
-    };
-    utter.onerror = () => {
-      finishBroadcast();
-      if (onDoneCallback) onDoneCallback();
-    };
-    window.speechSynthesis.speak(utter);
-  }
-
-  async function startBroadcast(onDoneCallback, keepRecordingState = false) {
-    stopBroadcast(keepRecordingState);
-
-    const text = contextInput.value.trim();
-    state.subtitleWords = text ? text.split(/\s+/) : [];
-    state.wordTimings = [];
-    state.activeWordIndex = 0;
-    state.autoCamTimer = 0;
-    if (state.newsImages.length > 0) {
-      state.activeImageIndex = 0;
-      state.prevImageIndex = -1;
-      state.imageTransition = 1;
-      state.imageCycleTimer = 0;
-      updateThumbHighlights();
-    }
-    broadcastBtn.disabled = true;
-    stopBtn.disabled = false;
-
-    // Caso A: Audio propio subido por el usuario (ElevenLabs / MP3 / WAV)
-    if (state.customAudioUrl) {
-      state.isSpeaking = true;
-      audioStatus.textContent = `Transmitiendo audio: ${state.customAudioName}`;
-      playAudioWithLipSync(state.customAudioUrl, [], onDoneCallback);
-      return true;
-    }
-
-    if (!text) {
-      finishBroadcast();
-      return false;
-    }
-
-    // Caso B: Voz Neural IA vía servidor local (/api/tts)
-    try {
-      broadcastBtn.textContent = '⏳ Generando voz...';
-      const { audioUrl, words } = await fetchNeuralTTS(text);
-      broadcastBtn.textContent = '▶ Transmitir Noticia';
-
-      // Si el usuario detuvo mientras se generaba
-      if (stopBtn.disabled) return false;
-
-      state.isSpeaking = true;
-      audioStatus.textContent = `Transmitiendo con voz neural (${voiceSelect.options[voiceSelect.selectedIndex].text})`;
-      playAudioWithLipSync(audioUrl, words, onDoneCallback);
-      return true;
-    } catch (err) {
-      console.warn('Fallo /api/tts, usando fallback:', err);
-      broadcastBtn.textContent = '▶ Transmitir Noticia';
-      state.isSpeaking = true;
-      startBrowserFallbackTTS(text, onDoneCallback);
-      return false;
-    }
-  }
-
-  function finishBroadcast() {
-    state.isSpeaking = false;
-    state.targetSpeechEnergy = 0;
-    broadcastBtn.disabled = false;
-    broadcastBtn.textContent = '▶ Transmitir Noticia';
-    stopBackgroundMusic(false);
-    if (subtitleInterval) {
-      clearInterval(subtitleInterval);
-      subtitleInterval = null;
-    }
-    if (!state.isRecording) {
-      stopBtn.disabled = true;
-    }
-  }
-
-  function stopBroadcast(keepRecordingState = false) {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (audioEl) {
-      audioEl.pause();
-      audioEl = null;
-    }
-    stopBackgroundMusic(true);
-    musicPreviewActive = false;
-    if (testMusicBtn) testMusicBtn.textContent = '🎵';
-    analyser = null;
-    if (subtitleInterval) {
-      clearInterval(subtitleInterval);
-      subtitleInterval = null;
-    }
-    state.isSpeaking = false;
-    state.targetSpeechEnergy = 0;
-    broadcastBtn.disabled = false;
-    broadcastBtn.textContent = '▶ Transmitir Noticia';
-    stopBtn.disabled = !keepRecordingState;
-
-    if (!keepRecordingState && state.isRecording) {
-      stopRecording();
-    }
-  }
-
-  // =========================================================
-  // 8. GRABADORA DE VIDEO (3D + HUD + VOZ NEURAL -> .WEBM)
-  // =========================================================
-  const captureCanvas = document.createElement('canvas');
-  const captureCtx = captureCanvas.getContext('2d');
-  let mediaRecorder = null;
-  let recordedChunks = [];
-
-  async function startRecordingAndBroadcast() {
-    if (state.isRecording) {
-      stopBroadcast(false);
-      return;
-    }
-
-    captureCanvas.width = state.width;
-    captureCanvas.height = state.height;
-
-    state.isRecording = true;
-    recIndicator.classList.add('active');
-    recordBtn.textContent = '■ Detener Grabación';
-    stopBtn.disabled = false;
-
-    // Esperar a que la voz neural esté lista antes de abrir MediaRecorder
-    const hasAudioTrack = await startBroadcast(() => {
-      if (state.isRecording) {
-        setTimeout(() => stopRecording(), 450);
-      }
-    }, true);
-
-    if (!state.isRecording) return;
-
-    const videoStream = captureCanvas.captureStream(30);
-    const tracks = [...videoStream.getVideoTracks()];
-
-    if (hasAudioTrack && mediaDest) {
-      tracks.push(...mediaDest.stream.getAudioTracks());
-    }
-
-    const combinedStream = new MediaStream(tracks);
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-      ? 'video/webm;codecs=vp9,opus'
-      : 'video/webm';
-
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(combinedStream, {
-      mimeType,
-      videoBitsPerSecond: 5_000_000,
-    });
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `hero-news-${Date.now()}.webm`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    };
-
-    mediaRecorder.start(100);
-  }
-
-  function stopRecording() {
-    state.isRecording = false;
-    recIndicator.classList.remove('active');
-    recordBtn.textContent = '● Grabar y Descargar Video (.webm)';
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
-    if (!state.isSpeaking) {
-      stopBtn.disabled = true;
-    }
-  }
-
-  // =========================================================
-  // 9. BUCLE DE ANIMACIÓN PRINCIPAL (60 FPS)
-  // =========================================================
-  const clock = new THREE.Clock();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    const dt = Math.min(clock.getDelta(), 0.05);
-    const t = clock.elapsedTime;
-    const mood = MOODS[state.mood];
-
-    // 1) Calcular nivel de voz para Lip-Sync y sincronizar subtítulo exacto
-    if (state.isSpeaking) {
-      if (audioEl && state.wordTimings.length > 0) {
-        const cur = audioEl.currentTime;
-        for (let i = state.wordTimings.length - 1; i >= 0; i--) {
-          if (cur >= state.wordTimings[i].start - 0.04) {
-            state.activeWordIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (analyser && freqData) {
-        analyser.getByteFrequencyData(freqData);
-        let sum = 0;
-        for (let i = 2; i < 30; i++) sum += freqData[i];
-        const avg = sum / (28 * 255);
-        state.targetSpeechEnergy = Math.min(1, avg * 2.8);
-      } else {
-        // Oscilación silábica natural para fallback Web Speech API
-        state.speechPulseTime += dt * 15;
-        const syllable =
-          0.45 +
-          0.35 * Math.sin(state.speechPulseTime) +
-          0.2 * Math.sin(state.speechPulseTime * 2.3);
-        state.targetSpeechEnergy = Math.max(0.08, syllable);
-      }
-    } else {
-      state.targetSpeechEnergy = 0;
-    }
-
-    state.speechEnergy += (state.targetSpeechEnergy - state.speechEnergy) * Math.min(1, dt * 18);
-
-    // 2) Animar boca y mentón (Lip-Sync)
-    const openAmt = state.speechEnergy;
-    mouthOpening.scale.y = 0.25 + openAmt * 3.1;
-    mouthOpening.scale.x = 0.85 + Math.sin(t * 14) * 0.18 * openAmt;
-    upperTeeth.visible = openAmt > 0.22;
-    upperTeeth.position.y = 0.012 + openAmt * 0.025;
-    chin.position.y = -0.05 - openAmt * 0.032;
-
-    // 3) Animar parpadeo y cejas según Mood
-    let currentBlinkScale = 1;
-    state.blinkTimer -= dt;
-    if (state.blinkTimer <= 0) {
-      state.blinkProgress += dt * 12;
-      currentBlinkScale = Math.max(0.05, Math.abs(Math.cos(state.blinkProgress)));
-      leftEye.scale.y = currentBlinkScale;
-      rightEye.scale.y = currentBlinkScale;
-      if (state.blinkProgress >= Math.PI) {
-        state.blinkProgress = 0;
-        state.blinkTimer = 2.2 + Math.random() * 2.8;
-        currentBlinkScale = 1;
-        leftEye.scale.y = 1;
-        rightEye.scale.y = 1;
-      }
-    }
-
-    // Animar avatar humano 3D realista (si está activo)
-    animateHumanAvatar(t, dt, openAmt, currentBlinkScale);
-
-    const browBoost = state.isSpeaking ? 0.06 * openAmt : 0;
-    leftBrow.rotation.z = -(mood.browAngle + browBoost);
-    rightBrow.rotation.z = mood.browAngle + browBoost;
-
-    // 4) Animación corporal del superhéroe (respiración + gestos al hablar)
-    bodyGroup.position.y = Math.sin(t * 2.2) * 0.035;
-    headGroup.rotation.y = Math.sin(t * (state.isSpeaking ? 2.4 : 0.9)) * (state.isSpeaking ? 0.14 : 0.06);
-    headGroup.rotation.x = Math.sin(t * 3.1) * (state.isSpeaking ? 0.06 : 0.02) - 0.02;
-    headGroup.rotation.z = Math.sin(t * 1.7) * (state.isSpeaking ? 0.05 : 0.015);
-
-    if (state.isSpeaking) {
-      state.gesturePhase += dt * 3.5;
-      // Gesto de manos de presentador superhéroe
-      rightArm.shoulderPivot.rotation.x = -0.55 + Math.sin(state.gesturePhase) * 0.25;
-      rightArm.shoulderPivot.rotation.z = -0.18 + Math.cos(state.gesturePhase * 0.7) * 0.1;
-      rightArm.elbowPivot.rotation.x = -0.65 - openAmt * 0.35;
-
-      leftArm.shoulderPivot.rotation.x = -0.45 + Math.cos(state.gesturePhase * 0.85) * 0.22;
-      leftArm.shoulderPivot.rotation.z = 0.18;
-      leftArm.elbowPivot.rotation.x = -0.55 - openAmt * 0.25;
-    } else {
-      // Pose heroica de descanso
-      rightArm.shoulderPivot.rotation.x += (-0.15 - rightArm.shoulderPivot.rotation.x) * dt * 4;
-      rightArm.shoulderPivot.rotation.z += (-0.12 - rightArm.shoulderPivot.rotation.z) * dt * 4;
-      rightArm.elbowPivot.rotation.x += (-0.35 - rightArm.elbowPivot.rotation.x) * dt * 4;
-
-      leftArm.shoulderPivot.rotation.x += (-0.15 - leftArm.shoulderPivot.rotation.x) * dt * 4;
-      leftArm.shoulderPivot.rotation.z += (0.12 - leftArm.shoulderPivot.rotation.z) * dt * 4;
-      leftArm.elbowPivot.rotation.x += (-0.35 - leftArm.elbowPivot.rotation.x) * dt * 4;
-    }
-
-    // 5) Ondulación de la capa con viento heroico
-    const posAttr = capeGeo.attributes.position;
-    for (let i = 0; i < posAttr.count; i++) {
-      const bx = capeBasePositions[i * 3];
-      const by = capeBasePositions[i * 3 + 1];
-      const bz = capeBasePositions[i * 3 + 2];
-      // Más movimiento en la parte baja de la capa
-      const weight = Math.max(0, (0.925 - by) / 1.85);
-      const wave = Math.sin(t * mood.capeSpeed + by * 3.2 + bx * 2.0) * 0.22 * weight;
-      posAttr.setZ(i, bz + wave - weight * 0.18);
-    }
-    posAttr.needsUpdate = true;
-    capeGeo.computeVertexNormals();
-
-    // 6) Flotación del monitor TV, partículas y transición de imágenes reales
-    holoGroup.position.y = (state.aspect === '9:16' ? 2.48 : 1.82) + Math.sin(t * 2.0) * 0.03;
-    emblemCore.rotation.y = t * 1.4;
-
-    if (state.newsImages.length > 0) {
-      // Cambio automático entre múltiples imágenes
-      if (state.newsImages.length > 1) {
-        if (state.isSpeaking && audioEl && audioEl.duration > 0) {
-          const progress = Math.min(0.999, audioEl.currentTime / audioEl.duration);
-          const targetIdx = Math.floor(progress * state.newsImages.length);
-          if (targetIdx !== state.activeImageIndex) {
-            setActiveImage(targetIdx);
-          }
-        } else {
-          state.imageCycleTimer += dt;
-          const interval = state.isSpeaking ? 3.5 : 4.5;
-          if (state.imageCycleTimer >= interval) {
-            state.imageCycleTimer = 0;
-            setActiveImage((state.activeImageIndex + 1) % state.newsImages.length);
-          }
-        }
-      }
-
-      if (state.imageTransition < 1) {
-        state.imageTransition = Math.min(1, state.imageTransition + dt * 2.4);
-        renderStudioScreens(t);
-      } else if (state.screenMode === 'monitor' && state.imageFit === 'cover-top') {
-        renderStudioScreens(t);
-      }
-    }
-
-    const pArr = pGeo.attributes.position.array;
-    for (let i = 0; i < particleCount; i++) {
-      pArr[i * 3 + 1] += dt * 0.35;
-      if (pArr[i * 3 + 1] > 5) pArr[i * 3 + 1] = -1;
-    }
-    pGeo.attributes.position.needsUpdate = true;
-
-    // 7) Cámara suave (TV automática o fija)
-    let targetCamKey = state.cameraMode;
-    if (state.cameraMode === 'auto') {
-      state.autoCamTimer += dt;
-      if (state.autoCamTimer > 5.5) {
-        state.autoCamTimer = 0;
-        state.autoCamIndex = (state.autoCamIndex + 1) % AUTO_CAM_ORDER.length;
-      }
-      targetCamKey = AUTO_CAM_ORDER[state.autoCamIndex];
-    }
-
-    const preset = CAM_PRESETS[targetCamKey] || CAM_PRESETS.front;
-    const zOffset = state.aspect === '9:16' ? 0.85 : 0;
-    const targetPos = preset.pos.clone();
-    const targetLook = preset.look.clone();
-    targetPos.z += zOffset;
-    targetPos.x += Math.sin(t * 0.55) * 0.08;
-
-    // En 16:9 con foto completa al costado derecho, encuadrar al presentador a la izquierda
-    if (
-      state.aspect === '16:9' &&
-      state.screenMode === 'backdrop' &&
-      state.imageFit === 'contain' &&
-      state.newsImages.length > 0
-    ) {
-      targetPos.x += 0.95;
-      targetLook.x += 0.95;
-    }
-
-    currentCamPos.lerp(targetPos, Math.min(1, dt * 2.8));
-    currentCamLook.lerp(targetLook, Math.min(1, dt * 2.8));
-    camera.position.copy(currentCamPos);
-    camera.lookAt(currentCamLook);
-
-    // 8) Render 3D + HUD 2D
-    renderer.render(scene, camera);
-    drawHUD(t, dt);
-
-    // 9) Si está grabando, componer Fondo 2D + 3D + HUD en el canvas de exportación
-    if (state.isRecording) {
-      captureCtx.fillStyle = '#050814';
-      captureCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-      if (state.screenMode === 'backdrop' && state.newsImages.length > 0) {
-        captureCtx.drawImage(bgCanvas, 0, 0, captureCanvas.width, captureCanvas.height);
-      }
-      captureCtx.drawImage(glCanvas, 0, 0, captureCanvas.width, captureCanvas.height);
-      captureCtx.drawImage(hudCanvas, 0, 0, captureCanvas.width, captureCanvas.height);
-    }
-  }
-
-  // =========================================================
-  // 10. GESTIÓN DE GALERÍA HASTA 5 IMÁGENES (CLIC / ARRASTRAR / CTRL+V)
-  // =========================================================
-  function setActiveImage(index) {
-    if (state.newsImages.length === 0) return;
-    const clamped = ((index % state.newsImages.length) + state.newsImages.length) % state.newsImages.length;
-    if (clamped !== state.activeImageIndex) {
-      state.prevImageIndex = state.activeImageIndex;
-      state.activeImageIndex = clamped;
-      state.imageTransition = 0;
-    }
-    updateThumbHighlights();
-    renderStudioScreens(clock.elapsedTime);
-  }
-
-  function updateThumbHighlights() {
-    const items = imageThumbs.querySelectorAll('.thumb-item:not(.slot-empty)');
-    items.forEach((el, idx) => {
-      el.classList.toggle('active', idx === state.activeImageIndex);
-    });
-  }
-
-  function renderImageThumbs() {
-    imageThumbs.innerHTML = '';
-
-    for (let idx = 0; idx < MAX_NEWS_IMAGES; idx++) {
-      const item = state.newsImages[idx];
-      const div = document.createElement('div');
-
-      if (item) {
-        div.className = 'thumb-item' + (idx === state.activeImageIndex ? ' active' : '');
-        div.title = `Foto ${idx + 1}: ${item.name} (clic para mostrar ahora)`;
-
-        const imgEl = document.createElement('img');
-        imgEl.src = item.url;
-        imgEl.alt = item.name;
-        div.appendChild(imgEl);
-
-        const num = document.createElement('span');
-        num.className = 'slot-num';
-        num.textContent = String(idx + 1);
-        div.appendChild(num);
-
-        const rmBtn = document.createElement('button');
-        rmBtn.type = 'button';
-        rmBtn.className = 'thumb-remove';
-        rmBtn.textContent = '✕';
-        rmBtn.title = 'Quitar foto';
-        rmBtn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          URL.revokeObjectURL(item.url);
-          state.newsImages.splice(idx, 1);
-          state.prevImageIndex = -1;
-          state.imageTransition = 1;
-          if (state.activeImageIndex >= state.newsImages.length) {
-            state.activeImageIndex = Math.max(0, state.newsImages.length - 1);
-          }
-          renderImageThumbs();
-          updateScreenVisibility();
-          renderStudioScreens(clock.elapsedTime);
-        });
-        div.appendChild(rmBtn);
-
-        div.addEventListener('click', () => {
-          state.imageCycleTimer = 0;
-          setActiveImage(idx);
-        });
-      } else {
-        div.className = 'thumb-item slot-empty';
-        div.title = `Agregar Foto ${idx + 1}`;
-        div.innerHTML = `<span>＋</span><span>${idx + 1}</span>`;
-        div.addEventListener('click', () => {
-          newsImagesInput.click();
-        });
-      }
-
-      imageThumbs.appendChild(div);
-    }
-
-    const count = state.newsImages.length;
-    if (addImagesBtn) {
-      addImagesBtn.textContent = count >= MAX_NEWS_IMAGES ? `✓ Lleno (${count}/5)` : `＋ Agregar (${count}/5)`;
-      addImagesBtn.disabled = count >= MAX_NEWS_IMAGES;
-    }
-
-    if (count === 0) {
-      imagesStatus.textContent =
-        'Haz clic en los recuadros 1–5, arrastra fotos o pega con Ctrl+V (hasta 5).';
-    } else if (count === 1) {
-      imagesStatus.textContent = '1/5 foto cargada. Agrega más para activar el carrusel o mosaico.';
-    } else {
-      const modeName =
-        state.galleryStyle === 'mosaic'
-          ? 'Mosaico (todas visibles)'
-          : state.galleryStyle === 'carousel'
-            ? 'Carrusel elegante'
-            : 'Cine (Fade suave)';
-      imagesStatus.textContent = `${count}/5 fotos listas en modo ${modeName}.`;
-    }
-  }
-
-  function addImageFiles(fileList) {
-    const remaining = MAX_NEWS_IMAGES - state.newsImages.length;
-    if (remaining <= 0) {
-      imagesStatus.textContent = 'Ya tienes el máximo de 5 imágenes. Quita una (✕) para agregar otra.';
-      return;
-    }
-
-    const files = Array.from(fileList || [])
-      .filter((f) => f.type && f.type.startsWith('image/'))
-      .slice(0, remaining);
-    if (files.length === 0) return;
-
-    const hadNone = state.newsImages.length === 0;
-    let loadedCount = 0;
-
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        if (state.newsImages.length >= MAX_NEWS_IMAGES) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        const blurCanvas = createBlurCanvas(img);
-        state.newsImages.push({
-          id: `${Date.now()}-${Math.random()}`,
-          url,
-          name: file.name || 'imagen.png',
-          img,
-          blurCanvas,
-        });
-        loadedCount++;
-        if (loadedCount === 1 && hadNone) {
-          state.activeImageIndex = 0;
-          state.prevImageIndex = -1;
-          state.imageTransition = 1;
-        }
-        renderImageThumbs();
-        updateScreenVisibility();
-        renderStudioScreens(clock.elapsedTime);
-      };
-      img.src = url;
-    });
-  }
-
-  if (addImagesBtn) {
-    addImagesBtn.addEventListener('click', () => newsImagesInput.click());
-  }
-
-  newsImagesInput.addEventListener('change', (e) => {
-    addImageFiles(e.target.files);
-    newsImagesInput.value = '';
-  });
-
-  // Arrastrar y soltar fotos sobre los 5 recuadros
-  imageThumbs.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    imageThumbs.classList.add('drag-over');
-  });
-  imageThumbs.addEventListener('dragleave', () => {
-    imageThumbs.classList.remove('drag-over');
-  });
-  imageThumbs.addEventListener('drop', (e) => {
-    e.preventDefault();
-    imageThumbs.classList.remove('drag-over');
-    if (e.dataTransfer && e.dataTransfer.files) {
-      addImageFiles(e.dataTransfer.files);
-    }
-  });
-
-  clearImagesBtn.addEventListener('click', () => {
-    state.newsImages.forEach((item) => URL.revokeObjectURL(item.url));
-    state.newsImages = [];
-    state.activeImageIndex = 0;
-    state.prevImageIndex = -1;
-    state.imageTransition = 1;
-    newsImagesInput.value = '';
-    renderImageThumbs();
-    updateScreenVisibility();
-    renderStudioScreens(clock.elapsedTime);
-  });
-
-  screenModeSelect.addEventListener('change', () => {
-    state.screenMode = screenModeSelect.value;
-    updateScreenVisibility();
-    renderImageThumbs();
-    renderStudioScreens(clock.elapsedTime);
-  });
-
-  galleryStyleSelect.addEventListener('change', () => {
-    state.galleryStyle = galleryStyleSelect.value;
-    renderImageThumbs();
-    renderStudioScreens(clock.elapsedTime);
-  });
-
-  imageFitSelect.addEventListener('change', () => {
-    state.imageFit = imageFitSelect.value;
-    renderStudioScreens(clock.elapsedTime);
-  });
-
-  // Permitir pegar imágenes directo desde el portapapeles (Ctrl+V)
-  window.addEventListener('paste', (e) => {
-    const items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    const imgFiles = [];
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const f = items[i].getAsFile();
-        if (f) imgFiles.push(f);
-      }
-    }
-    if (imgFiles.length > 0) {
-      addImageFiles(imgFiles);
-    }
-  });
-
-  // =========================================================
-  // 11. EVENTOS UI E INICIALIZACIÓN
-  // =========================================================
-  avatarSelect.addEventListener('change', () => {
-    switchAvatarMode(avatarSelect.value);
-  });
-
-  capeToggle.addEventListener('change', updateCapeVisibility);
-
-  let customAvatarUrl = null;
-  customAvatarInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (customAvatarUrl) URL.revokeObjectURL(customAvatarUrl);
-    customAvatarUrl = URL.createObjectURL(file);
-    humanState.mode = 'custom';
-    loadHumanAvatar(customAvatarUrl, file.name);
-  });
-
-  aspectSelect.addEventListener('change', applyAspectRatio);
-  cameraSelect.addEventListener('change', () => {
-    state.cameraMode = cameraSelect.value;
-  });
-  moodSelect.addEventListener('change', applyMood);
-  headlineInput.addEventListener('input', updateHoloTexture);
-  pitchRange.addEventListener('input', () => {
-    const v = parseInt(pitchRange.value, 10);
-    pitchVal.textContent = `${v >= 0 ? '+' : ''}${v} Hz`;
-  });
-  rateRange.addEventListener('input', () => {
-    const v = parseInt(rateRange.value, 10);
-    rateVal.textContent = `${v >= 0 ? '+' : ''}${v}%`;
-  });
-
-  if (musicVolRange) {
-    musicVolRange.addEventListener('input', () => {
-      const v = parseInt(musicVolRange.value, 10);
-      if (musicVolVal) musicVolVal.textContent = `${v}%`;
-      if (audioCtx && musicBus && musicRunning) {
-        musicBus.gain.setTargetAtTime(getTargetMusicGain(), audioCtx.currentTime, 0.08);
-      }
-    });
-  }
-
-  if (musicSelect) {
-    musicSelect.addEventListener('change', () => {
-      if (musicRunning) {
-        if (musicSelect.value === 'none') {
-          stopBackgroundMusic(false);
-          musicPreviewActive = false;
-          if (testMusicBtn) testMusicBtn.textContent = '🎵';
-        } else {
-          startBackgroundMusic();
-        }
-      }
-    });
-  }
-
-  if (testMusicBtn) {
-    testMusicBtn.addEventListener('click', () => {
-      if (musicPreviewActive) {
-        stopBackgroundMusic(false);
-        musicPreviewActive = false;
-        testMusicBtn.textContent = '🎵';
-      } else {
-        if (musicSelect && musicSelect.value === 'none') {
-          musicSelect.value = 'modern';
-        }
-        startBackgroundMusic();
-        musicPreviewActive = true;
-        testMusicBtn.textContent = '■';
-      }
-    });
-  }
-
-  broadcastBtn.addEventListener('click', () => startBroadcast());
-  stopBtn.addEventListener('click', () => stopBroadcast(false));
-  recordBtn.addEventListener('click', startRecordingAndBroadcast);
-
-  applyAspectRatio();
-  applyMood();
-  updateHoloTexture();
-  renderImageThumbs();
-  switchAvatarMode(avatarSelect.value || 'avatarsdk');
-  animate();
-})();
+}
+
+function saveRecordedVideo() {
+  updateStatus("💾 Procesando y descargando archivo de video...");
+  const blob = new Blob(state.recordedChunks, { type: "video/webm" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = `profe_pizarra_${Date.now()}.webm`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    updateStatus("✅ Video descargado con éxito. ¡Listo para TikTok o Reels!");
+  }, 100);
+}

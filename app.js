@@ -134,6 +134,10 @@ const state = {
   lastHandX: null,
   lastHandY: null,
   isWritingNow: false,
+  titleFontSize: 66,
+  boardTitleFontSize: 66,
+  bannerTitleFontSize: 46,
+  isShowingCoverPreview: false,
   audioElementSourceNode: null,
   recordingMimeType: ""
 };
@@ -502,6 +506,7 @@ function setup3DCharacter(model) {
 // Iniciar aplicación
 window.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
+  initTopicsSelector();
   loadTemplate("capicua");
   initAudio();
   initThree3D();
@@ -625,6 +630,44 @@ HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
   if (btnDownloadThumbnail) {
     btnDownloadThumbnail.addEventListener("click", downloadThumbnailCover);
   }
+
+  // Deslizador configurable para tamaño de título (Pizarra y Portada)
+  const sliderTitleSize = document.getElementById("sliderTitleSize");
+  const labelTitleSize = document.getElementById("labelTitleSize");
+  if (sliderTitleSize) {
+    sliderTitleSize.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.titleFontSize = val;
+      state.boardTitleFontSize = val;
+      state.bannerTitleFontSize = Math.round(val * 0.68);
+      if (labelTitleSize) labelTitleSize.textContent = `${val} px`;
+    });
+  }
+
+  // Botón para alternar la vista previa de portada sensual
+  const btnPreviewCover = document.getElementById("btnPreviewCover");
+  const btnMobileCover = document.getElementById("btnMobileCover");
+  const toggleCoverPreview = () => {
+    if (state.audioElement && !state.audioElement.paused) {
+      state.audioElement.pause();
+      state.isPlaying = false;
+    }
+    state.isShowingCoverPreview = !state.isShowingCoverPreview;
+    if (btnPreviewCover) {
+      btnPreviewCover.textContent = state.isShowingCoverPreview ? "🎬 Video" : "👁️ Ver";
+      btnPreviewCover.style.background = state.isShowingCoverPreview ? "#7c3aed" : "rgba(168, 85, 247, 0.2)";
+    }
+    if (btnMobileCover) {
+      btnMobileCover.textContent = state.isShowingCoverPreview ? "🎬 Video" : "📸 Portada";
+    }
+    if (state.isShowingCoverPreview) {
+      updateStatus("📸 Vista previa de Portada Sensual activa (docente de espaldas escribiendo). Ajusta el tamaño del título.");
+    } else {
+      updateStatus("🎬 Volviendo a reproducción normal de video.");
+    }
+  };
+  if (btnPreviewCover) btnPreviewCover.addEventListener("click", toggleCoverPreview);
+  if (btnMobileCover) btnMobileCover.addEventListener("click", toggleCoverPreview);
 
   // Control de volumen de voz del docente
   if (sliderVoiceVol) {
@@ -887,20 +930,245 @@ function parseScriptText(raw) {
   }
 }
 
+/* =========================================================
+   PORTADA SENSUAL HD Y SELECTOR DE TEMAS RAE / PROFE MÓNICA
+   ========================================================= */
+
+function renderSensualCover(targetCanvas) {
+  const tCtx = targetCanvas.getContext("2d");
+  const w = targetCanvas.width;
+  const h = targetCanvas.height;
+
+  // 1. Fondo de aula ilustrada oficial (formato 9:16 vertical)
+  const isLandscape = (w > h);
+  const bg = isLandscape ? bgClassroomH : bgClassroomV;
+  if (bg && bg.complete && bg.naturalWidth > 0) {
+    tCtx.drawImage(bg, 0, 0, w, h);
+  } else {
+    tCtx.fillStyle = "#81399d";
+    tCtx.fillRect(0, 0, w, h);
+  }
+
+  // 2. Logo oficial "La Profe Rochi" en la pared superior (centrado en x=540, y=255)
+  const cx = w / 2;
+  const cy = 255;
+  const size = 330;
+  if (logoProfeRochi && logoProfeRochi.complete && logoProfeRochi.naturalWidth > 0) {
+    tCtx.save();
+    tCtx.translate(cx, cy);
+    tCtx.save();
+    tCtx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    tCtx.shadowBlur = 24;
+    tCtx.shadowOffsetY = 10;
+    tCtx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+    tCtx.restore();
+    tCtx.drawImage(logoProfeRochi, -size / 2, -size / 2, size, size);
+    tCtx.restore();
+  }
+
+  // 3. Banner dorado superior con el Título del Tema (tamaño configurable)
+  const lessonTitle = getLessonTitle();
+  const bannerFontSize = state.bannerTitleFontSize || Math.round((state.titleFontSize || 66) * 0.68);
+  const bannerY = 465;
+
+  tCtx.save();
+  tCtx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
+  const textW = tCtx.measureText(lessonTitle).width;
+  const bannerW = Math.min(960, Math.max(480, textW + 80));
+  const bannerH = Math.max(68, bannerFontSize + 32);
+
+  tCtx.translate(cx, bannerY);
+  tCtx.save();
+  tCtx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  tCtx.shadowBlur = 20;
+  tCtx.shadowOffsetY = 8;
+  const grad = tCtx.createLinearGradient(-bannerW / 2, 0, bannerW / 2, 0);
+  grad.addColorStop(0, "#fbbf24");
+  grad.addColorStop(0.5, "#fef08a");
+  grad.addColorStop(1, "#f59e0b");
+  tCtx.fillStyle = grad;
+  tCtx.beginPath();
+  tCtx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
+  tCtx.fill();
+  tCtx.restore();
+
+  // Borde oscuro marcado
+  tCtx.lineWidth = 4;
+  tCtx.strokeStyle = "#78350f";
+  tCtx.beginPath();
+  tCtx.roundRect(-bannerW / 2, -bannerH / 2, bannerW, bannerH, 18);
+  tCtx.stroke();
+
+  // Etiqueta 🔴 TEMA DE HOY
+  const tagW = 150;
+  const tagH = 26;
+  tCtx.fillStyle = "#ef4444";
+  tCtx.beginPath();
+  tCtx.roundRect(-tagW / 2, -bannerH / 2 - 13, tagW, tagH, 8);
+  tCtx.fill();
+  tCtx.fillStyle = "#ffffff";
+  tCtx.font = "bold 15px 'Inter', sans-serif";
+  tCtx.textAlign = "center";
+  tCtx.textBaseline = "middle";
+  tCtx.fillText("🔴 TEMA DE HOY", 0, -bannerH / 2);
+
+  // Texto del título con tamaño configurable
+  tCtx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
+  tCtx.fillStyle = "#1e1b4b";
+  tCtx.textAlign = "center";
+  tCtx.textBaseline = "middle";
+  tCtx.fillText(lessonTitle, 0, 4);
+  tCtx.restore();
+
+  // 4. Pose Sensual de la Señorita Bellum de espaldas con marcador en la pizarra
+  let writeImg = (bellumSprites.write && (bellumSprites.write[2] || bellumSprites.write[1] || bellumSprites.write[0]));
+  if (writeImg && writeImg.complete && writeImg.naturalWidth > 0) {
+    const targetH = 1000;
+    const targetW = (writeImg.naturalWidth / writeImg.naturalHeight) * targetH;
+    const teacherX = w * 0.44; // 475px - posición centrada frente a la pizarra
+    const teacherY = 1750; // Pies firmes en el suelo
+    const drawX = teacherX - targetW / 2;
+    const drawY = teacherY - (targetH * (780 / 800));
+
+    tCtx.save();
+    tCtx.save();
+    tCtx.shadowColor = "rgba(15, 23, 42, 0.35)";
+    tCtx.shadowBlur = 26;
+    tCtx.shadowOffsetX = 10;
+    tCtx.shadowOffsetY = 14;
+    tCtx.drawImage(writeImg, drawX, drawY, targetW, targetH);
+    tCtx.restore();
+
+    // Dibujar la figura en pose sensual de espaldas
+    tCtx.drawImage(writeImg, drawX, drawY, targetW, targetH);
+    tCtx.restore();
+  }
+
+  // 5. Subtítulo estilo gancho viral en la parte inferior
+  const firstSpeech = (state.steps && state.steps[0] && state.steps[0].speech) ? state.steps[0].speech : "¡Hola, mis estudiantes!";
+  const hookSentence = firstSpeech.split(/[\.\!\?]/).filter(s => s.trim().length > 0)[0] || "¡Hola, mis estudiantes!";
+  const subText = hookSentence.trim().startsWith("¡") ? hookSentence.trim() : `¡${hookSentence.trim()}!`;
+
+  tCtx.save();
+  const subY = h - 240;
+  tCtx.font = "bold 44px 'Inter', sans-serif";
+  const subTextW = tCtx.measureText(subText).width;
+  const pillW = Math.min(940, Math.max(380, subTextW + 80));
+  const pillH = 74;
+
+  tCtx.save();
+  tCtx.shadowColor = "rgba(0,0,0,0.55)";
+  tCtx.shadowBlur = 24;
+  tCtx.shadowOffsetY = 10;
+  tCtx.fillStyle = "rgba(15, 23, 42, 0.92)";
+  tCtx.beginPath();
+  tCtx.roundRect(w / 2 - pillW / 2, subY - pillH / 2, pillW, pillH, 20);
+  tCtx.fill();
+  tCtx.restore();
+
+  tCtx.strokeStyle = "rgba(251, 191, 36, 0.5)";
+  tCtx.lineWidth = 2.5;
+  tCtx.beginPath();
+  tCtx.roundRect(w / 2 - pillW / 2, subY - pillH / 2, pillW, pillH, 20);
+  tCtx.stroke();
+
+  tCtx.textAlign = "center";
+  tCtx.textBaseline = "middle";
+  tCtx.fillStyle = "#ffffff";
+  tCtx.fillText(subText, w / 2, subY);
+  tCtx.restore();
+}
+
 function downloadThumbnailCover() {
   try {
-    const dataUrl = canvas.toDataURL("image/png");
+    const offCanvas = document.createElement("canvas");
+    offCanvas.width = canvas.width || 1080;
+    offCanvas.height = canvas.height || 1920;
+    renderSensualCover(offCanvas);
+
+    const dataUrl = offCanvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `miniatura_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+    a.download = `portada_sensual_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    updateStatus("📸 ¡Miniatura HD guardada con éxito!");
+    updateStatus("📸 ¡Portada HD guardada con éxito (pose sensual de espaldas escribiendo)!");
   } catch (err) {
-    console.error("Error al guardar miniatura:", err);
-    alert("No se pudo descargar la miniatura.");
+    console.error("Error al guardar miniatura de portada:", err);
+    alert("No se pudo generar la portada.");
   }
+}
+
+function initTopicsSelector() {
+  const select = document.getElementById("selectRaeTopic");
+  if (!select) return;
+
+  const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
+  if (topics.length === 0) return;
+
+  const groups = {};
+  topics.forEach(t => {
+    const cat = t.category || "General";
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(t);
+  });
+
+  select.innerHTML = '<option value="" disabled selected>👉 Selecciona un tema curricular o de la RAE...</option>';
+
+  for (const [catName, catTopics] of Object.entries(groups)) {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = `📚 ${catName}`;
+    catTopics.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = `${t.icon || "✍️"} ${t.name} - ${t.summary || ""}`;
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  }
+
+  select.addEventListener("change", (e) => {
+    if (e.target.value) loadTopicLesson(e.target.value);
+  });
+
+  const btnLoad = document.getElementById("btnLoadRaeTopic");
+  if (btnLoad) {
+    btnLoad.addEventListener("click", () => {
+      if (select.value) {
+        loadTopicLesson(select.value);
+      } else {
+        alert("Por favor selecciona un tema de la lista primero.");
+      }
+    });
+  }
+
+  const btnRandom = document.getElementById("btnRandomRaeTopic");
+  if (btnRandom) {
+    btnRandom.addEventListener("click", () => {
+      const rand = topics[Math.floor(Math.random() * topics.length)];
+      if (rand) {
+        select.value = rand.id;
+        loadTopicLesson(rand.id);
+      }
+    });
+  }
+}
+
+function loadTopicLesson(topicId) {
+  const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
+  const topic = topics.find(t => t.id === topicId);
+  if (!topic) return;
+
+  state.steps = JSON.parse(JSON.stringify(topic.steps));
+  renderStepsUI();
+
+  state.currentTime = 0;
+  state.duration = 0;
+  state.isPlaying = false;
+  state.isRecording = false;
+
+  updateStatus(`✅ ¡Lección cargada: "${topic.name}"! Haz clic en '▶ Generar y Reproducir'.`);
 }
 
 window.removeStep = (idx) => {
@@ -1030,6 +1298,7 @@ function formatTime(sec) {
 }
 
 async function generateAndPlay() {
+  state.isShowingCoverPreview = false;
   btnPlayPreview.disabled = true;
   updateStatus("🎙️ Sintetizando voz con Inteligencia Artificial...");
 
@@ -1160,6 +1429,7 @@ function assignTimestampsToSteps() {
 }
 
 function restartPlayback() {
+  state.isShowingCoverPreview = false;
   restartAllAudio();
   state.isPlaying = true;
   btnTogglePlay.textContent = "⏸";
@@ -1302,6 +1572,13 @@ function renderLoop(time) {
   const w = canvas.width;
   const h = canvas.height;
 
+  // Si está activa la vista previa de la portada sensual:
+  if (state.isShowingCoverPreview) {
+    renderSensualCover(canvas);
+    requestAnimationFrame(renderLoop);
+    return;
+  }
+
   // Sincronización continua de alta precisión (60 FPS) entre audio y fotogramas visuales
   if (state.audioElement && !state.audioElement.paused) {
     state.currentTime = state.audioElement.currentTime;
@@ -1422,11 +1699,15 @@ function drawChannelLogo(w, h, time) {
 
   // BANNER DE MINIATURA VIRAL CON EL TÍTULO DEL TEMA (ZONA SUPERIOR PARA PORTADA)
   const lessonTitle = getLessonTitle();
+  const bannerFontSize = state.bannerTitleFontSize || Math.round((state.titleFontSize || 66) * 0.68);
   const bannerY = 465 + bobY * 0.5;
-  const bannerW = Math.min(840, Math.max(500, lessonTitle.length * 28 + 120));
-  const bannerH = 68;
 
   ctx.save();
+  ctx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
+  const textW = ctx.measureText(lessonTitle).width;
+  const bannerW = Math.min(960, Math.max(480, textW + 80));
+  const bannerH = Math.max(68, bannerFontSize + 32);
+
   ctx.translate(cx, bannerY);
 
   // Sombra del banner
@@ -1467,7 +1748,7 @@ function drawChannelLogo(w, h, time) {
   ctx.fillText("🔴 TEMA DE HOY", 0, -bannerH / 2);
 
   // Texto del título
-  ctx.font = "900 36px 'Inter', sans-serif";
+  ctx.font = `900 ${bannerFontSize}px 'Inter', sans-serif`;
   ctx.fillStyle = "#1e1b4b";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -1584,11 +1865,13 @@ function drawBoardContent(w, h, currentStep, time) {
     const charCount = Math.floor(fullTitle.length * writeProgTitle);
     const textToShow = fullTitle.substring(0, charCount);
 
-    let fontSize = 66;
+    let baseFontSize = state.boardTitleFontSize || state.titleFontSize || 66;
+    let fontSize = baseFontSize;
     ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
     let totalW = ctx.measureText(fullTitle).width;
-    if (totalW > 740) {
-      fontSize = Math.max(44, Math.floor(fontSize * (740 / totalW)));
+    const maxTitleW = 760;
+    if (totalW > maxTitleW) {
+      fontSize = Math.max(34, Math.floor(baseFontSize * (maxTitleW / totalW)));
       ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
       totalW = ctx.measureText(fullTitle).width;
     }
@@ -2940,6 +3223,7 @@ function toggleRecording() {
 }
 
 async function startRecording() {
+  state.isShowingCoverPreview = false;
   if (state.isRecording) {
     stopRecording();
     return;

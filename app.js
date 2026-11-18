@@ -143,7 +143,7 @@ const state = {
 };
 
 // Prompt Maestro Pedagógico para ChatGPT / Claude / Gemini
-const MASTER_AI_PROMPT = `Actúa como guionista pedagógico profesional para "La Profe Rochi" (canal educativo estilo "La Profe Mónica", en formato vertical para TikTok, Reels y Shorts con pizarra animada interactiva).
+const MASTER_AI_PROMPT = `Actúa como guionista pedagógico profesional para "La Profe Rochi" (canal educativo oficial de La Profe Rochi, en formato vertical para TikTok, Reels y Shorts con pizarra animada interactiva).
 
 Tu misión es crear una lección en video atractiva, concisa, entretenida y muy fácil de entender sobre el tema que te pida el usuario.
 
@@ -935,7 +935,7 @@ function parseScriptText(raw) {
 }
 
 /* =========================================================
-   PORTADA SENSUAL HD Y SELECTOR DE TEMAS RAE / PROFE MÓNICA
+   PORTADA SENSUAL HD Y SELECTOR DE TEMAS - LA PROFE ROCHI
    ========================================================= */
 
 function renderSensualCover(targetCanvas) {
@@ -1899,7 +1899,7 @@ function drawWhiteboardBackground(w, h) {
     return;
   }
 
-  // Pizarra Blanca Acrílica (Estilo Profe Mónica)
+  // Pizarra Blanca Acrílica (La Profe Rochi)
   ctx.fillStyle = "#fafafa";
   ctx.fillRect(0, 0, w, h);
 
@@ -2175,7 +2175,7 @@ function drawCurvedArrow(ctx, x1, y1, x2, y2, curveOffset, color, progress) {
 
 /* =========================================================
    DIBUJO HIPERREALISTA DE LA MANO Y EL MARCADOR DE PIZARRA
-   Inspirado en la toma real de "La Profe Mónica"
+   Inspirado en la pizarra oficial de "La Profe Rochi"
    ========================================================= */
 function drawUltraRealisticHand(ctx, x, y, time, tiltAngle = 0, isTouching = true) {
   ctx.save();
@@ -2499,7 +2499,7 @@ function drawTeacher(w, h, cameraType, time, currentStep) {
   } else if (state.avatar === "scarlet") {
     drawScarletAvatar(ctx, blink, mouthOpen, time, sway);
   } else {
-    drawMonicaAvatar(ctx, blink, mouthOpen, time);
+    drawClassicTeacherAvatar(ctx, blink, mouthOpen, time);
   }
 
   ctx.restore();
@@ -3135,8 +3135,8 @@ function drawScarletAvatar(ctx, blink, mouthOpen, time, sway) {
   ctx.restore();
 }
 
-/* AVATAR: PROFE MÓNICA (Clásico original) */
-function drawMonicaAvatar(ctx, blink, mouthOpen, time) {
+/* AVATAR: DOCENTE CLÁSICA */
+function drawClassicTeacherAvatar(ctx, blink, mouthOpen, time) {
   // Cuerpo / Traje negro
   ctx.fillStyle = "#1e1b2e";
   ctx.beginPath();

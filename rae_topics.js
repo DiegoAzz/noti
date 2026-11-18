@@ -1407,7 +1407,7 @@ const RAE_TOPICS = [
   // =========================================================
 {
     "id": "representaci_n_y_determinaci_n_de_conjuntos",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "DETERMINACIÓN DE CONJUNTOS",
     "icon": "📐",
     "summary": "Representación y determinación de conjuntos",
@@ -1458,7 +1458,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "relaci_n_de_pertenencia_y_contenencia",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "PERTENENCIA Y CONTENENCIA",
     "icon": "🔢",
     "summary": "Relación de pertenencia y contenencia",
@@ -1509,7 +1509,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_uni_n_entre_conjuntos_y_c_mo_representarlos",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "UNIÓN ENTRE CONJUNTOS",
     "icon": "⭕",
     "summary": "¿Qué es la unión entre conjuntos y cómo representarlos?",
@@ -1560,7 +1560,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_intersecci_n_entre_conjuntos",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "INTERSECCIÓN DE CONJUNTOS",
     "icon": "🎯",
     "summary": "¿Qué es la intersección entre conjuntos?",
@@ -1611,7 +1611,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "sistema_de_numeraci_n_decimal_hasta_10_000",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "NUMERACIÓN HASTA 10.000",
     "icon": "📊",
     "summary": "Sistema de numeración decimal hasta 10.000",
@@ -1662,7 +1662,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "descomposici_n_de_n_meros_hasta_100_000",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "DESCOMPOSICIÓN HASTA 100.000",
     "icon": "🧮",
     "summary": "Descomposición de números hasta 100.000",
@@ -1713,7 +1713,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "comparaci_n_de_n_meros_hasta_100_000",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "COMPARACIÓN DE NÚMEROS",
     "icon": "⚖️",
     "summary": "Comparación de números hasta 100.000",
@@ -1764,7 +1764,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "adici_n_o_suma_de_n_meros_hasta_100_mil",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "SUMA HASTA 100.000",
     "icon": "➕",
     "summary": "Adición o suma de números hasta 100 mil",
@@ -1815,7 +1815,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "truco_para_aprender_la_tabla_del_2",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "TRUCO TABLA DEL 2",
     "icon": "✌️",
     "summary": "Truco para aprender la tabla del 2",
@@ -1866,7 +1866,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "tabla_de_multiplicar_del_n_mero_3",
-    "category": "Matemáticas (Profe Mónica)",
+    "category": "Matemáticas",
     "name": "TABLA DEL 3 EN PATRONES",
     "icon": "3️⃣",
     "summary": "Tabla de multiplicar del número 3",
@@ -1917,7 +1917,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_c_lula_y_cu_les_son_sus_partes",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "LA CÉLULA Y SUS PARTES",
     "icon": "🔬",
     "summary": "¿Qué es la célula y cuáles son sus partes?",
@@ -1968,7 +1968,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "partes_de_la_c_lula_animal_y_vegetal",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "CÉLULA ANIMAL VS VEGETAL",
     "icon": "🌱",
     "summary": "Partes de la célula animal y vegetal",
@@ -2019,7 +2019,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_son_los_los_tejidos_vegetales",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "TEJIDOS VEGETALES",
     "icon": "🌿",
     "summary": "¿Qué son los los tejidos vegetales?",
@@ -2070,7 +2070,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "caracter_sticas_de_los_tejidos_animales",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "TEJIDOS ANIMALES",
     "icon": "🦁",
     "summary": "Características de los tejidos animales",
@@ -2121,7 +2121,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_rotaci_n_y_traslaci_n_de_la_tierra",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "ROTACIÓN Y TRASLACIÓN",
     "icon": "🌍",
     "summary": "¿Qué es la rotación y traslación de la tierra?",
@@ -2172,7 +2172,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "cu_les_son_los_las_capas_de_la_tierra_por_cu_l_capa_viajan_los_aviones",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "CAPAS DE LA ATMÓSFERA",
     "icon": "✈️",
     "summary": "¿Cuáles son los las capas de la tierra? ¿Por cuál capa viajan los aviones?",
@@ -2223,7 +2223,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "partes_del_sistema_seo_articular_y_muscular_del_cuerpo_humano",
-    "category": "Ciencias Naturales (Profe Mónica)",
+    "category": "Ciencias Naturales",
     "name": "SISTEMA LOCOMOTOR",
     "icon": "🦴",
     "summary": "Partes del sistema óseo, articular y muscular del cuerpo humano",
@@ -2274,7 +2274,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "cu_les_son_las_regiones_naturales_de_colombia",
-    "category": "Ciencias Sociales (Profe Mónica)",
+    "category": "Ciencias Sociales",
     "name": "REGIONES NATURALES DE COLOMBIA",
     "icon": "🗺️",
     "summary": "¿Cuáles son las regiones naturales de Colombia?",
@@ -2325,7 +2325,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "departamentos_y_capitales_de_colombia",
-    "category": "Ciencias Sociales (Profe Mónica)",
+    "category": "Ciencias Sociales",
     "name": "DEPARTAMENTOS DE COLOMBIA",
     "icon": "🇨🇴",
     "summary": "Departamentos y Capitales de Colombia",
@@ -2376,7 +2376,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "cu_les_son_los_sectores_econ_micos_de_colombia",
-    "category": "Ciencias Sociales (Profe Mónica)",
+    "category": "Ciencias Sociales",
     "name": "SECTORES ECONÓMICOS",
     "icon": "💼",
     "summary": "¿Cuáles son los sectores económicos de Colombia?",
@@ -2427,7 +2427,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "cu_les_son_los_puntos_cardinales_c_mo_ubicarnos",
-    "category": "Ciencias Sociales (Profe Mónica)",
+    "category": "Ciencias Sociales",
     "name": "PUNTOS CARDINALES",
     "icon": "🧭",
     "summary": "¿Cuáles son los puntos cardinales? ¿Cómo ubicarnos?",
@@ -2478,7 +2478,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_un_sustantivo_clasificaci_n",
-    "category": "Lengua Castellana (Profe Mónica)",
+    "category": "Lengua Castellana",
     "name": "EL SUSTANTIVO Y SU CLASES",
     "icon": "📖",
     "summary": "¿Qué es un sustantivo? Clasificación",
@@ -2529,13 +2529,13 @@ const RAE_TOPICS = [
   },
   {
     "id": "el_acento_y_la_tilde_t_cnica_sega",
-    "category": "Lengua Castellana (Profe Mónica)",
+    "category": "Lengua Castellana",
     "name": "TÉCNICA S.E.G.A. PARA TILDES",
     "icon": "✍️",
     "summary": "El acento y la tilde (técnica SEGA)",
     "steps": [
       {
-        "speech": "¡Hola! El método SEGA de la Profe Mónica es el truco definitivo para no dudar nunca de una tilde.",
+        "speech": "¡Hola! El método SEGA de la La Profe Rochi es el truco definitivo para no dudar nunca de una tilde.",
         "action": "write",
         "text": "TÉCNICA S.E.G.A. PARA TILDES",
         "target": "title",
@@ -2580,7 +2580,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_son_los_adjetivos_clasificaci_n",
-    "category": "Lengua Castellana (Profe Mónica)",
+    "category": "Lengua Castellana",
     "name": "LOS ADJETIVOS",
     "icon": "✨",
     "summary": "¿Qué son los adjetivos? Clasificación",
@@ -2631,7 +2631,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_el_verbo_regulares_e_irregulares",
-    "category": "Lengua Castellana (Profe Mónica)",
+    "category": "Lengua Castellana",
     "name": "VERBOS REGULARES E IRREGULARES",
     "icon": "🏃",
     "summary": "¿Qué es el verbo? Regulares e irregulares",
@@ -2682,7 +2682,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_son_los_sin_nimos_y_ant_nimos",
-    "category": "Lengua Castellana (Profe Mónica)",
+    "category": "Lengua Castellana",
     "name": "SINÓNIMOS Y ANTÓNIMOS",
     "icon": "🔄",
     "summary": "¿Qué son los sinónimos y antónimos?",
@@ -2733,7 +2733,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "los_n_meros_en_ingl_s_the_numbers",
-    "category": "Inglés (Profe Mónica)",
+    "category": "Inglés",
     "name": "THE NUMBERS (1 TO 20)",
     "icon": "🇬🇧",
     "summary": "Los números en inglés - The numbers",
@@ -2784,7 +2784,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "los_colores_en_ingl_s_the_colors",
-    "category": "Inglés (Profe Mónica)",
+    "category": "Inglés",
     "name": "THE COLORS IN ENGLISH",
     "icon": "🎨",
     "summary": "Los colores en inglés - The colors",
@@ -2835,7 +2835,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "partes_de_la_casa_parts_of_the_house",
-    "category": "Inglés (Profe Mónica)",
+    "category": "Inglés",
     "name": "PARTS OF THE HOUSE",
     "icon": "🏠",
     "summary": "Partes de la casa - Parts of the house",
@@ -2886,7 +2886,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "los_tiles_escolares_the_school_materials",
-    "category": "Inglés (Profe Mónica)",
+    "category": "Inglés",
     "name": "SCHOOL MATERIALS",
     "icon": "🎒",
     "summary": "Los útiles escolares - The school materials",
@@ -2937,7 +2937,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_son_los_conflictos_y_la_agresi_n",
-    "category": "Ética y Valores (Profe Mónica)",
+    "category": "Ética y Valores",
     "name": "RESOLUCIÓN DE CONFLICTOS",
     "icon": "🕊️",
     "summary": "¿Qué son los conflictos y la agresión?",
@@ -2988,7 +2988,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_democracia_y_la_responsabilidad_social",
-    "category": "Ética y Valores (Profe Mónica)",
+    "category": "Ética y Valores",
     "name": "DEMOCRACIA Y PARTICIPACIÓN",
     "icon": "🤝",
     "summary": "¿Qué es la democracia y la responsabilidad social?",
@@ -3039,7 +3039,7 @@ const RAE_TOPICS = [
   },
   {
     "id": "qu_es_la_responsabilidad_con_el_medio_ambiente",
-    "category": "Ética y Valores (Profe Mónica)",
+    "category": "Ética y Valores",
     "name": "CUIDADO DEL MEDIO AMBIENTE",
     "icon": "🌍",
     "summary": "¿Qué es la responsabilidad con el medio ambiente?",

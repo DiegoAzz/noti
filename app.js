@@ -1120,16 +1120,11 @@ function renderSensualCover(targetCanvas) {
     tCtx.restore();
   }
 
-  // 1c. Fondo del tablero según la materia (Diferenciación de color para el Feed)
-  const bx0 = 212, by0 = 692, bw = 678, bh = 476;
-  tCtx.save();
-  tCtx.fillStyle = palette.boardBg;
-  tCtx.beginPath();
-  tCtx.roundRect(bx0, by0, bw, bh, 20);
-  tCtx.fill();
-
-  if (palette.hasGrid) {
-    tCtx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.18)";
+  // Cuadrícula sutil solo para Matemáticas (sin recuadros ni marcos artificiales)
+  if (palette && palette.hasGrid) {
+    const bx0 = 215, by0 = 695, bw = 675, bh = 470;
+    tCtx.save();
+    tCtx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.16)";
     tCtx.lineWidth = 1.5;
     for (let gy = by0 + 20; gy < by0 + bh; gy += 32) {
       tCtx.beginPath();
@@ -1143,14 +1138,8 @@ function renderSensualCover(targetCanvas) {
       tCtx.lineTo(gx, by0 + bh);
       tCtx.stroke();
     }
+    tCtx.restore();
   }
-
-  tCtx.lineWidth = 5;
-  tCtx.strokeStyle = palette.boardBorder;
-  tCtx.beginPath();
-  tCtx.roundRect(bx0, by0, bw, bh, 20);
-  tCtx.stroke();
-  tCtx.restore();
 
   // 2. Logo oficial "La Profe Rochi" en la pared superior (centrado en x=540, y=255)
   const cx = w / 2;
@@ -2120,7 +2109,7 @@ function drawWhiteboardBackground(w, h) {
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Aplicar paleta por materia en el aula y tablero durante la reproducción
+    // Aplicar paleta por materia en la pared del aula durante la reproducción
     const palette = getCurrentSubjectPalette();
     if (palette && palette.wallColor) {
       ctx.save();
@@ -2130,16 +2119,11 @@ function drawWhiteboardBackground(w, h) {
       ctx.restore();
     }
 
-    // Fondo del tablero según la materia
-    const bx0 = 212, by0 = 692, bw = 678, bh = 476;
-    ctx.save();
-    ctx.fillStyle = palette.boardBg;
-    ctx.beginPath();
-    ctx.roundRect(bx0, by0, bw, bh, 20);
-    ctx.fill();
-
-    if (palette.hasGrid) {
-      ctx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.18)";
+    // Cuadrícula sutil solo para Matemáticas (sin recuadros ni marcos artificiales)
+    if (palette && palette.hasGrid) {
+      const bx0 = 215, by0 = 695, bw = 675, bh = 470;
+      ctx.save();
+      ctx.strokeStyle = palette.gridColor || "rgba(59, 130, 246, 0.16)";
       ctx.lineWidth = 1.5;
       for (let gy = by0 + 20; gy < by0 + bh; gy += 32) {
         ctx.beginPath();
@@ -2153,14 +2137,8 @@ function drawWhiteboardBackground(w, h) {
         ctx.lineTo(gx, by0 + bh);
         ctx.stroke();
       }
+      ctx.restore();
     }
-
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = palette.boardBorder;
-    ctx.beginPath();
-    ctx.roundRect(bx0, by0, bw, bh, 20);
-    ctx.stroke();
-    ctx.restore();
     return;
   }
   if (state.theme === "blackboard_green") {
@@ -2376,38 +2354,56 @@ function drawBoardContent(w, h, currentStep, time) {
           isWritingNow = true;
         }
       } else if (subStep.action === "highlight") {
-        // DETECCIÓN INTELIGENTE DE FILA: Si el texto a resaltar es diferente a s.text,
-        // pertenece a la FILA 2 (yPos + rowHeight) para que NUNCA se monte sobre la fila 1
         const isDifferentText = Boolean(subStep.text && s.text && subStep.text.trim() !== s.text.trim());
-        const targetRowY = isDifferentText ? (yPos + rowHeight) : yPos;
+        if (!isDifferentText) {
+          // El texto ya está dibujado en la pizarra (línea 2326) con startX y yPos exactos.
+          // NO se vuelve a llamar a fillText (eso producía que el texto se dibujara dos veces y se amontonaran las letras).
+          // Únicamente se dibuja el trazo del resaltador amarillo suave animado sobre el texto original:
+          const hlWidth = totalW * subProg;
+          ctx.save();
+          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
+          ctx.fillRect(startX - 6, yPos - 52, hlWidth + 12, 60);
+          ctx.restore();
 
-        let hlFontSize = fontSize;
-        ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-        const hlText = subStep.text || s.text || "";
-        let hlTotalW = ctx.measureText(hlText).width;
-        if (hlTotalW > 740) {
-          hlFontSize = Math.max(38, Math.floor(fontSize * (740 / hlTotalW)));
+          if (isSubDrawing) {
+            handTargetX = startX + hlWidth;
+            handTargetY = yPos - 22;
+            handAngle = -0.05;
+            isWritingNow = true;
+          }
+        } else {
+          // Es un texto nuevo e independiente: pertenece a la FILA 2 (yPos + rowHeight)
+          const targetRowY = yPos + rowHeight;
+          let hlFontSize = 72;
           ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-          hlTotalW = ctx.measureText(hlText).width;
-        }
-        const hlStartX = (w / 2) - (hlTotalW / 2);
-        const textW = hlTotalW * subProg;
+          const hlText = subStep.text.trim();
+          let hlTotalW = ctx.measureText(hlText).width;
+          if (hlTotalW > 740) {
+            hlFontSize = Math.max(38, Math.floor(hlFontSize * (740 / hlTotalW)));
+            ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
+            hlTotalW = ctx.measureText(hlText).width;
+          }
+          const hlStartX = (w / 2) - (hlTotalW / 2);
+          const hlWidth = hlTotalW * subProg;
 
-        // Cuadro de resaltador amarillo suave en su propia fila independiente
-        ctx.fillStyle = "rgba(250, 204, 21, 0.45)";
-        ctx.fillRect(hlStartX - 6, targetRowY - 52, textW + 12, 60);
+          // Cuadro de resaltador en Fila 2
+          ctx.save();
+          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
+          ctx.fillRect(hlStartX - 6, targetRowY - 52, hlWidth + 12, 60);
+          ctx.restore();
 
-        // Trazo del texto nítido en su fila
-        ctx.fillStyle = blueInk;
-        ctx.textAlign = "left";
-        const charSubCount = Math.floor(hlText.length * subProg);
-        ctx.fillText(hlText.substring(0, charSubCount), hlStartX, targetRowY);
+          // Texto nítido en Fila 2
+          ctx.fillStyle = blueInk;
+          ctx.textAlign = "left";
+          const charSubCount = Math.floor(hlText.length * subProg);
+          ctx.fillText(hlText.substring(0, charSubCount), hlStartX, targetRowY);
 
-        if (isSubDrawing) {
-          handTargetX = hlStartX + textW;
-          handTargetY = targetRowY - 22;
-          handAngle = -0.05;
-          isWritingNow = true;
+          if (isSubDrawing) {
+            handTargetX = hlStartX + hlWidth;
+            handTargetY = targetRowY - 22;
+            handAngle = -0.05;
+            isWritingNow = true;
+          }
         }
       }
     }

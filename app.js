@@ -139,6 +139,7 @@ const state = {
   boardTitleFontSize: 66,
   bannerTitleFontSize: 46,
   isShowingCoverPreview: false,
+  isShowingChallengePreview: false,
   audioElementSourceNode: null,
   recordingMimeType: ""
 };
@@ -400,6 +401,7 @@ const pasteScriptPanel = document.getElementById("pasteScriptPanel");
 const rawScriptText = document.getElementById("rawScriptText");
 const tabBtnPreview = document.getElementById("tabBtnPreview");
 const tabBtnSteps = document.getElementById("tabBtnSteps");
+const tabBtnChallenges = document.getElementById("tabBtnChallenges");
 const tabBtnSettings = document.getElementById("tabBtnSettings");
 const btnMobilePlay = document.getElementById("btnMobilePlay");
 const btnMobileRecord = document.getElementById("btnMobileRecord");
@@ -512,6 +514,7 @@ function setup3DCharacter(model) {
 // Iniciar aplicación
 window.addEventListener("DOMContentLoaded", () => {
   try { initTopicsSelector(); } catch (e) { console.error("Error al iniciar temas:", e); }
+  try { initChallengesModule(); } catch (e) { console.error("Error al iniciar retos:", e); }
   try { setupEventListeners(); } catch (e) { console.error("Error al iniciar listeners:", e); }
   try { loadTemplate("capicua"); } catch (e) { console.error("Error al cargar plantilla:", e); }
   try { initAudio(); } catch (e) { console.error("Error al iniciar audio:", e); }
@@ -598,19 +601,53 @@ ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de or
     });
   }
 
+  // Pestañas de navegación para escritorio
+  const switchSidebarTab = (tabName) => {
+    const tabBtns = document.querySelectorAll(".sidebar-tab-btn");
+    tabBtns.forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.tab === tabName);
+    });
+
+    const panes = {
+      settings: document.getElementById("paneSettings"),
+      steps: document.getElementById("paneSteps"),
+      challenges: document.getElementById("paneChallenges")
+    };
+
+    Object.keys(panes).forEach(k => {
+      if (panes[k]) {
+        panes[k].classList.toggle("active", k === tabName);
+      }
+    });
+  };
+  window.switchSidebarTab = switchSidebarTab;
+
+  const desktopTabBtns = document.querySelectorAll(".sidebar-tab-btn");
+  desktopTabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      switchSidebarTab(btn.dataset.tab);
+    });
+  });
+
   // Pestañas de navegación para celulares y pantallas pequeñas
   const setMobileTab = (tabName) => {
-    document.body.classList.remove("mobile-tab-preview", "mobile-tab-steps", "mobile-tab-settings");
+    document.body.classList.remove("mobile-tab-preview", "mobile-tab-steps", "mobile-tab-settings", "mobile-tab-challenges");
     document.body.classList.add(`mobile-tab-${tabName}`);
 
     if (tabBtnPreview) tabBtnPreview.classList.toggle("active", tabName === "preview");
     if (tabBtnSteps) tabBtnSteps.classList.toggle("active", tabName === "steps");
+    if (tabBtnChallenges) tabBtnChallenges.classList.toggle("active", tabName === "challenges");
     if (tabBtnSettings) tabBtnSettings.classList.toggle("active", tabName === "settings");
+
+    if (tabName === "steps" || tabName === "challenges" || tabName === "settings") {
+      switchSidebarTab(tabName);
+    }
   };
   window.setMobileTab = setMobileTab;
 
   if (tabBtnPreview) tabBtnPreview.addEventListener("click", () => setMobileTab("preview"));
   if (tabBtnSteps) tabBtnSteps.addEventListener("click", () => setMobileTab("steps"));
+  if (tabBtnChallenges) tabBtnChallenges.addEventListener("click", () => setMobileTab("challenges"));
   if (tabBtnSettings) tabBtnSettings.addEventListener("click", () => setMobileTab("settings"));
 
   // Inicializar en pestaña Preview en móvil
@@ -669,6 +706,9 @@ ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de or
       state.isPlaying = false;
     }
     state.isShowingCoverPreview = !state.isShowingCoverPreview;
+    if (state.isShowingCoverPreview) {
+      state.isShowingChallengePreview = false;
+    }
     if (btnPreviewCover) {
       btnPreviewCover.textContent = state.isShowingCoverPreview ? "🎬 Video" : "👁️ Ver";
       btnPreviewCover.style.background = state.isShowingCoverPreview ? "#7c3aed" : "rgba(168, 85, 247, 0.2)";
@@ -1785,6 +1825,444 @@ window.updateStepText = (idx, val) => {
   updateYoutubeCopy();
 };
 
+/* =========================================================
+   MÓDULO DE RETOS VIRALES & ACERTIJOS (ESTILO MEME / FACEBOOK / TIKTOK)
+   Permite crear retos visuales con opciones A, B, C, D como en redes sociales
+   ========================================================= */
+
+function renderChallengeGraphic(targetCanvas, challenge, isVertical = false) {
+  const tCtx = targetCanvas.getContext("2d");
+  const w = targetCanvas.width;
+  const h = targetCanvas.height;
+
+  // 1. Marco de Madera Realista
+  const bw = 46;
+  tCtx.save();
+  tCtx.fillStyle = "#8a5227";
+  tCtx.fillRect(0, 0, w, h);
+
+  // Vetas de madera
+  tCtx.strokeStyle = "rgba(65, 32, 10, 0.35)";
+  tCtx.lineWidth = 2.5;
+  for (let i = 0; i < w; i += 24) {
+    tCtx.beginPath();
+    tCtx.moveTo(i, 0);
+    tCtx.lineTo(i + 14, bw);
+    tCtx.moveTo(i, h - bw);
+    tCtx.lineTo(i + 14, h);
+    tCtx.stroke();
+  }
+  for (let j = 0; j < h; j += 24) {
+    tCtx.beginPath();
+    tCtx.moveTo(0, j);
+    tCtx.lineTo(bw, j + 14);
+    tCtx.moveTo(w - bw, j);
+    tCtx.lineTo(w, j + 14);
+    tCtx.stroke();
+  }
+
+  // 2. Fondo de Pizarra Verde Escolar
+  const pGrad = tCtx.createLinearGradient(0, bw, 0, h - bw);
+  pGrad.addColorStop(0, "#1a4635");
+  pGrad.addColorStop(0.5, "#143a2b");
+  pGrad.addColorStop(1, "#0f2d22");
+  tCtx.fillStyle = pGrad;
+  tCtx.fillRect(bw, bw, w - bw * 2, h - bw * 2);
+
+  // Bisel interior oscuro
+  tCtx.lineWidth = 8;
+  tCtx.strokeStyle = "rgba(8, 24, 18, 0.85)";
+  tCtx.strokeRect(bw, bw, w - bw * 2, h - bw * 2);
+
+  // Garabatos tenues de tiza (fórmulas matemáticas escolares)
+  tCtx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  tCtx.lineWidth = 2;
+  tCtx.beginPath();
+  tCtx.moveTo(110, isVertical ? 320 : 220);
+  tCtx.lineTo(210, isVertical ? 320 : 220);
+  tCtx.lineTo(210, isVertical ? 220 : 120);
+  tCtx.closePath();
+  tCtx.stroke();
+
+  tCtx.beginPath();
+  tCtx.arc(w - 140, isVertical ? 260 : 160, 44, 0, Math.PI * 2);
+  tCtx.moveTo(w - 140, isVertical ? 260 : 160);
+  tCtx.lineTo(w - 96, isVertical ? 260 : 160);
+  tCtx.stroke();
+
+  tCtx.font = "italic 22px 'Caveat', cursive";
+  tCtx.fillStyle = "rgba(255, 255, 255, 0.08)";
+  tCtx.fillText("a² + b² = c²", 120, isVertical ? 360 : 260);
+  tCtx.fillText("E = mc²", w - 190, isVertical ? 340 : 240);
+
+  // 3. Hashtag superior dorado
+  tCtx.font = "bold 22px 'Inter', sans-serif";
+  tCtx.fillStyle = "#fbbf24";
+  tCtx.textAlign = "center";
+  tCtx.fillText("#LaProfeRochi", w / 2, bw + (isVertical ? 48 : 34));
+
+  // 4. Encabezado en letra cursiva estilo pizarra escolar (Caveat / Kalam)
+  const whiteText = challenge.headerWhite || "Cuando te preguntan algo de";
+  const highlightText = challenge.headerHighlight || "matemáticas";
+
+  const topY1 = bw + (isVertical ? 110 : 80);
+  const topY2 = bw + (isVertical ? 175 : 138);
+
+  tCtx.save();
+  tCtx.shadowColor = "rgba(0, 0, 0, 0.6)";
+  tCtx.shadowBlur = 8;
+  tCtx.font = `700 ${isVertical ? 58 : 52}px 'Caveat', 'Kalam', cursive, sans-serif`;
+  tCtx.fillStyle = "#ffffff";
+  tCtx.fillText(whiteText, w / 2, topY1);
+
+  tCtx.font = `700 ${isVertical ? 66 : 58}px 'Caveat', 'Kalam', cursive, sans-serif`;
+  tCtx.fillStyle = "#fef08a";
+  tCtx.fillText(highlightText, w / 2, topY2);
+  tCtx.restore();
+
+  // 5. La Profe Rochi como protagonista en el centro
+  let sensualImg = bellumSprites.sensualCover;
+  if (!sensualImg || !sensualImg.complete || sensualImg.naturalWidth === 0) {
+    sensualImg = (bellumSprites.talk && bellumSprites.talk[0]) || bellumSprites.base;
+  }
+
+  if (sensualImg && sensualImg.complete && sensualImg.naturalWidth > 0) {
+    tCtx.save();
+    tCtx.shadowColor = "rgba(0, 0, 0, 0.55)";
+    tCtx.shadowBlur = 24;
+    tCtx.shadowOffsetY = 12;
+
+    if (isVertical) {
+      const targetH = 820;
+      const targetW = (sensualImg.naturalWidth / sensualImg.naturalHeight) * targetH;
+      const drawX = (w - targetW) / 2;
+      const drawY = 320;
+      tCtx.drawImage(sensualImg, drawX, drawY, targetW, targetH);
+    } else {
+      const cropRatio = 0.60;
+      const srcW = sensualImg.naturalWidth;
+      const srcH = sensualImg.naturalHeight * cropRatio;
+      const targetH = 435;
+      const targetW = (srcW / srcH) * targetH;
+      const drawX = (w - targetW) / 2;
+      const drawY = 200;
+      tCtx.drawImage(sensualImg, 0, 0, srcW, srcH, drawX, drawY, targetW, targetH);
+    }
+    tCtx.restore();
+  }
+
+  // 6. Tarjeta del Reto / Acertijo
+  const cardMargin = 80;
+  const cardW = w - cardMargin * 2;
+  const cardY = isVertical ? 1180 : 640;
+  const cardH = isVertical ? 220 : 165;
+
+  tCtx.save();
+  tCtx.shadowColor = "rgba(0, 0, 0, 0.4)";
+  tCtx.shadowBlur = 16;
+  tCtx.shadowOffsetY = 6;
+  tCtx.fillStyle = "rgba(8, 34, 26, 0.92)";
+  tCtx.beginPath();
+  tCtx.roundRect(cardMargin, cardY, cardW, cardH, 18);
+  tCtx.fill();
+  tCtx.lineWidth = 3;
+  tCtx.strokeStyle = "#34d399";
+  tCtx.stroke();
+  tCtx.restore();
+
+  // Texto de la pregunta
+  tCtx.save();
+  tCtx.textAlign = "center";
+  tCtx.textBaseline = "middle";
+  const question = challenge.question || "";
+  const qParts = question.split(/(¿[^?]+\?)/);
+  let mainPart = question;
+  let subPart = "";
+  if (qParts.length > 1) {
+    mainPart = qParts[0].trim();
+    subPart = qParts[1].trim();
+  }
+
+  tCtx.font = "bold 26px 'Inter', sans-serif";
+  tCtx.fillStyle = "#ffffff";
+  if (mainPart.length > 55) {
+    const words = mainPart.split(" ");
+    const mid = Math.ceil(words.length / 2);
+    const line1 = words.slice(0, mid).join(" ");
+    const line2 = words.slice(mid).join(" ");
+    tCtx.fillText(line1, w / 2, cardY + (cardH * 0.28));
+    tCtx.fillText(line2, w / 2, cardY + (cardH * 0.52));
+  } else {
+    tCtx.fillText(mainPart, w / 2, cardY + (cardH * 0.36));
+  }
+
+  if (subPart) {
+    tCtx.font = "900 28px 'Inter', sans-serif";
+    tCtx.fillStyle = "#fde047";
+    tCtx.fillText(subPart, w / 2, cardY + (cardH * 0.78));
+  }
+  tCtx.restore();
+
+  // 7. Las 4 Opciones A, B, C, D en dos columnas
+  const opts = challenge.options || [
+    { key: "A", text: "Opción A" },
+    { key: "B", text: "Opción B" },
+    { key: "C", text: "Opción C" },
+    { key: "D", text: "Opción D" }
+  ];
+
+  const btnW = (cardW - 20) / 2;
+  const btnH = isVertical ? 74 : 64;
+  const btnRow1Y = isVertical ? 1425 : 822;
+  const btnRow2Y = isVertical ? 1515 : 898;
+  const col1X = cardMargin;
+  const col2X = cardMargin + btnW + 20;
+
+  const positions = [
+    { x: col1X, y: btnRow1Y, opt: opts[0] },
+    { x: col2X, y: btnRow1Y, opt: opts[1] },
+    { x: col1X, y: btnRow2Y, opt: opts[2] },
+    { x: col2X, y: btnRow2Y, opt: opts[3] }
+  ];
+
+  positions.forEach(pos => {
+    if (!pos.opt) return;
+    tCtx.save();
+    tCtx.fillStyle = "rgba(10, 36, 28, 0.95)";
+    tCtx.beginPath();
+    tCtx.roundRect(pos.x, pos.y, btnW, btnH, 12);
+    tCtx.fill();
+    tCtx.lineWidth = 2.5;
+    tCtx.strokeStyle = "#34d399";
+    tCtx.stroke();
+
+    tCtx.font = "900 26px 'Inter', sans-serif";
+    tCtx.fillStyle = "#ef4444";
+    tCtx.textAlign = "left";
+    tCtx.textBaseline = "middle";
+    tCtx.fillText(`${pos.opt.key}:`, pos.x + 20, pos.y + btnH / 2);
+
+    tCtx.font = "bold 25px 'Inter', sans-serif";
+    tCtx.fillStyle = "#ffffff";
+    tCtx.fillText(pos.opt.text, pos.x + 60, pos.y + btnH / 2);
+    tCtx.restore();
+  });
+
+  // 8. Pie de página
+  tCtx.save();
+  tCtx.font = "bold 22px 'Inter', sans-serif";
+  tCtx.fillStyle = "#6ee7b7";
+  tCtx.textAlign = "center";
+  tCtx.textBaseline = "middle";
+  tCtx.fillText("💡 Retos La Profe Rochi", w / 2, isVertical ? 1640 : (h - bw - 20));
+  tCtx.restore();
+
+  tCtx.restore();
+}
+
+function loadChallengeToVideo(challenge) {
+  if (!challenge) return;
+  state.isShowingChallengePreview = false;
+  state.isShowingCoverPreview = false;
+  stopAndResetAllAudio();
+  resizeCanvas();
+
+  let steps = challenge.videoSteps;
+  if (!steps || steps.length === 0) {
+    const optA = challenge.options[0] ? challenge.options[0].text : "";
+    const optB = challenge.options[1] ? challenge.options[1].text : "";
+    const optC = challenge.options[2] ? challenge.options[2].text : "";
+    const optD = challenge.options[3] ? challenge.options[3].text : "";
+    const correctKey = challenge.correct || "A";
+    const correctText = (challenge.options.find(o => o.key === correctKey) || {}).text || "";
+
+    steps = [
+      {
+        speech: `¡A ver si eres capaz de resolver este reto de ${challenge.category || 'lógica'}! Presta mucha atención.`,
+        action: "write",
+        text: `RETO: ${challenge.title ? challenge.title.toUpperCase() : 'DESAFÍO VIRAL'}`,
+        target: "title",
+        camera: "teacher"
+      },
+      {
+        speech: `${challenge.question} Las opciones son: A, ${optA}. B, ${optB}. C, ${optC}. O D, ${optD}. ¡Comenta cuál es la correcta!`,
+        action: "write",
+        text: `A: ${optA} | B: ${optB}\nC: ${optC} | D: ${optD}`,
+        target: "example1",
+        camera: "board"
+      },
+      {
+        speech: `¡Tiempo! La respuesta correcta es la ${correctKey}: ${correctText}. ${challenge.explanation || ''} ¡Comenta si acertaste!`,
+        action: "highlight",
+        text: `✅ CORRECTA: ${correctKey}) ${correctText}`,
+        target: "result",
+        camera: "board"
+      }
+    ];
+  }
+
+  state.steps = JSON.parse(JSON.stringify(steps));
+  state.steps.forEach(s => {
+    s.progress = 0;
+    delete s.startTime;
+    delete s.speechEndTime;
+  });
+  renderStepsUI();
+
+  updateYoutubeCopy({
+    name: `Reto Viral: ${challenge.title || '¿Podrás resolverlo?'}`,
+    summary: challenge.question + " " + (challenge.explanation || ""),
+    category: challenge.category || "Matemáticas"
+  });
+
+  if (window.setMobileTab) {
+    window.setMobileTab("preview");
+  } else if (window.switchSidebarTab) {
+    window.switchSidebarTab("steps");
+  }
+
+  updateStatus(`🎯 ¡Reto "${challenge.title || 'Viral'}" cargado en el reproductor de video! Haz clic en '▶ Generar y Reproducir'.`);
+}
+
+function initChallengesModule() {
+  const select = document.getElementById("selectChallenge");
+  if (!select) return;
+
+  const challenges = window.CHALLENGES_DATA || [];
+  if (challenges.length === 0) return;
+
+  if (select.options.length <= 1) {
+    select.innerHTML = '<option value="">🎯 Selecciona un reto viral...</option>';
+    challenges.forEach((ch, idx) => {
+      const opt = document.createElement("option");
+      opt.value = ch.id;
+      opt.textContent = `[${ch.category}] ${ch.title}`;
+      if (idx === 0) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  const loadChallengeIntoForm = (ch) => {
+    if (!ch) return;
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setVal("challengeHeaderWhite", ch.headerWhite || "Cuando te preguntan algo de");
+    setVal("challengeHeaderHighlight", ch.headerHighlight || "matemáticas");
+    setVal("challengeQuestion", ch.question || "");
+    setVal("challengeOptA", (ch.options[0] && ch.options[0].text) || "");
+    setVal("challengeOptB", (ch.options[1] && ch.options[1].text) || "");
+    setVal("challengeOptC", (ch.options[2] && ch.options[2].text) || "");
+    setVal("challengeOptD", (ch.options[3] && ch.options[3].text) || "");
+    setVal("challengeCorrectOpt", ch.correct || "A");
+    setVal("challengeExplanation", ch.explanation || "");
+  };
+
+  if (challenges[0]) loadChallengeIntoForm(challenges[0]);
+
+  select.addEventListener("change", (e) => {
+    const ch = challenges.find(c => c.id === e.target.value);
+    if (ch) loadChallengeIntoForm(ch);
+  });
+
+  const btnRandom = document.getElementById("btnRandomChallenge");
+  if (btnRandom && !btnRandom.dataset.bound) {
+    btnRandom.dataset.bound = "true";
+    btnRandom.addEventListener("click", () => {
+      const rand = challenges[Math.floor(Math.random() * challenges.length)];
+      if (rand) {
+        select.value = rand.id;
+        loadChallengeIntoForm(rand);
+      }
+    });
+  }
+
+  const getFormData = () => {
+    const selectedCh = challenges.find(c => c.id === select.value) || {};
+    const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; };
+    return {
+      title: selectedCh.title || "Reto Viral",
+      category: selectedCh.category || "Matemáticas",
+      headerWhite: getVal("challengeHeaderWhite", "Cuando te preguntan algo de"),
+      headerHighlight: getVal("challengeHeaderHighlight", "matemáticas"),
+      question: getVal("challengeQuestion", "Acertijo matemático"),
+      options: [
+        { key: "A", text: getVal("challengeOptA", "Opción A") },
+        { key: "B", text: getVal("challengeOptB", "Opción B") },
+        { key: "C", text: getVal("challengeOptC", "Opción C") },
+        { key: "D", text: getVal("challengeOptD", "Opción D") }
+      ],
+      correct: getVal("challengeCorrectOpt", "A"),
+      explanation: getVal("challengeExplanation", ""),
+      videoSteps: selectedCh.videoSteps
+    };
+  };
+
+  const btnSquare = document.getElementById("btnExportChallengeSquare");
+  if (btnSquare && !btnSquare.dataset.bound) {
+    btnSquare.dataset.bound = "true";
+    btnSquare.addEventListener("click", () => {
+      updateStatus("📸 Generando post cuadrado del reto (1:1)...");
+      const offCanvas = document.createElement("canvas");
+      offCanvas.width = 1080;
+      offCanvas.height = 1080;
+      const ch = getFormData();
+      renderChallengeGraphic(offCanvas, ch, false);
+      offCanvas.toBlob(async (blob) => {
+        if (!blob) return alert("Error al generar imagen");
+        const filename = `reto_rochi_1x1_${Date.now()}.png`;
+        await downloadBlob(blob, filename);
+        updateStatus("📸 ¡Post de Reto 1:1 guardado con éxito!");
+      }, "image/png");
+    });
+  }
+
+  const btnVertical = document.getElementById("btnExportChallengeVertical");
+  if (btnVertical && !btnVertical.dataset.bound) {
+    btnVertical.dataset.bound = "true";
+    btnVertical.addEventListener("click", () => {
+      updateStatus("📱 Generando post vertical del reto (9:16)...");
+      const offCanvas = document.createElement("canvas");
+      offCanvas.width = 1080;
+      offCanvas.height = 1920;
+      const ch = getFormData();
+      renderChallengeGraphic(offCanvas, ch, true);
+      offCanvas.toBlob(async (blob) => {
+        if (!blob) return alert("Error al generar imagen");
+        const filename = `reto_rochi_9x16_${Date.now()}.png`;
+        await downloadBlob(blob, filename);
+        updateStatus("📱 ¡Post de Reto 9:16 guardado con éxito!");
+      }, "image/png");
+    });
+  }
+
+  const btnLoadVideo = document.getElementById("btnLoadChallengeToVideo");
+  if (btnLoadVideo && !btnLoadVideo.dataset.bound) {
+    btnLoadVideo.dataset.bound = "true";
+    btnLoadVideo.addEventListener("click", () => {
+      const ch = getFormData();
+      loadChallengeToVideo(ch);
+    });
+  }
+
+  const btnPreview = document.getElementById("btnPreviewChallengeInCanvas");
+  if (btnPreview && !btnPreview.dataset.bound) {
+    btnPreview.dataset.bound = "true";
+    btnPreview.addEventListener("click", () => {
+      const ch = getFormData();
+      state.isShowingChallengePreview = true;
+      state.isShowingCoverPreview = false;
+      stopAndResetAllAudio();
+      if (window.setMobileTab) window.setMobileTab("preview");
+      canvas.width = 1080;
+      canvas.height = 1080;
+      const badge = document.getElementById("badgeResolution");
+      if (badge) badge.textContent = "1080 × 1080 (1:1 Reto Redes)";
+      renderChallengeGraphic(canvas, ch, false);
+      updateStatus("👁️ Visualizando Reto en Pizarra. Listo para exportar imagen o cargar en video.");
+    });
+  }
+}
+window.initChallengesModule = initChallengesModule;
+
 function resizeCanvas() {
   if (state.format === "9:16") {
     canvas.width = 1080;
@@ -1997,6 +2475,7 @@ async function synthesizeLessonAudio() {
 }
 
 async function generateAndPlay() {
+  state.isShowingChallengePreview = false;
   state.isShowingCoverPreview = false;
   if (window.innerWidth <= 920 && window.setMobileTab) {
     window.setMobileTab("preview");
@@ -2080,6 +2559,7 @@ function assignTimestampsToSteps() {
 }
 
 function restartPlayback() {
+  state.isShowingChallengePreview = false;
   state.isShowingCoverPreview = false;
   restartAllAudio();
   state.isPlaying = true;
@@ -2222,6 +2702,12 @@ function generateAiTopic() {
 function renderLoop(time) {
   const w = canvas.width;
   const h = canvas.height;
+
+  // Si está activa la vista previa estática del reto:
+  if (state.isShowingChallengePreview) {
+    requestAnimationFrame(renderLoop);
+    return;
+  }
 
   // Si está activa la vista previa de la portada sensual:
   if (state.isShowingCoverPreview) {
@@ -4200,6 +4686,7 @@ function toggleRecording() {
 }
 
 async function startRecording() {
+  state.isShowingChallengePreview = false;
   state.isShowingCoverPreview = false;
   if (window.innerWidth <= 920 && window.setMobileTab) {
     window.setMobileTab("preview");

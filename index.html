@@ -11,6 +11,7 @@
   <script src="three.min.js"></script>
   <script src="GLTFLoader.js"></script>
   <script src="rae_topics.js?v=110"></script>
+  <script src="challenges_data.js?v=110"></script>
 </head>
 <body>
   <!-- BARRA DE PESTAÑAS MÓVIL (SOLO VISIBLE EN CELULAR / PANTALLAS PEQUEÑAS) -->
@@ -22,6 +23,10 @@
     <button class="mobile-tab-btn" id="tabBtnSteps" data-tab="steps">
       <span>📝</span>
       <span>Guion</span>
+    </button>
+    <button class="mobile-tab-btn" id="tabBtnChallenges" data-tab="challenges">
+      <span>🎯</span>
+      <span>Retos</span>
     </button>
     <button class="mobile-tab-btn" id="tabBtnSettings" data-tab="settings">
       <span>⚙️</span>
@@ -38,6 +43,13 @@
           <h2>Profe Pizarra IA</h2>
           <span class="badge">Estudio Educativo TikTok / Reels</span>
         </div>
+      </div>
+
+      <!-- SELECTOR DE PESTAÑAS PRINCIPALES (ESCRITORIO) -->
+      <div class="sidebar-main-tabs" id="sidebarMainTabs">
+        <button class="sidebar-tab-btn active" data-tab="steps">📝 Lección</button>
+        <button class="sidebar-tab-btn tab-challenges" data-tab="challenges">🎯 Retos Virales</button>
+        <button class="sidebar-tab-btn" data-tab="settings">⚙️ Ajustes</button>
       </div>
 
       <!-- PESTAÑA: AJUSTES / CONFIGURACIÓN -->
@@ -190,7 +202,7 @@
       </div>
 
       <!-- PESTAÑA: GUION Y PASOS -->
-      <div class="tab-pane-content" id="paneSteps">
+      <div class="tab-pane-content active" id="paneSteps">
         <!-- BASE DE DATOS MAESTRA DE TEMAS (LA PROFE ROCHI) -->
         <div class="section" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(147, 51, 234, 0.18)); border: 1.5px solid #818cf8; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -313,6 +325,107 @@
           <div class="ai-input-group">
             <input type="text" id="aiTopicInput" class="form-control" placeholder="Ej: Reglas de la B y la V, Palabras Agudas, Fracciones...">
             <button id="btnAiGenerate" class="btn btn-secondary">Crear Lección</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA: RETOS VIRALES & ACERTIJOS (ESTILO FACEBOOK / TIKTOK) -->
+      <div class="tab-pane-content" id="paneChallenges">
+        <div class="section" style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.22), rgba(16, 185, 129, 0.12)); border: 1.5px solid #10b981; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.35rem;">🎯</span>
+              <div>
+                <label class="section-title" style="margin:0; color:#6ee7b7; font-size:0.92rem; font-weight:800;">Retos Virales & Acertijos</label>
+                <div style="font-size:0.68rem; color:#a7f3d0;">Quizzes con opciones A, B, C, D para Facebook, TikTok e Instagram</div>
+              </div>
+            </div>
+            <span class="badge" style="background:#059669; color:#ffffff; font-size:0.65rem; font-weight:800;">VIRAL POST</span>
+          </div>
+
+          <!-- SELECTOR DE RETOS VIRALES PRECONFIGURADOS -->
+          <div style="margin-top:10px;">
+            <label style="font-size:0.75rem; color:#d1fae5; font-weight:700;">📚 Banco de Retos Listos:</label>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <select id="selectChallenge" class="form-control" style="background:#064e3b; border:1.5px solid #34d399; color:#f0fdf4; font-weight:700; font-size:0.8rem; cursor:pointer; flex:3;">
+                <!-- Opciones cargadas dinámicamente -->
+              </select>
+              <button id="btnRandomChallenge" class="btn btn-secondary btn-sm" style="flex:1; border:1px solid #34d399; background:rgba(52,211,153,0.25); color:#6ee7b7; font-weight:700;" title="Cargar reto al azar">
+                🎲 Al Azar
+              </button>
+            </div>
+          </div>
+
+          <!-- FORMULARIO EDITABLE DEL RETO -->
+          <div style="background:rgba(2, 44, 34, 0.65); border:1px solid rgba(52, 211, 153, 0.4); border-radius:8px; padding:10px; margin-top:12px;">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">✏️ Título / Gancho Superior:</label>
+              <input type="text" id="challengeHeaderWhite" class="form-control" style="font-size:0.78rem; margin-bottom:4px;" placeholder="Ej: Cuando te preguntan algo de">
+              <input type="text" id="challengeHeaderHighlight" class="form-control" style="font-size:0.78rem; border-color:#fbbf24; color:#fef08a;" placeholder="Ej: matemáticas (palabra resaltada en amarillo)">
+            </div>
+
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">❓ Pregunta o Acertijo:</label>
+              <textarea id="challengeQuestion" class="form-control" rows="3" style="font-size:0.78rem; line-height:1.35;" placeholder="Escribe aquí el acertijo o problema..."></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">🔢 4 Opciones de Respuesta:</label>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:4px;">
+                <div style="display:flex; align-items:center; gap:4px; background:rgba(15,23,42,0.6); padding:4px 6px; border-radius:6px; border:1px solid #10b981;">
+                  <span style="font-weight:900; color:#ef4444; font-size:0.8rem;">A:</span>
+                  <input type="text" id="challengeOptA" class="form-control" style="font-size:0.75rem; padding:4px;" placeholder="Opción A">
+                </div>
+                <div style="display:flex; align-items:center; gap:4px; background:rgba(15,23,42,0.6); padding:4px 6px; border-radius:6px; border:1px solid #10b981;">
+                  <span style="font-weight:900; color:#ef4444; font-size:0.8rem;">B:</span>
+                  <input type="text" id="challengeOptB" class="form-control" style="font-size:0.75rem; padding:4px;" placeholder="Opción B">
+                </div>
+                <div style="display:flex; align-items:center; gap:4px; background:rgba(15,23,42,0.6); padding:4px 6px; border-radius:6px; border:1px solid #10b981;">
+                  <span style="font-weight:900; color:#ef4444; font-size:0.8rem;">C:</span>
+                  <input type="text" id="challengeOptC" class="form-control" style="font-size:0.75rem; padding:4px;" placeholder="Opción C">
+                </div>
+                <div style="display:flex; align-items:center; gap:4px; background:rgba(15,23,42,0.6); padding:4px 6px; border-radius:6px; border:1px solid #10b981;">
+                  <span style="font-weight:900; color:#ef4444; font-size:0.8rem;">D:</span>
+                  <input type="text" id="challengeOptD" class="form-control" style="font-size:0.75rem; padding:4px;" placeholder="Opción D">
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+              <div style="flex:1;">
+                <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">✅ Opción Correcta:</label>
+                <select id="challengeCorrectOpt" class="form-control" style="font-weight:800; font-size:0.78rem;">
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                </select>
+              </div>
+              <div style="flex:2;">
+                <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">💡 Razón / Explicación:</label>
+                <input type="text" id="challengeExplanation" class="form-control" style="font-size:0.75rem;" placeholder="Breve justificación de la respuesta...">
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTONES DE EXPORTACIÓN Y ACCIÓN -->
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+            <div style="display:flex; gap:6px;">
+              <button id="btnExportChallengeSquare" class="btn btn-primary" style="flex:1; background:linear-gradient(135deg, #059669, #10b981); border:none; font-weight:800; font-size:0.8rem; padding:9px;">
+                📸 Post Cuadrado (1:1 FB/IG)
+              </button>
+              <button id="btnExportChallengeVertical" class="btn btn-secondary" style="flex:1; border:1.5px solid #10b981; color:#a7f3d0; font-weight:700; font-size:0.8rem; padding:9px;">
+                📱 Vertical (9:16 Story/TikTok)
+              </button>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button id="btnLoadChallengeToVideo" class="btn btn-accent" style="flex:2; font-weight:800; font-size:0.8rem; padding:9px;">
+                🎬 Cargar en Video Interactivo
+              </button>
+              <button id="btnPreviewChallengeInCanvas" class="btn btn-secondary" style="flex:1; border:1px solid #6ee7b7; color:#f0fdf4; font-weight:700; font-size:0.8rem;">
+                👁️ Ver Reto
+              </button>
+            </div>
           </div>
         </div>
       </div>

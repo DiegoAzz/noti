@@ -474,6 +474,58 @@ select.form-control option {
   background-color: #ffffff;
 }
 
+/* SELECTOR DE PESTAÑAS PRINCIPALES DEL SIDEBAR (ESCRITORIO) */
+.sidebar-main-tabs {
+  display: flex;
+  gap: 4px;
+  background: #11151f;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #1f293d;
+  margin-bottom: 12px;
+}
+
+.sidebar-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.sidebar-tab-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-tab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.sidebar-tab-btn.tab-challenges.active {
+  background: #059669;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+}
+
+@media (min-width: 921px) {
+  .tab-pane-content {
+    display: none;
+  }
+  .tab-pane-content.active {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
 /* =========================================================
    DISEÑO 100% RESPONSIVO PARA CELULARES Y TABLETS (< 920px)
    ========================================================= */
@@ -617,12 +669,31 @@ select.form-control option {
   body.mobile-tab-settings #paneSteps {
     display: none !important;
   }
+  body.mobile-tab-settings #paneChallenges {
+    display: none !important;
+  }
   body.mobile-tab-settings #paneSettings {
     display: flex !important;
     flex-direction: column;
     gap: 12px;
   }
   body.mobile-tab-settings .preview-area {
+    display: none !important;
+  }
+
+  body.mobile-tab-challenges .sidebar {
+    display: flex !important;
+  }
+  body.mobile-tab-challenges #paneSettings,
+  body.mobile-tab-challenges #paneSteps {
+    display: none !important;
+  }
+  body.mobile-tab-challenges #paneChallenges {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+  body.mobile-tab-challenges .preview-area {
     display: none !important;
   }
 }

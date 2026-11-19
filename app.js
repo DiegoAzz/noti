@@ -2273,151 +2273,238 @@ function drawBoardContent(w, h, currentStep, time) {
     }
   }
 
-  // 2. CONTENIDO INFERIOR: Se auto-limpia con cada nuevo paso de escritura (no se sobreescribe)
-  let activeWriteIdx = -1;
-  for (let k = currentIdx; k >= 1; k--) {
-    if (state.steps[k] && state.steps[k].action === "write") {
-      activeWriteIdx = k;
-      break;
+  // Si estamos en el paso 0 (título), la pizarra en el cuerpo queda limpia
+  if (currentIdx === 0) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
+
+  // 2. ACCIÓN EXPLÍCITA DE BORRADO DE PIZARRA (clear)
+  if (currentStep && currentStep.action === "clear") {
+    const s = currentStep;
+    const stepStart = s.startTime || 0;
+    const speechEnd = s.speechEndTime || (stepStart + 2.0);
+    const wipeDur = Math.max(0.6, speechEnd - stepStart);
+    const elapsed = Math.max(0, t - stepStart);
+    const wipeProg = Math.min(1.0, elapsed / wipeDur);
+
+    drawEraserWipe(ctx, w, startY + 60, startY + 340, wipeProg);
+
+    if (state.isPlaying && wipeProg < 1.0) {
+      handTargetX = (w * 0.22) + (w * 0.56) * wipeProg;
+      handTargetY = startY + 180 + Math.sin(wipeProg * Math.PI * 4) * 40;
+      handAngle = 0;
+      isWritingNow = true;
+    }
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
+
+  // 3. DETERMINACIÓN DEL PASO ACTIVO DEL CUERPO (AUTO-LIMPIEZA ENTRE PASOS)
+  // Cada nuevo paso con contenido borra la pizarra y se actualiza limpiamente sin amontonarse nunca
+  let activeStep = null;
+  let activeStepIdx = -1;
+
+  if (currentStep && (
+    (currentStep.text && currentStep.text.trim().length > 0) ||
+    currentStep.action === "write" ||
+    currentStep.action === "highlight" ||
+    currentStep.action === "arc"
+  )) {
+    activeStep = currentStep;
+    activeStepIdx = currentIdx;
+  } else {
+    // Si el paso actual es solo charla (talk) sin texto, mantenemos visible el paso previo más reciente
+    for (let k = currentIdx - 1; k >= 1; k--) {
+      const prev = state.steps[k];
+      if (!prev) continue;
+      if (prev.action === "clear") {
+        // Un paso previo ordenó borrar la pizarra
+        break;
+      }
+      if ((prev.text && prev.text.trim().length > 0) || prev.action === "write" || prev.action === "highlight" || prev.action === "arc") {
+        activeStep = prev;
+        activeStepIdx = k;
+        break;
+      }
     }
   }
 
-  // Si hay un paso de escritura activo posterior al título, dibujamos ese paso y sus derivados (arcos/resaltados)
-  if (activeWriteIdx >= 1) {
-    const s = state.steps[activeWriteIdx];
-    const isCurrent = (activeWriteIdx === currentIdx);
-    const fullText = s.text || "";
-    const yPos = startY + rowHeight; // Fila 1
+  if (!activeStep) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
 
-    const stepStart = s.startTime || 0;
-    const speechEnd = s.speechEndTime || (stepStart + 2.5);
-    const speechDur = Math.max(0.8, speechEnd - stepStart);
+  // Texto a dibujar en la zona de contenido
+  const fullRawText = (activeStep.text || "").trim();
+  if (!fullRawText) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
 
-    // Velocidad de escritura ágil (la mano no se arrastra ni se retrasa: ej: "1 2 2 1" toma ~0.8s)
-    const writeDur = Math.min(speechDur * 0.45, Math.max(0.75, fullText.length * 0.09));
-    const elapsed = Math.max(0, t - stepStart);
-    const isWritingActive = isCurrent && (elapsed < writeDur) && state.isPlaying;
-    const writeProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, writeDur)) : 1.0;
+  // División inteligente en 1 o 2 líneas si contiene separadores o es largo
+  let lines = [];
+  if (fullRawText.includes("\n")) {
+    lines = fullRawText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.includes("|")) {
+    lines = fullRawText.split("|").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.includes("//")) {
+    lines = fullRawText.split("//").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.length > 24 && (fullRawText.includes(". ") || fullRawText.includes(": "))) {
+    const sep = fullRawText.includes(". ") ? ". " : ": ";
+    const parts = fullRawText.split(sep);
+    lines = [parts[0] + (sep === ". " ? "." : ":"), parts.slice(1).join(sep).trim()];
+  } else {
+    lines = [fullRawText];
+  }
 
-    const charCount = Math.floor(fullText.length * writeProg);
-    const textToShow = fullText.substring(0, charCount);
+  const isCurrent = (activeStepIdx === currentIdx);
+  const stepStart = activeStep.startTime || 0;
+  const speechEnd = activeStep.speechEndTime || (stepStart + 2.5);
+  const speechDur = Math.max(0.8, speechEnd - stepStart);
 
+  const writeDur = Math.min(speechDur * 0.48, Math.max(0.75, fullRawText.length * 0.08));
+  const elapsed = Math.max(0, t - stepStart);
+  const isWritingActive = isCurrent && (elapsed < writeDur) && state.isPlaying;
+  const writeProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, writeDur)) : 1.0;
+
+  if (lines.length === 1) {
+    // 1 SOLA LÍNEA (Centrada verticalmente en la zona de contenido de la pizarra)
+    const lineY = startY + rowHeight * 1.35;
     let fontSize = 72;
     ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-    let totalW = ctx.measureText(fullText).width;
-    if (totalW > 740) {
-      fontSize = Math.max(44, Math.floor(fontSize * (740 / totalW)));
+    let lineW = ctx.measureText(lines[0]).width;
+    if (lineW > 740) {
+      fontSize = Math.max(38, Math.floor(fontSize * (740 / lineW)));
       ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-      totalW = ctx.measureText(fullText).width;
+      lineW = ctx.measureText(lines[0]).width;
     }
-    const startX = (w / 2) - (totalW / 2);
+    const lineX = (w / 2) - (lineW / 2);
 
-    ctx.fillStyle = mainInk;
+    const charCount = Math.floor(lines[0].length * writeProg);
+    const textToShow = lines[0].substring(0, charCount);
+
+    if (activeStep.action === "highlight") {
+      const hlW = lineW * writeProg;
+      ctx.save();
+      ctx.fillStyle = "rgba(250, 204, 21, 0.42)";
+      ctx.fillRect(lineX - 8, lineY - 54, hlW + 16, 64);
+      ctx.restore();
+    }
+
+    ctx.fillStyle = (activeStep.action === "highlight") ? blueInk : mainInk;
     ctx.textAlign = "left";
-    ctx.fillText(textToShow, startX, yPos);
+    ctx.fillText(textToShow, lineX, lineY);
 
-    // Escribe activamente solo mientras traza la palabra. Al terminar, la docente se pone a un costado
-    if (isWritingActive && fullText.length > 0) {
+    if (isWritingActive && lines[0].length > 0) {
       const textW = ctx.measureText(textToShow).width;
-      handTargetX = startX + textW;
-      handTargetY = yPos - 14;
+      handTargetX = lineX + textW;
+      handTargetY = lineY - 14;
       handAngle = -0.12;
       isWritingNow = true;
     }
 
-    // Dibujar arcos o resaltados pertenecientes a este paso activo
-    for (let j = activeWriteIdx + 1; j <= currentIdx; j++) {
-      const subStep = state.steps[j];
-      if (!subStep) continue;
-      const isSubCurrent = (j === currentIdx);
-      const subStepStart = subStep.startTime || 0;
-      const subSpeechEnd = subStep.speechEndTime || (subStepStart + 2.5);
-      const subSpeechDur = Math.max(0.8, subSpeechEnd - subStepStart);
+    // Arco curvo de unión entre letras
+    if (activeStep.action === "arc") {
+      const subProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, speechDur * 0.40)) : 1.0;
+      const text = lines[0];
+      const charWidth = lineW / Math.max(1, text.length);
+      const p1X = lineX + (activeStep.fromIdx || 0) * charWidth + charWidth / 2;
+      const p2X = lineX + (activeStep.toIdx !== undefined ? activeStep.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
 
-      const subElapsed = Math.max(0, t - subStepStart);
-      const subDrawDur = Math.min(subSpeechDur * 0.38, 1.0);
-      const isSubDrawing = isSubCurrent && (subElapsed < subDrawDur) && state.isPlaying;
-      const subProg = isSubCurrent ? Math.min(1.0, subElapsed / Math.max(0.01, subDrawDur)) : 1.0;
+      drawCurvedArrow(ctx, p1X, lineY - 58, p2X, lineY - 58, -42, redInk, subProg);
 
-      if (subStep.action === "arc") {
-        const text = s.text || subStep.text || "";
-        ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-        const arcTotalW = ctx.measureText(text).width;
-        const arcStartX = (w / 2) - (arcTotalW / 2);
-        const charWidth = arcTotalW / Math.max(1, text.length);
+      if (activeStep.fromIdx2 !== undefined && activeStep.toIdx2 !== undefined) {
+        const q1X = lineX + activeStep.fromIdx2 * charWidth + charWidth / 2;
+        const q2X = lineX + activeStep.toIdx2 * charWidth + charWidth / 2;
+        drawCurvedArrow(ctx, q1X, lineY - 52, q2X, lineY - 52, -26, blueInk, subProg);
+      }
 
-        const p1X = arcStartX + (subStep.fromIdx || 0) * charWidth + charWidth / 2;
-        const p2X = arcStartX + (subStep.toIdx !== undefined ? subStep.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
+      if (isWritingActive && subProg < 1.0) {
+        const tArc = Math.min(1, subProg);
+        const midX = (p1X + p2X) / 2;
+        const midY = (lineY - 58) - 42;
+        handTargetX = (1 - tArc) * (1 - tArc) * p1X + 2 * (1 - tArc) * tArc * midX + tArc * tArc * p2X;
+        handTargetY = (1 - tArc) * (1 - tArc) * (lineY - 58) + 2 * (1 - tArc) * tArc * midY + tArc * tArc * (lineY - 58);
+        handAngle = Math.atan2(midY - (lineY - 58), p2X - p1X) * 0.4;
+        isWritingNow = true;
+      }
+    }
+  } else {
+    // 2 LÍNEAS (Línea 1 concepto principal, Línea 2 ejemplo o aclaración)
+    const line1Y = startY + rowHeight * 0.95;
+    const line2Y = startY + rowHeight * 1.95;
 
-        drawCurvedArrow(ctx, p1X, yPos - 58, p2X, yPos - 58, -42, redInk, subProg);
+    let fontSize1 = 68;
+    ctx.font = `bold ${fontSize1}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let line1W = ctx.measureText(lines[0]).width;
+    if (line1W > 740) {
+      fontSize1 = Math.max(38, Math.floor(fontSize1 * (740 / line1W)));
+      ctx.font = `bold ${fontSize1}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      line1W = ctx.measureText(lines[0]).width;
+    }
+    const line1X = (w / 2) - (line1W / 2);
 
-        if (subStep.fromIdx2 !== undefined && subStep.toIdx2 !== undefined) {
-          const q1X = arcStartX + subStep.fromIdx2 * charWidth + charWidth / 2;
-          const q2X = arcStartX + subStep.toIdx2 * charWidth + charWidth / 2;
-          drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, subProg);
-        }
+    const prog1 = Math.min(1.0, writeProg / 0.5);
+    const prog2 = Math.max(0.0, Math.min(1.0, (writeProg - 0.5) / 0.5));
 
-        if (isSubDrawing) {
-          const tArc = Math.min(1, subProg);
-          const midX = (p1X + p2X) / 2;
-          const midY = (yPos - 58) - 42;
-          handTargetX = (1 - tArc) * (1 - tArc) * p1X + 2 * (1 - tArc) * tArc * midX + tArc * tArc * p2X;
-          handTargetY = (1 - tArc) * (1 - tArc) * (yPos - 58) + 2 * (1 - tArc) * tArc * midY + tArc * tArc * (yPos - 58);
-          handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
-          isWritingNow = true;
-        }
-      } else if (subStep.action === "highlight") {
-        const isDifferentText = Boolean(subStep.text && s.text && subStep.text.trim() !== s.text.trim());
-        if (!isDifferentText) {
-          // El texto ya está dibujado en la pizarra (línea 2326) con startX y yPos exactos.
-          // NO se vuelve a llamar a fillText (eso producía que el texto se dibujara dos veces y se amontonaran las letras).
-          // Únicamente se dibuja el trazo del resaltador amarillo suave animado sobre el texto original:
-          const hlWidth = totalW * subProg;
-          ctx.save();
-          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
-          ctx.fillRect(startX - 6, yPos - 52, hlWidth + 12, 60);
-          ctx.restore();
+    const chars1 = Math.floor(lines[0].length * prog1);
+    const text1ToShow = lines[0].substring(0, chars1);
 
-          if (isSubDrawing) {
-            handTargetX = startX + hlWidth;
-            handTargetY = yPos - 22;
-            handAngle = -0.05;
-            isWritingNow = true;
-          }
-        } else {
-          // Es un texto nuevo e independiente: pertenece a la FILA 2 (yPos + rowHeight)
-          const targetRowY = yPos + rowHeight;
-          let hlFontSize = 72;
-          ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-          const hlText = subStep.text.trim();
-          let hlTotalW = ctx.measureText(hlText).width;
-          if (hlTotalW > 740) {
-            hlFontSize = Math.max(38, Math.floor(hlFontSize * (740 / hlTotalW)));
-            ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-            hlTotalW = ctx.measureText(hlText).width;
-          }
-          const hlStartX = (w / 2) - (hlTotalW / 2);
-          const hlWidth = hlTotalW * subProg;
+    ctx.fillStyle = mainInk;
+    ctx.textAlign = "left";
+    ctx.fillText(text1ToShow, line1X, line1Y);
 
-          // Cuadro de resaltador en Fila 2
-          ctx.save();
-          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
-          ctx.fillRect(hlStartX - 6, targetRowY - 52, hlWidth + 12, 60);
-          ctx.restore();
+    let fontSize2 = 56;
+    ctx.font = `bold ${fontSize2}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let line2W = ctx.measureText(lines[1]).width;
+    if (line2W > 740) {
+      fontSize2 = Math.max(34, Math.floor(fontSize2 * (740 / line2W)));
+      ctx.font = `bold ${fontSize2}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      line2W = ctx.measureText(lines[1]).width;
+    }
+    const line2X = (w / 2) - (line2W / 2);
 
-          // Texto nítido en Fila 2
-          ctx.fillStyle = blueInk;
-          ctx.textAlign = "left";
-          const charSubCount = Math.floor(hlText.length * subProg);
-          ctx.fillText(hlText.substring(0, charSubCount), hlStartX, targetRowY);
+    const chars2 = Math.floor(lines[1].length * prog2);
+    const text2ToShow = lines[1].substring(0, chars2);
 
-          if (isSubDrawing) {
-            handTargetX = hlStartX + hlWidth;
-            handTargetY = targetRowY - 22;
-            handAngle = -0.05;
-            isWritingNow = true;
-          }
-        }
+    if (activeStep.action === "highlight" && prog2 > 0) {
+      const hlW = line2W * prog2;
+      ctx.save();
+      ctx.fillStyle = "rgba(250, 204, 21, 0.42)";
+      ctx.fillRect(line2X - 8, line2Y - 48, hlW + 16, 56);
+      ctx.restore();
+    }
+
+    ctx.fillStyle = (activeStep.action === "highlight") ? blueInk : (palette.accentInk || blueInk);
+    ctx.textAlign = "left";
+    ctx.fillText(text2ToShow, line2X, line2Y);
+
+    if (isWritingActive) {
+      if (prog1 < 1.0) {
+        const textW = ctx.measureText(text1ToShow).width;
+        handTargetX = line1X + textW;
+        handTargetY = line1Y - 14;
+        handAngle = -0.12;
+        isWritingNow = true;
+      } else if (prog2 < 1.0 && lines[1].length > 0) {
+        const textW = ctx.measureText(text2ToShow).width;
+        handTargetX = line2X + textW;
+        handTargetY = line2Y - 14;
+        handAngle = -0.12;
+        isWritingNow = true;
       }
     }
   }
@@ -2427,6 +2514,44 @@ function drawBoardContent(w, h, currentStep, time) {
   state.lastHandX = handTargetX;
   state.lastHandY = handTargetY;
   state.isWritingNow = isWritingNow;
+}
+
+/* 2b. ANIMACIÓN REALISTA DEL BORRADOR DE PIZARRA (ACCIÓN CLEAR) */
+function drawEraserWipe(ctx, w, topY, bottomY, progress) {
+  if (progress <= 0 || progress >= 1.0) return;
+  const startX = w * 0.22;
+  const endX = w * 0.78;
+  const curX = startX + (endX - startX) * progress;
+  const curY = topY + ((bottomY - topY) / 2) + Math.sin(progress * Math.PI * 6) * 35;
+
+  ctx.save();
+  ctx.translate(curX, curY);
+  ctx.rotate(-0.08);
+
+  // Sombra suave del borrador sobre la pizarra
+  ctx.shadowColor = "rgba(0,0,0,0.30)";
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 8;
+
+  // Bloque de madera (cuerpo del borrador)
+  ctx.fillStyle = "#854d0e";
+  ctx.beginPath();
+  ctx.roundRect(-45, -28, 90, 56, 8);
+  ctx.fill();
+
+  // Relieve de madera superior
+  ctx.fillStyle = "#a16207";
+  ctx.beginPath();
+  ctx.roundRect(-42, -26, 84, 20, 5);
+  ctx.fill();
+
+  // Capa de fieltro (base que limpia la pizarra)
+  ctx.fillStyle = "#1e293b";
+  ctx.beginPath();
+  ctx.roundRect(-45, 16, 90, 14, [0, 0, 6, 6]);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 /* FLECHA / ARCO CURVO DE UNIÓN ENTRE LETRAS */

@@ -166,6 +166,10 @@ PIZARRA: [Palabra clave, número, ecuación o ejemplo corto que se escribe en la
 - Paso 5 (Ejemplo 2): PIZARRA con el segundo ejemplo + HABLA explicándolo.
 - Paso 6 (Llamado a la acción): HABLA invitando a comentar (ej: "¿Conoces otro ejemplo? ¡Déjalo aquí en los comentarios!").
 
+4. ETIQUETAS / TAGS OBLIGATORIAS AL FINAL (Separadas por coma para YouTube / TikTok / Reels):
+- Al final de todo el guion, incluye OBLIGATORIAMENTE una línea con las etiquetas separadas por comas. Debe iniciar SIEMPRE con "profe rochi, profe monica" seguido de las palabras clave del tema, ortografía, RAE, dudas frecuentes, etc.:
+ETIQUETAS: profe rochi, profe monica, [etiquetas del tema separadas por coma]
+
 EJEMPLO DE SALIDA EXACTA:
 TÍTULO: PALABRAS AGUDAS
 HABLA: ¡Aprende las palabras agudas en solo 30 segundos!
@@ -175,6 +179,7 @@ HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
 PIZARRA: compás
 HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
 HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!
+ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de ortografia, rae, aprender español, lengua castellana, educacion, trucos de ortografia, profe de español, shorts
 
 ¡Genera ahora el guion para el siguiente tema!: `;
 
@@ -532,6 +537,7 @@ function setupEventListeners() {
       camera: "board"
     });
     renderStepsUI();
+    updateYoutubeCopy();
   });
 
   if (selectVoice) selectVoice.addEventListener("change", (e) => state.voice = e.target.value);
@@ -584,8 +590,9 @@ PIZARRA: camión
 HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
 PIZARRA: compás
 HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
-HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
-        updateStatus("💡 Ejemplo cargado en el cuadro. Haz clic en '⚡ Auto-Dividir'.");
+HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!
+ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de ortografia, rae, aprender español, lengua castellana, educacion, trucos de ortografia, profe de español, shorts`;
+        updateStatus("💡 Ejemplo con etiquetas cargado en el cuadro. Haz clic en '⚡ Auto-Dividir'.");
       }
     });
   }
@@ -755,6 +762,7 @@ function switchActiveTemplate(event, key) {
 function loadTemplate(key) {
   state.steps = JSON.parse(JSON.stringify(TEMPLATES[key] || TEMPLATES.capicua));
   renderStepsUI();
+  updateYoutubeCopy();
   updateStatus(`Plantilla cargada: ${key.toUpperCase()}`);
 }
 
@@ -853,7 +861,8 @@ function parseScriptText(raw) {
   const newSteps = [];
   let explicitTitle = "";
 
-  const hasTags = lines.some(l => /^(T[ÍI]TULO|HABLA|PROFE|DOCENTE|PIZARRA|TEXTO|ESCRIBE|ARCO|FLECHA):/i.test(l));
+  const hasTags = lines.some(l => /^(T[ÍI]TULO|HABLA|PROFE|DOCENTE|PIZARRA|TEXTO|ESCRIBE|ARCO|FLECHA|ETIQUETAS|TAGS|KEYWORDS):/i.test(l));
+  let explicitTags = "";
 
   if (hasTags) {
     let pendingText = "";
@@ -862,6 +871,8 @@ function parseScriptText(raw) {
     for (const line of lines) {
       if (/^(T[ÍI]TULO):/i.test(line)) {
         explicitTitle = line.replace(/^(T[ÍI]TULO):/i, "").trim().slice(0, 30);
+      } else if (/^(ETIQUETAS|TAGS|KEYWORDS):/i.test(line)) {
+        explicitTags = line.replace(/^(ETIQUETAS|TAGS|KEYWORDS):/i, "").trim();
       } else if (/^(PIZARRA|TEXTO|ESCRIBE):/i.test(line)) {
         pendingText = line.replace(/^(PIZARRA|TEXTO|ESCRIBE):/i, "").trim().slice(0, 30);
         pendingAction = "write";
@@ -932,9 +943,11 @@ function parseScriptText(raw) {
       newSteps[0].action = "write";
     }
     state.steps = newSteps;
+    state.customTags = explicitTags || null;
     renderStepsUI();
+    updateYoutubeCopy();
     if (pasteScriptPanel) pasteScriptPanel.style.display = "none";
-    updateStatus(`✅ ¡Guion importado! Se generaron ${newSteps.length} pasos respetando los límites.`);
+    updateStatus(`✅ ¡Guion importado! Se generaron ${newSteps.length} pasos con etiquetas optimizadas.`);
   }
 }
 
@@ -1395,14 +1408,160 @@ window.addEventListener("load", () => {
   initTopicsSelector();
 });
 
+function generateTopicTags(topic, steps) {
+  // Si el usuario especificó etiquetas manuales en un guion pegado, se respetan
+  if (state.customTags && state.customTags.trim().length > 0) {
+    let custom = state.customTags.trim();
+    if (!/profe\s+rochi/i.test(custom)) custom = "profe rochi, " + custom;
+    if (!/profe\s+monica/i.test(custom)) custom = custom.replace(/profe\s+rochi,?\s*/i, "profe rochi, profe monica, ");
+    return custom;
+  }
+
+  const tags = [];
+
+  // 1. REGLA OBLIGATORIA (Solicitado expresamente por el usuario):
+  // "profe rochi, profe monica" SIEMPRE de primero
+  tags.push("profe rochi", "profe monica");
+
+  // 2. Marca personal y canal educativo
+  tags.push("la profe rochi", "profesora rochi", "educacion", "clases online");
+
+  // 3. Extracción de palabras clave del título del tema
+  const titleText = topic ? topic.name : getLessonTitle();
+  const cleanTitle = (titleText || "")
+    .replace(/[¿?¡!]/g, "")
+    .trim()
+    .toLowerCase();
+
+  if (cleanTitle) {
+    tags.push(cleanTitle);
+
+    // Si tiene " o " (ej: "¿ay, hay o ahí?", "¿haiga o haya?", "b o v")
+    if (cleanTitle.includes(" o ")) {
+      const parts = cleanTitle.split(/\s+o\s+/);
+      parts.forEach(p => {
+        const item = p.trim();
+        if (item && item.length > 1) tags.push(item);
+      });
+      if (parts.length >= 2) {
+        tags.push(`diferencia entre ${parts.join(" y ")}`);
+        tags.push(`como se escribe ${parts.join(" o ")}`);
+      }
+    }
+
+    // Palabras compuestas
+    const words = cleanTitle.split(/[\s,]+/).filter(w => w.length > 2 && !["los", "las", "del", "con", "por", "que", "una", "uno"].includes(w));
+    if (words.length >= 2 && words.length <= 4) {
+      tags.push(words.join(" "));
+    }
+  }
+
+  // 4. Categoría y términos pedagógicos afines
+  const cat = (topic && topic.category ? topic.category : "").toLowerCase();
+  if (cat.includes("ortograf") || cat.includes("rae") || cat.includes("errores") || cat.includes("lengua") || !cat) {
+    tags.push(
+      "ortografia",
+      "rae",
+      "lengua castellana",
+      "aprender español",
+      "reglas de ortografia",
+      "español correcto",
+      "dudas frecuentes",
+      "gramatica",
+      "como escribir bien",
+      "trucos de ortografia",
+      "errores comunes",
+      "un libro lleno de errores",
+      "profe de español",
+      "palabras dudosas"
+    );
+  } else if (cat.includes("matem")) {
+    tags.push("matematicas", "trucos de matematicas", "aprender matematicas", "profe de matematicas", "calculo mental", "algebra");
+  } else if (cat.includes("ciencias") || cat.includes("naturales")) {
+    tags.push("ciencias naturales", "biologia", "aprender ciencias", "curiosidades cientificas", "experimentos");
+  } else if (cat.includes("sociales") || cat.includes("historia")) {
+    tags.push("ciencias sociales", "historia", "geografia", "cultura general");
+  } else if (cat.includes("ingl")) {
+    tags.push("ingles facil", "aprender ingles", "ingles desde cero", "pronunciacion en ingles");
+  }
+
+  // 5. Palabras clave desde las palabras escritas en la pizarra
+  const currentSteps = steps || (state && state.steps) || (topic ? topic.steps : []);
+  if (Array.isArray(currentSteps)) {
+    currentSteps.forEach(s => {
+      if (s.text && s.target !== "title") {
+        const parts = s.text.replace(/[¿?¡!=:;]/g, " ").split(/\||\n/);
+        parts.forEach(p => {
+          const item = p.trim().toLowerCase();
+          if (item.length > 2 && item.length < 25 && !item.includes("ejemplo") && !item.includes("espero") && !item.includes("recuerda")) {
+            tags.push(item);
+          }
+        });
+      }
+    });
+  }
+
+  // 6. Formatos y etiquetas virales de alto alcance
+  tags.push("shorts", "reels", "tiktok educativo", "aprende en tiktok", "viral", "whiteboard animation");
+
+  // 7. Deduplicar manteniendo estrictamente "profe rochi, profe monica" al inicio
+  const seen = new Set();
+  const result = [];
+  result.push("profe rochi", "profe monica");
+  seen.add("profe rochi");
+  seen.add("profe monica");
+
+  tags.forEach(t => {
+    if (!t) return;
+    const clean = t.trim().toLowerCase().replace(/\s+/g, " ");
+    if (clean.length > 1 && !seen.has(clean)) {
+      seen.add(clean);
+      result.push(clean);
+    }
+  });
+
+  return result.join(", ");
+}
+
+function exportCurrentScriptWithTags() {
+  const lines = [];
+  const title = getLessonTitle();
+  lines.push(`TÍTULO: ${title}`);
+  lines.push("");
+
+  const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
+  const currentTopic = topics.find(t => t.name === title || t.id === (state.currentTopicId || ""));
+
+  (state.steps || []).forEach((s, idx) => {
+    if (s.target === "title" && idx === 0) return;
+    if (s.action === "clear") {
+      lines.push("ACCION: BORRAR PIZARRA");
+    }
+    if (s.speech && s.speech.trim()) {
+      lines.push(`HABLA: ${s.speech.trim()}`);
+    }
+    if (s.text && s.text.trim()) {
+      lines.push(`PIZARRA: ${s.text.trim()}`);
+    }
+    lines.push("");
+  });
+
+  const tags = generateTopicTags(currentTopic, state.steps);
+  lines.push(`ETIQUETAS: ${tags}`);
+
+  return lines.join("\n");
+}
+
 function updateYoutubeCopy(topic) {
   const ytTitleInput = document.getElementById("ytCopyTitle");
   const ytDescInput = document.getElementById("ytCopyDesc");
+  const ytTagsInput = document.getElementById("ytCopyTags");
   if (!ytTitleInput || !ytDescInput) return;
 
-  const titleText = topic ? topic.name : getLessonTitle();
-  const summaryText = topic ? (topic.summary || "") : "Explicación interactiva en pizarra con La Profe Rochi.";
-  const categoryText = topic ? (topic.category || "Educación") : "Educación";
+  const currentTopic = topic || (window.RAE_TOPICS || []).find(t => t.id === state.currentTopicId) || null;
+  const titleText = currentTopic ? currentTopic.name : getLessonTitle();
+  const summaryText = currentTopic ? (currentTopic.summary || "") : "Explicación interactiva en pizarra con La Profe Rochi.";
+  const categoryText = currentTopic ? (currentTopic.category || "Educación") : "Educación";
 
   // 1. Título Viral optimizado para YouTube / Shorts / Reels / TikTok
   const cleanTitle = titleText.replace(/^¿/, "").replace(/\?$/, "").trim();
@@ -1421,7 +1580,10 @@ function updateYoutubeCopy(topic) {
     ? keyPoints.join("\n") 
     : `✍️ Regla explicada paso a paso en la pizarra interactiva.`;
 
-  // 3. Descripción completa profesional para YouTube
+  // 3. Generar Etiquetas dinámicas separadas por coma
+  const tagsString = generateTopicTags(currentTopic, state.steps);
+
+  // 4. Descripción completa profesional para YouTube
   const viralDescription = `¿Tienes dudas con "${cleanTitle}"? ¡En esta clase rápida de 1 minuto, La Profe Rochi te lo explica de forma súper sencilla y entretenida en la pizarra animada!
 
 📚 REGLA RÁPIDA:
@@ -1436,18 +1598,29 @@ ${keyPointsStr}
 
 ----------------------------------------
 📌 Asignatura: ${categoryText}
-#LaProfeRochi #Educacion #AprendeEnTikTok #Shorts #Reels #WhiteboardAnimation #ProfePizarra #ClasesOnline #RAE`;
+#LaProfeRochi #Educacion #AprendeEnTikTok #Shorts #Reels #WhiteboardAnimation #ProfePizarra #ClasesOnline #RAE
+
+----------------------------------------
+🏷️ ETIQUETAS / TAGS (Copia y pega en YouTube / TikTok):
+${tagsString}`;
 
   ytTitleInput.value = viralTitle;
   ytDescInput.value = viralDescription;
+  if (ytTagsInput) {
+    ytTagsInput.value = tagsString;
+  }
 }
 
 function setupYoutubeCopyButtons() {
   const btnCopyAll = document.getElementById("btnCopyAllYoutube");
   const btnCopyTitle = document.getElementById("btnCopyYtTitle");
   const btnCopyDesc = document.getElementById("btnCopyYtDesc");
+  const btnCopyTags = document.getElementById("btnCopyYtTags");
+  const btnCopyFullScript = document.getElementById("btnCopyFullScript");
+  const btnExportScriptToPanel = document.getElementById("btnExportScriptToPanel");
   const ytTitleInput = document.getElementById("ytCopyTitle");
   const ytDescInput = document.getElementById("ytCopyDesc");
+  const ytTagsInput = document.getElementById("ytCopyTags");
 
   const copyText = (text, msg) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1473,8 +1646,11 @@ function setupYoutubeCopyButtons() {
 
   if (btnCopyAll) {
     btnCopyAll.addEventListener("click", () => {
-      const full = `${ytTitleInput ? ytTitleInput.value : ""}\n\n${ytDescInput ? ytDescInput.value : ""}`;
-      copyText(full, "✅ ¡Título y Descripción completa para YouTube copiados al portapapeles!");
+      const title = ytTitleInput ? ytTitleInput.value : "";
+      const desc = ytDescInput ? ytDescInput.value : "";
+      const tags = ytTagsInput ? ytTagsInput.value : "";
+      const full = `📌 TÍTULO:\n${title}\n\n📝 DESCRIPCIÓN:\n${desc}\n\n🏷️ ETIQUETAS:\n${tags}`;
+      copyText(full, "✅ ¡Título, Descripción y Etiquetas completas para YouTube copiados al portapapeles!");
     });
   }
   if (btnCopyTitle) {
@@ -1487,6 +1663,26 @@ function setupYoutubeCopyButtons() {
       copyText(ytDescInput ? ytDescInput.value : "", "✅ ¡Descripción de YouTube copiada al portapapeles!");
     });
   }
+  if (btnCopyTags) {
+    btnCopyTags.addEventListener("click", () => {
+      copyText(ytTagsInput ? ytTagsInput.value : "", "✅ ¡Etiquetas copiadas al portapapeles (separadas por coma)!");
+    });
+  }
+  if (btnCopyFullScript) {
+    btnCopyFullScript.addEventListener("click", () => {
+      const script = exportCurrentScriptWithTags();
+      copyText(script, "✅ ¡Guion completo con pasos y etiquetas copiado al portapapeles!");
+    });
+  }
+  if (btnExportScriptToPanel) {
+    btnExportScriptToPanel.addEventListener("click", () => {
+      const rawScriptText = document.getElementById("rawScriptText");
+      if (rawScriptText) {
+        rawScriptText.value = exportCurrentScriptWithTags();
+        updateStatus("📋 Guion actual con etiquetas cargado en el editor.");
+      }
+    });
+  }
 }
 
 function loadTopicLesson(topicId) {
@@ -1494,6 +1690,8 @@ function loadTopicLesson(topicId) {
   const topic = topics.find(t => t.id === topicId);
   if (!topic) return;
 
+  state.currentTopicId = topicId;
+  state.customTags = null;
   state.steps = JSON.parse(JSON.stringify(topic.steps));
   renderStepsUI();
 
@@ -1520,11 +1718,21 @@ window.removeStep = (idx) => {
   if (state.steps.length <= 1) return;
   state.steps.splice(idx, 1);
   renderStepsUI();
+  updateYoutubeCopy();
 };
 
-window.updateStepSpeech = (idx, val) => state.steps[idx].speech = val;
-window.updateStepAction = (idx, val) => state.steps[idx].action = val;
-window.updateStepText = (idx, val) => state.steps[idx].text = val;
+window.updateStepSpeech = (idx, val) => {
+  state.steps[idx].speech = val;
+  updateYoutubeCopy();
+};
+window.updateStepAction = (idx, val) => {
+  state.steps[idx].action = val;
+  updateYoutubeCopy();
+};
+window.updateStepText = (idx, val) => {
+  state.steps[idx].text = val;
+  updateYoutubeCopy();
+};
 
 function resizeCanvas() {
   if (state.format === "9:16") {

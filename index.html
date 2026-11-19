@@ -224,12 +224,20 @@
             <input type="text" id="ytCopyTitle" class="form-control" style="font-size:0.8rem; font-weight:700; background:#0f172a; color:#fef08a; border: 1px solid #475569;" readonly>
           </div>
 
-          <div>
+          <div style="margin-bottom: 8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
               <span style="font-size:0.73rem; color:#94a3b8; font-weight:700;">📝 Descripción con Hashtags:</span>
               <button class="btn-sm" id="btnCopyYtDesc" style="padding:1px 6px; font-size:0.65rem; background:#374151; color:#f3f4f6; cursor:pointer;">Copiar Descripción</button>
             </div>
             <textarea id="ytCopyDesc" class="form-control" rows="5" style="font-size:0.75rem; font-family:inherit; background:#0f172a; color:#e2e8f0; border: 1px solid #475569;" readonly></textarea>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;">
+              <span style="font-size:0.73rem; color:#67e8f9; font-weight:700;">🏷️ Etiquetas / Tags (Separadas por coma para YouTube y Redes):</span>
+              <button class="btn-sm" id="btnCopyYtTags" style="padding:1px 6px; font-size:0.65rem; background:#0284c7; color:#fff; cursor:pointer; font-weight:700;" title="Copiar etiquetas separadas por coma">Copiar Etiquetas</button>
+            </div>
+            <textarea id="ytCopyTags" class="form-control" rows="3" style="font-size:0.73rem; font-family:monospace; background:#0f172a; color:#67e8f9; border: 1px solid #0284c7;" readonly></textarea>
           </div>
         </div>
 
@@ -238,6 +246,7 @@
           <div class="section-header-inline">
             <label class="section-title">📝 Guion y Pasos</label>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-sm" id="btnCopyFullScript" style="background:#2563eb; color:#fff; font-weight:700;" title="Copiar Guion completo con pasos y etiquetas al final">📋 Copiar Guion</button>
               <button class="btn-sm" id="btnCopyPrompt" style="background:#059669; color:#fff;" title="Copiar Prompt Maestro para ChatGPT / Claude">🤖 Prompt IA</button>
               <button class="btn-sm" id="btnTogglePasteScript" style="background:#4f46e5; color:#fff;" title="Pegar texto o guion completo">📋 Pegar Guion</button>
               <button class="btn-sm" id="btnAddStep">+ Añadir</button>
@@ -253,6 +262,9 @@
             </div>
 
             <div style="display:flex; gap:6px; margin: 6px 0 8px 0; flex-wrap:wrap;">
+              <button class="btn-sm" id="btnExportScriptToPanel" style="background:#4338ca; color:#fff; font-size:0.7rem;" title="Ver el guion actual con sus etiquetas aquí para editarlo">
+                👁️ Ver Guion Actual Aquí
+              </button>
               <button class="btn-sm" id="btnCopyPromptInside" style="background:#059669; color:#fff; font-size:0.7rem; flex:1;">
                 🤖 Copiar Prompt para ChatGPT/Claude
               </button>
@@ -268,7 +280,8 @@
               PIZARRA: reconocer<br>
               HABLA: Fíjate cómo se lee igual al revés.<br>
               PIZARRA: somos<br>
-              HABLA: ¿Conoces otro palíndromo? ¡Comenta!</code>
+              HABLA: ¿Conoces otro palíndromo? ¡Comenta!<br>
+              ETIQUETAS: profe rochi, profe monica, palindromos, rae, ortografia, aprender español, lengua castellana, shorts</code>
             </p>
             <textarea id="rawScriptText" class="form-control" rows="6" style="font-size:0.75rem; font-family:monospace;" placeholder="Pega aquí tu guion o texto..."></textarea>
             <button id="btnProcessRawScript" class="btn btn-primary btn-sm" style="width:100%; margin-top:6px; font-weight:700;">
@@ -344,6 +357,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=107"></script>
+  <script src="app.js?v=109"></script>
 </body>
 </html>

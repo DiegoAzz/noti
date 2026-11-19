@@ -2067,38 +2067,43 @@ function loadChallengeToVideo(challenge) {
   stopAndResetAllAudio();
   resizeCanvas();
 
+  const optA = (challenge.options && challenge.options[0] && challenge.options[0].text) || "Opción A";
+  const optB = (challenge.options && challenge.options[1] && challenge.options[1].text) || "Opción B";
+  const optC = (challenge.options && challenge.options[2] && challenge.options[2].text) || "Opción C";
+  const optD = (challenge.options && challenge.options[3] && challenge.options[3].text) || "Opción D";
+
+  const ctaSpeech = challenge.ctaSpeech || "¡Cuidado que tiene trampa! ¿Tú cuál dices que es la respuesta correcta? ¿A, B, C o D? ¡Déjamela en los comentarios y dime por qué, los leo a todos!";
+  const ctaText = challenge.ctaText || "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡DÉJALA EN LOS COMENTARIOS!";
+
   let steps = challenge.videoSteps;
   if (!steps || steps.length === 0) {
-    const optA = challenge.options[0] ? challenge.options[0].text : "";
-    const optB = challenge.options[1] ? challenge.options[1].text : "";
-    const optC = challenge.options[2] ? challenge.options[2].text : "";
-    const optD = challenge.options[3] ? challenge.options[3].text : "";
-    const correctKey = challenge.correct || "A";
-    const correctText = (challenge.options.find(o => o.key === correctKey) || {}).text || "";
-
     steps = [
       {
-        speech: `¡A ver si eres capaz de resolver este reto de ${challenge.category || 'lógica'}! Presta mucha atención.`,
+        speech: `¡A ver si eres capaz de resolver este reto de ${challenge.category || 'lógica'}! Presta mucha atención a la pizarra.`,
         action: "write",
         text: `RETO: ${challenge.title ? challenge.title.toUpperCase() : 'DESAFÍO VIRAL'}`,
         target: "title",
         camera: "teacher"
       },
       {
-        speech: `${challenge.question} Las opciones son: A, ${optA}. B, ${optB}. C, ${optC}. O D, ${optD}. ¡Comenta cuál es la correcta!`,
+        speech: `${challenge.question} Las opciones son: A, ${optA}. B, ${optB}. C, ${optC}. O D, ${optD}.`,
         action: "write",
         text: `A: ${optA} | B: ${optB}\nC: ${optC} | D: ${optD}`,
         target: "example1",
         camera: "board"
       },
       {
-        speech: `¡Tiempo! La respuesta correcta es la ${correctKey}: ${correctText}. ${challenge.explanation || ''} ¡Comenta si acertaste!`,
+        speech: ctaSpeech,
         action: "highlight",
-        text: `✅ CORRECTA: ${correctKey}) ${correctText}`,
+        text: ctaText,
         target: "result",
         camera: "board"
       }
     ];
+  } else {
+    // Si viene de un preset, asegurar siempre que el paso 3 NUNCA diga la respuesta
+    steps[2].speech = ctaSpeech;
+    steps[2].text = ctaText;
   }
 
   state.steps = JSON.parse(JSON.stringify(steps));
@@ -2110,9 +2115,9 @@ function loadChallengeToVideo(challenge) {
   renderStepsUI();
 
   updateYoutubeCopy({
-    name: `Reto Viral: ${challenge.title || '¿Podrás resolverlo?'}`,
-    summary: challenge.question + " " + (challenge.explanation || ""),
-    category: challenge.category || "Matemáticas"
+    name: `Reto Viral: ${challenge.title || '¿Podrás resolverlo?'} 🤔 (A, B, C o D)`,
+    summary: `${challenge.question}\n\nOpciones:\nA) ${optA}\nB) ${optB}\nC) ${optC}\nD) ${optD}\n\n¿Cuál crees que es la respuesta correcta? ¡Déjala en los comentarios y dime por qué! 👇\n\n#LaProfeRochi #RetoViral #Acertijo #Quiz #MenteActiva`,
+    category: challenge.category || "Retos Virales"
   });
 
   if (window.setMobileTab) {
@@ -2121,7 +2126,7 @@ function loadChallengeToVideo(challenge) {
     window.switchSidebarTab("steps");
   }
 
-  updateStatus(`🎯 ¡Reto "${challenge.title || 'Viral'}" cargado en el reproductor de video! Haz clic en '▶ Generar y Reproducir'.`);
+  updateStatus(`🎯 ¡Reto cargado en video! Deja a la audiencia pensando con llamada a comentar. Haz clic en '▶ Generar y Reproducir'.`);
 }
 
 function initChallengesModule() {
@@ -2152,6 +2157,7 @@ function initChallengesModule() {
     setVal("challengeOptB", (ch.options[1] && ch.options[1].text) || "");
     setVal("challengeOptC", (ch.options[2] && ch.options[2].text) || "");
     setVal("challengeOptD", (ch.options[3] && ch.options[3].text) || "");
+    setVal("challengeCtaText", ch.ctaSpeech || "¡Cuidado que tiene trampa! ¿Tú cuál dices que es la correcta? ¿A, B, C o D? ¡Déjamela en los comentarios!");
     setVal("challengeCorrectOpt", ch.correct || "A");
     setVal("challengeExplanation", ch.explanation || "");
   };
@@ -2178,6 +2184,7 @@ function initChallengesModule() {
   const getFormData = () => {
     const selectedCh = challenges.find(c => c.id === select.value) || {};
     const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; };
+    const customCta = getVal("challengeCtaText", "¡Cuidado que tiene trampa! ¿Tú cuál dices que es la correcta? ¿A, B, C o D? ¡Déjamela en los comentarios!");
     return {
       title: selectedCh.title || "Reto Viral",
       category: selectedCh.category || "Matemáticas",
@@ -2190,9 +2197,9 @@ function initChallengesModule() {
         { key: "C", text: getVal("challengeOptC", "Opción C") },
         { key: "D", text: getVal("challengeOptD", "Opción D") }
       ],
-      correct: getVal("challengeCorrectOpt", "A"),
-      explanation: getVal("challengeExplanation", ""),
-      videoSteps: selectedCh.videoSteps
+      ctaSpeech: customCta,
+      ctaText: "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡DÉJALA EN LOS COMENTARIOS!",
+      videoSteps: null
     };
   };
 

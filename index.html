@@ -391,20 +391,11 @@
               </div>
             </div>
 
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-              <div style="flex:1;">
-                <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">✅ Opción Correcta:</label>
-                <select id="challengeCorrectOpt" class="form-control" style="font-weight:800; font-size:0.78rem;">
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                </select>
-              </div>
-              <div style="flex:2;">
-                <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">💡 Razón / Explicación:</label>
-                <input type="text" id="challengeExplanation" class="form-control" style="font-size:0.75rem;" placeholder="Breve justificación de la respuesta...">
-              </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.72rem; color:#a7f3d0; font-weight:700;">🗣️ Frase Final para la Audiencia (¡Para dejarlos pensando y debatiendo!):</label>
+              <input type="text" id="challengeCtaText" class="form-control" style="font-size:0.78rem;" placeholder="Ej: ¡Cuidado que tiene trampa! ¿Tú cuál dices que es? ¿A, B, C o D? ¡Déjamela en los comentarios!">
+              <input type="hidden" id="challengeCorrectOpt" value="A">
+              <input type="hidden" id="challengeExplanation" value="">
             </div>
           </div>
 

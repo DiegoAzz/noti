@@ -1,12 +1,14 @@
-// =========================================================
-// BANCO MAESTRO DE RETOS VIRALES & ACERTIJOS - LA PROFE ROCHI
-// Formato estilo Meme / Facebook / TikTok / Reels con opciones A, B, C, D
-// =========================================================
+/**
+ * BANCO DE RETOS VIRALES & ACERTIJOS - LA PROFE ROCHI
+ * Formato diseñado para máxima interacción en redes sociales (TikTok, Reels, Shorts y Facebook).
+ * ESTRATEGIA VIRAL: NUNCA REVELAR LA RESPUESTA EN EL VIDEO NI EN EL POST.
+ * La audiencia debe quedar pensando y debatiendo en los comentarios cuál es la opción correcta (A, B, C o D).
+ */
 
 const CHALLENGES_DATA = [
   {
     id: "triangular_park",
-    title: "El Parque Triangular",
+    title: "Parque Triangular",
     category: "Matemáticas",
     headerWhite: "Cuando te preguntan algo de",
     headerHighlight: "matemáticas",
@@ -17,8 +19,8 @@ const CHALLENGES_DATA = [
       { key: "C", text: "9" },
       { key: "D", text: "12" }
     ],
-    correct: "A",
-    explanation: "Los árboles de las 3 esquinas se comparten entre dos lados a la vez. Cada lado tiene 2 esquinas más 1 árbol en el centro (total 3 por lado). En total son: 3 esquinas + 3 intermedios = ¡6 árboles!",
+    ctaSpeech: "¡Cuidado que tiene trampa! ¿Tú cuál dices que es la respuesta correcta? ¿A, B, C o D? ¡Déjamela en los comentarios y dime por qué!",
+    ctaText: "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡DÉJALA EN LOS COMENTARIOS!",
     videoSteps: [
       {
         speech: "¡A ver si eres capaz de resolver este reto de lógica matemática! Presta mucha atención a la pizarra.",
@@ -28,16 +30,16 @@ const CHALLENGES_DATA = [
         camera: "teacher"
       },
       {
-        speech: "En un parque triangular hay 3 árboles en cada lado y 1 en cada esquina. ¿Cuántos árboles hay en total? A: 6, B: 7, C: 9 o D: 12. ¡Pausa o comenta tu respuesta ya!",
+        speech: "En un parque triangular hay 3 árboles en cada lado y 1 en cada esquina. ¿Cuántos árboles hay en total? A: 6, B: 7, C: 9 o D: 12.",
         action: "write",
         text: "3 árboles por lado | 1 en esquina: ¿Total?",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡Tiempo! La respuesta correcta es la A, 6 árboles. Porque los árboles de las esquinas pertenecen a dos lados a la vez. ¡Comenta si acertaste!",
+        speech: "¡Cuidado que tiene trampa! ¿Tú cuál dices que es la respuesta correcta? ¿A, B, C o D? ¡Déjamela en los comentarios y dime por qué, los leo a todos!",
         action: "highlight",
-        text: "✅ RESPUESTA: A) 6 ÁRBOLES (3 esquinas + 3 medios)",
+        text: "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡DÉJALA EN LOS COMENTARIOS!",
         target: "result",
         camera: "board"
       }
@@ -56,8 +58,8 @@ const CHALLENGES_DATA = [
       { key: "C", text: "5 minutos" },
       { key: "D", text: "1 minuto" }
     ],
-    correct: "C",
-    explanation: "Cada máquina tarda 5 minutos en fabricar 1 artículo de forma independiente. Si pones 100 máquinas a trabajar al mismo tiempo, ¡en 5 minutos tendrán listos los 100 artículos!",
+    ctaSpeech: "¡El noventa y cinco por ciento responde mal! ¿Tú qué opinas? ¿A, B, C o D? ¡Escríbela en los comentarios y reta a tus amigos!",
+    ctaText: "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡COMENTA Y COMPARTE!",
     videoSteps: [
       {
         speech: "¡Cuidado con la trampa! El noventa y cinco por ciento responde mal a este famoso dilema mental.",
@@ -74,9 +76,9 @@ const CHALLENGES_DATA = [
         camera: "board"
       },
       {
-        speech: "¡La respuesta es la C, 5 minutos! Cada máquina tarda 5 minutos en hacer un artículo. ¡Comparte el video a ver si tus amigos caen!",
+        speech: "¡El noventa y cinco por ciento responde mal! ¿Tú qué opinas? ¿A, B, C o D? ¡Escríbela en los comentarios y reta a tus amigos!",
         action: "highlight",
-        text: "✅ RESPUESTA: C) 5 MINUTOS (Trabajan en paralelo)",
+        text: "¿CUÁL ES LA CORRECTA?\n🤔 A, B, C o D\n👇 ¡COMENTA Y COMPARTE!",
         target: "result",
         camera: "board"
       }
@@ -95,27 +97,27 @@ const CHALLENGES_DATA = [
       { key: "C", text: "$0.01" },
       { key: "D", text: "$0.15" }
     ],
-    correct: "B",
-    explanation: "Si la pelota costara $0.10 y el bate $1.00 más ($1.10), el total sería $1.20. La pelota cuesta $0.05 y el bate $1.05, sumando exactamente $1.10.",
+    ctaSpeech: "¡No te dejes engañar por la intuición rápida! ¿Cuál es el precio exacto de la pelota? ¿A, B, C o D? ¡Déjame tu cálculo en los comentarios!",
+    ctaText: "¿CUÁL ES EL PRECIO?\n🤔 A, B, C o D\n👇 ¡DEJA TU RESPUESTA!",
     videoSteps: [
       {
-        speech: "¡Tu cerebro querrá decir la opción A al instante! Pero no te dejes engañar por la intuición.",
+        speech: "¡Tu cerebro querrá decir la primera opción al instante! Pero no te dejes engañar por la intuición rápida.",
         action: "write",
         text: "BATE Y PELOTA: $1.10",
         target: "title",
         camera: "teacher"
       },
       {
-        speech: "Un bate y una pelota cuestan un dólar con diez. El bate cuesta un dólar más que la pelota. ¿Cuánto cuesta la pelota? ¿Diez centavos o cinco centavos?",
+        speech: "Un bate y una pelota cuestan un dólar con diez en total. El bate cuesta un dólar más que la pelota. ¿Cuánto cuesta la pelota? A: diez centavos, B: cinco centavos, C: un centavo o D: quince centavos.",
         action: "write",
         text: "Bate + Pelota = $1.10 | Bate = Pelota + $1.00",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡La solución correcta es la B, 5 centavos! El bate cuesta 1.05 y la pelota 0.05. ¡Comenta si tu primer pensamiento fue 10 centavos!",
+        speech: "¡Muchísimos se equivocan al calcular! ¿Tú cuál crees que es? ¿A, B, C o D? ¡Escribe tu respuesta en los comentarios y dime por qué!",
         action: "highlight",
-        text: "✅ RESPUESTA: B) $0.05 (Bate $1.05 + Pelota $0.05)",
+        text: "¿CUÁL ES EL PRECIO?\n🤔 A, B, C o D\n👇 ¡DEJA TU RESPUESTA!",
         target: "result",
         camera: "board"
       }
@@ -134,11 +136,11 @@ const CHALLENGES_DATA = [
       { key: "C", text: "10 peces" },
       { key: "D", text: "3 peces" }
     ],
-    correct: "C",
-    explanation: "¡Los peces viven en el agua y no pueden ahogarse! Además, dentro de una pecera cerrada ninguno puede nadar lejos. Y aunque mueran, ¡siguen estando dentro del acuario!",
+    ctaSpeech: "¡Piénsalo muy bien antes de responder! ¿Cuántos peces quedan realmente en el acuario? ¿A, B, C o D? ¡Coméntalo ya!",
+    ctaText: "¿CUÁNTOS PECES QUEDAN?\n🤔 A, B, C o D\n👇 ¡DÉJALO EN COMENTARIOS!",
     videoSteps: [
       {
-        speech: "¡Acertijo viral! Este reto parece de matemáticas básicas, pero en realidad es de lógica pura.",
+        speech: "¡Acertijo viral! Este reto parece de matemáticas básicas, pero en realidad es de sentido común y lógica pura.",
         action: "write",
         text: "LOS 10 PECES DEL ACUARIO",
         target: "title",
@@ -152,9 +154,9 @@ const CHALLENGES_DATA = [
         camera: "board"
       },
       {
-        speech: "¡Quedan los 10 peces, opción C! Los peces no se ahogan, de una pecera no pueden huir, y si mueren siguen adentro. ¡Comenta si caíste!",
+        speech: "¡Piénsalo muy bien y no caigas en la trampa! ¿Cuántos peces quedan en el acuario? ¿A, B, C o D? ¡Déjame tu respuesta en los comentarios!",
         action: "highlight",
-        text: "✅ RESPUESTA: C) 10 PECES (¡No se ahogan ni escapan!)",
+        text: "¿CUÁNTOS PECES QUEDAN?\n🤔 A, B, C o D\n👇 ¡DÉJALO EN COMENTARIOS!",
         target: "result",
         camera: "board"
       }
@@ -173,8 +175,8 @@ const CHALLENGES_DATA = [
       { key: "C", text: "9" },
       { key: "D", text: "12" }
     ],
-    correct: "C",
-    explanation: "Por jerarquía de operaciones: primero el paréntesis (1+2)=3. Queda 6 ÷ 2 × 3. Al tener misma jerarquía la división y multiplicación, se resuelven de izquierda a derecha: 6 ÷ 2 = 3, y luego 3 × 3 = 9.",
+    ctaSpeech: "¡Esta operación divide a todo internet! ¿Tú dices que da uno o que da nueve? ¿Cuál es tu respuesta final? ¡Coméntala y defiéndela!",
+    ctaText: "¿CUÁL ES EL RESULTADO?\n🤔 A, B, C o D\n👇 ¡DEFIENDE TU RESPUESTA!",
     videoSteps: [
       {
         speech: "¡Esta sencilla operación divide a millones de personas en internet todos los años! Resolvámosla con reglas oficiales.",
@@ -184,16 +186,16 @@ const CHALLENGES_DATA = [
         camera: "teacher"
       },
       {
-        speech: "¿Cuánto es seis entre dos, factor de uno más dos? ¿Da uno, da seis, o da nueve? ¡Deja tu respuesta en el chat antes de que lo resuelva!",
+        speech: "¿Cuánto es seis entre dos, factor de uno más dos? ¿A: 1, B: 6, C: 9 o D: 12? ¡Presta atención al orden de las operaciones!",
         action: "write",
         text: "6 ÷ 2(1 + 2) = ¿1 o 9?",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡El resultado oficial es 9, opción C! 1 más 2 son 3. Luego de izquierda a derecha: 6 entre 2 da 3, y 3 por 3 da 9. ¡Guarda este video!",
+        speech: "¡Esta operación divide a todo internet! ¿Tú dices que da uno o que da nueve? ¿Cuál es tu respuesta final? ¡Coméntala y defiéndela en los comentarios!",
         action: "highlight",
-        text: "✅ RESPUESTA: C) 9 ➔ (6 ÷ 2 = 3) × 3 = 9",
+        text: "¿CUÁL ES EL RESULTADO?\n🤔 A, B, C o D\n👇 ¡DEFIENDE TU RESPUESTA!",
         target: "result",
         camera: "board"
       }
@@ -212,27 +214,27 @@ const CHALLENGES_DATA = [
       { key: "C", text: "aya" },
       { key: "D", text: "allá" }
     ],
-    correct: "A",
-    explanation: "'Haya' (con y) es del verbo HABER. 'Halla' (con ll) es del verbo HALLAR (encontrar). 'Aya' es una niñera, y 'Allá' es adverbio de lugar con tilde.",
+    ctaSpeech: "¡Muchos caen en este error ortográfico! ¿Cuál es la opción correcta para completar la frase? ¿A, B, C o D? ¡Escríbela en los comentarios!",
+    ctaText: "¿CÓMO SE ESCRIBE?\n🤔 A, B, C o D\n👇 ¡ESCRÍBELO EN COMENTARIOS!",
     videoSteps: [
       {
-        speech: "¡Duda ortográfica mortal! Muchísima gente confunde estas tres palabras al escribir.",
+        speech: "¡Duda ortográfica mortal! Muchísima gente confunde estas tres palabras al redactar.",
         action: "write",
         text: "¿HAYA, HALLA o AYA?",
         target: "title",
         camera: "teacher"
       },
       {
-        speech: "Completa la frase: 'Espero que él _____ terminado el trabajo'. ¿Se escribe con Y griega, con doble L o con tilde? ¡Comenta tu opción!",
+        speech: "Completa la frase: 'Espero que él _____ terminado el trabajo'. ¿A: haya con Y, B: halla con doble L, C: aya, o D: allá con tilde? ¡Piénsalo bien!",
         action: "write",
         text: "Espero que él _____ terminado: ¿A, B, C o D?",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡Se escribe HAYA con Y griega, opción A! Porque viene del verbo haber. Halla con doble L es de encontrar. ¡Aprende ortografía con La Profe Rochi!",
+        speech: "¡Muchos caen en este error ortográfico! ¿Cuál es la opción correcta según la Real Academia Española? ¿A, B, C o D? ¡Escríbela en los comentarios!",
         action: "highlight",
-        text: "✅ RESPUESTA: A) HAYA (del verbo HABER)",
+        text: "¿CÓMO SE ESCRIBE?\n🤔 A, B, C o D\n👇 ¡ESCRÍBELO EN COMENTARIOS!",
         target: "result",
         camera: "board"
       }
@@ -251,8 +253,8 @@ const CHALLENGES_DATA = [
       { key: "C", text: "Los 12 meses" },
       { key: "D", text: "Ningún mes" }
     ],
-    correct: "C",
-    explanation: "¡Los 12 meses del año tienen al menos 28 días! Febrero tiene 28 (o 29 en bisiestos), y todos los demás tienen 30 o 31 días (lo que incluye 28 días).",
+    ctaSpeech: "¡Lee muy bien la pregunta y no caigas en la trampa! ¿Cuántos meses tienen 28 días? ¿A, B, C o D? ¡Coméntalo ya!",
+    ctaText: "¿CUÁNTOS MESES SON?\n🤔 A, B, C o D\n👇 ¡COMENTA TU OPCIÓN!",
     videoSteps: [
       {
         speech: "¡Pon a prueba tu agilidad mental con este acertijo clásico de calendario!",
@@ -262,16 +264,16 @@ const CHALLENGES_DATA = [
         camera: "teacher"
       },
       {
-        speech: "¿Cuántos meses del año tienen 28 días? ¿Solo febrero, solo en años bisiestos o los doce meses? ¡Respóndeme en los comentarios!",
+        speech: "¿Cuántos meses del año tienen 28 días? A: Solo un mes, B: Solo en años bisiestos, C: Los doce meses, o D: Ningún mes.",
         action: "write",
         text: "¿Cuántos meses tienen 28 días?",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡La respuesta es la C, los 12 meses! Todos los meses tienen 28 días, aunque algunos tienen más. ¡Comenta si respondiste solo febrero!",
+        speech: "¡Lee muy bien la pregunta y no caigas en la trampa! ¿Cuántos meses tienen 28 días? ¿A, B, C o D? ¡Respóndeme en los comentarios y dime por qué!",
         action: "highlight",
-        text: "✅ RESPUESTA: C) LOS 12 MESES (¡Todos tienen 28 o más!)",
+        text: "¿CUÁNTOS MESES SON?\n🤔 A, B, C o D\n👇 ¡COMENTA TU OPCIÓN!",
         target: "result",
         camera: "board"
       }
@@ -290,8 +292,8 @@ const CHALLENGES_DATA = [
       { key: "C", text: "3.er lugar" },
       { key: "D", text: "Depende" }
     ],
-    correct: "B",
-    explanation: "Al adelantar a quien va en segundo lugar, tú tomas su puesto, por lo que quedas en el segundo lugar. ¡El que iba de primero sigue en primer lugar!",
+    ctaSpeech: "¡Cuidado que parece obvia pero engaña a muchos! Si adelantas al segundo... ¿en qué lugar quedas? ¿A, B, C o D? ¡Coméntala ya!",
+    ctaText: "¿EN QUÉ LUGAR QUEDAS?\n🤔 A, B, C o D\n👇 ¡DILO EN LOS COMENTARIOS!",
     videoSteps: [
       {
         speech: "¡Imagina esta situación de carrera! Responde rápido sin pensarlo dos veces.",
@@ -301,16 +303,16 @@ const CHALLENGES_DATA = [
         camera: "teacher"
       },
       {
-        speech: "Estás corriendo y adelantas a quien va en segundo lugar. ¿Quedas en primer lugar o en segundo lugar? ¡Comenta tu respuesta!",
+        speech: "Estás corriendo en una carrera y adelantas a la persona que va en segundo lugar. ¿En qué posición quedas? A: primer lugar, B: segundo lugar, C: tercer lugar o D: depende.",
         action: "write",
         text: "Adelantas al 2.° lugar ➔ ¿En qué posición quedas?",
         target: "example1",
         camera: "board"
       },
       {
-        speech: "¡Quedas en segundo lugar, opción B! Porque tomaste su puesto, no el del primero. ¡Dale like si te gustó el reto!",
+        speech: "¡Cuidado que parece obvia pero engaña a muchísimas personas! Si adelantas al segundo... ¿en qué posición quedas? ¿A, B, C o D? ¡Dímelo en los comentarios!",
         action: "highlight",
-        text: "✅ RESPUESTA: B) 2.° LUGAR (¡El 1.° sigue adelante!)",
+        text: "¿EN QUÉ LUGAR QUEDAS?\n🤔 A, B, C o D\n👇 ¡DILO EN LOS COMENTARIOS!",
         target: "result",
         camera: "board"
       }

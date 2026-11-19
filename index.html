@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;600;700;800;900&family=Kalam:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
   <script src="three.min.js"></script>
   <script src="GLTFLoader.js"></script>
   <script src="rae_topics.js?v=106"></script>
@@ -326,6 +326,13 @@
 
       <div class="canvas-wrapper" id="canvasWrapper">
         <canvas id="stageCanvas" width="1080" height="1920"></canvas>
+        <div id="recordingFloatingBanner" class="recording-floating-banner" style="display:none;">
+          <div class="rec-dot-pulse"></div>
+          <div class="rec-text-group">
+            <div id="recBannerTimer" class="rec-title">● GRABANDO MP4: 00:00 / 00:00</div>
+            <div class="rec-subtitle">No cierres esta pestaña. Se descargará al terminar la lección.</div>
+          </div>
+        </div>
       </div>
 
       <!-- BOTONES FLOTANTES MÓVILES PARA ACCIÓN RÁPIDA -->
@@ -337,6 +344,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=106"></script>
+  <script src="app.js?v=107"></script>
 </body>
 </html>

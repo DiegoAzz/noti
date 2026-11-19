@@ -626,3 +626,65 @@ select.form-control option {
     display: none !important;
   }
 }
+
+/* BANNER FLOTANTE DE GRABACIÓN ACTIVA (MÓVIL Y ESCRITORIO) */
+.recording-floating-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(185, 28, 28, 0.94);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border: 1.5px solid rgba(254, 202, 202, 0.6);
+  z-index: 99;
+  max-width: 92%;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  animation: fadeInBanner 0.3s ease-out;
+}
+
+@keyframes fadeInBanner {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.rec-dot-pulse {
+  width: 14px;
+  height: 14px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: pulse-red 1.2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.rec-text-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.rec-title {
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.rec-subtitle {
+  font-size: 0.68rem;
+  color: rgba(254, 226, 226, 0.9);
+  font-weight: 500;
+}

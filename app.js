@@ -1634,12 +1634,74 @@ function updateTimeBadge() {
   const cur = formatTime(state.currentTime);
   const dur = formatTime(state.duration);
   badgeTime.textContent = `${cur} / ${dur}`;
+
+  // Actualización en tiempo real del progreso de grabación (móvil y escritorio)
+  if (state.isRecording) {
+    const recTimer = document.getElementById("recBannerTimer");
+    if (recTimer) recTimer.textContent = `● GRABANDO MP4: ${cur} / ${dur}`;
+    if (btnMobileRecord) btnMobileRecord.textContent = `⏹ Grabando (${cur})`;
+    if (btnRecord) btnRecord.textContent = `⏹ Grabando (${cur} / ${dur}) - Descarga automática`;
+  }
 }
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
   const s = Math.floor(sec % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+async function synthesizeLessonAudio() {
+  if (!state.audioContext) {
+    initAudio();
+  }
+  if (state.audioContext && state.audioContext.state === "suspended") {
+    try { await state.audioContext.resume(); } catch (e) {}
+  }
+
+  const fullScript = state.steps.map(s => s.speech.trim()).join(" ... ");
+
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: fullScript,
+      voice: state.voice,
+      pitchHz: 0,
+      ratePct: 2
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al sintetizar voz");
+  }
+
+  const data = await res.json();
+  state.wordsTimeline = data.words || [];
+
+  assignTimestampsToSteps();
+
+  const audioBlob = b64toBlob(data.audioBase64, data.mimeType || "audio/mpeg");
+  const audioUrl = URL.createObjectURL(audioBlob);
+  state.audioElement.src = audioUrl;
+
+  // Esperar a que el audio cargue completamente sus metadatos y buffer
+  await new Promise((resolve) => {
+    let resolved = false;
+    const onReady = () => {
+      if (!resolved) {
+        resolved = true;
+        state.audioElement.removeEventListener("canplaythrough", onReady);
+        resolve();
+      }
+    };
+    state.audioElement.addEventListener("canplaythrough", onReady);
+    setTimeout(onReady, 500);
+  });
+
+  if (state.audioElement.duration && !isNaN(state.audioElement.duration)) {
+    state.duration = Math.max(state.duration, state.audioElement.duration);
+  }
 }
 
 async function generateAndPlay() {
@@ -1650,59 +1712,8 @@ async function generateAndPlay() {
   btnPlayPreview.disabled = true;
   updateStatus("🎙️ Sintetizando voz con Inteligencia Artificial...");
 
-  if (!state.audioContext) {
-    initAudio();
-  }
-  if (state.audioContext.state === "suspended") {
-    await state.audioContext.resume();
-  }
-
-  const fullScript = state.steps.map(s => s.speech.trim()).join(" ... ");
-
   try {
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: fullScript,
-        voice: state.voice,
-        pitchHz: 0,
-        ratePct: 2
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Error al sintetizar voz");
-    }
-
-    const data = await res.json();
-    state.wordsTimeline = data.words || [];
-
-    assignTimestampsToSteps();
-
-    const audioBlob = b64toBlob(data.audioBase64, data.mimeType || "audio/mpeg");
-    const audioUrl = URL.createObjectURL(audioBlob);
-    state.audioElement.src = audioUrl;
-
-    // Esperar a que el audio cargue completamente sus metadatos y buffer
-    await new Promise((resolve) => {
-      let resolved = false;
-      const onReady = () => {
-        if (!resolved) {
-          resolved = true;
-          state.audioElement.removeEventListener("canplaythrough", onReady);
-          resolve();
-        }
-      };
-      state.audioElement.addEventListener("canplaythrough", onReady);
-      setTimeout(onReady, 400);
-    });
-
-    if (state.audioElement.duration && !isNaN(state.audioElement.duration)) {
-      state.duration = Math.max(state.duration, state.audioElement.duration);
-    }
-
+    await synthesizeLessonAudio();
     state.currentTime = 0;
     restartAllAudio();
     state.isPlaying = true;
@@ -1931,6 +1942,11 @@ function renderLoop(time) {
   if (state.audioElement && !state.audioElement.paused) {
     state.currentTime = state.audioElement.currentTime;
     updateTimeBadge();
+  }
+
+  // Auto-finalización garantizada de la grabación cuando la lección llega al final exacto
+  if (state.isRecording && state.duration > 4 && state.currentTime >= (state.duration - 0.2)) {
+    stopRecording(true);
   }
 
   const currentStep = getCurrentStep();
@@ -3754,11 +3770,24 @@ function drawViralCaptions(w, h, currentStep) {
 }
 
 /* =========================================================
-   GRABACIÓN Y DESCARGA DIRECTA DE VIDEO (MP4)
+   GRABACIÓN Y CONVERSIÓN PROFESIONAL DE VIDEO MP4 (YOUTUBE READY)
    ========================================================= */
 function toggleRecording() {
   if (state.isRecording) {
-    stopRecording();
+    // Protección anti-corte accidental: si lleva menos de 5 segundos y la lección dura más de 8s
+    const elapsedSec = (performance.now() - (state.recordingStartTime || performance.now())) / 1000;
+    if (elapsedSec < 4.5 && state.duration > 8) {
+      const ok = confirm(
+        `⚠️ La lección apenas lleva ${Math.floor(elapsedSec)} segundos (duración completa: ${Math.floor(state.duration)}s).\n\n` +
+        `Si detienes ahora, el video solo durará 3 segundos y fallará en YouTube.\n\n` +
+        `El video se descargará solo al finalizar la explicación completa.\n\n` +
+        `¿Deseas esperar a que termine? (Recomendado: Cancelar para seguir grabando)`
+      );
+      if (!ok) {
+        return; // Sigue grabando
+      }
+    }
+    stopRecording(true);
   } else {
     startRecording();
   }
@@ -3770,39 +3799,43 @@ async function startRecording() {
     window.setMobileTab("preview");
   }
   if (state.isRecording) {
-    stopRecording();
+    stopRecording(true);
     return;
   }
 
-  // Si no se ha generado el audio aún, generarlo primero automáticamente
-  if (!state.audioElement || !state.audioElement.src) {
-    updateStatus("🎙️ Sintetizando lección primero para iniciar la grabación...");
-    await generateAndPlay();
-    await new Promise(r => setTimeout(r, 600));
-  }
-
-  state.isRecording = true;
-  state.recordedChunks = [];
-  btnRecord.classList.add("btn-accent");
-  btnRecord.textContent = "⏹ Detener y Guardar MP4";
-  badgeRecording.style.display = "inline-block";
-
-  // Despertar AudioContext si estaba suspendido
+  // 1. Despertar AudioContext de inmediato en el gesto del usuario
   if (!state.audioContext) {
     initAudio();
   }
   if (state.audioContext && state.audioContext.state === "suspended") {
-    await state.audioContext.resume();
+    try { await state.audioContext.resume(); } catch (e) {}
   }
 
+  // 2. Si no se ha generado el audio aún, sintetizarlo primero
+  if (!state.audioElement || !state.audioElement.src) {
+    updateStatus("🎙️ Sintetizando audio de la lección antes de grabar...");
+    try {
+      await synthesizeLessonAudio();
+    } catch (err) {
+      alert("Error al preparar el audio para grabación: " + err.message);
+      return;
+    }
+  }
+
+  state.isRecording = true;
+  state.recordedChunks = [];
+  state.recordingStartTime = performance.now();
+
+  // Actualizar UI visualmente para indicar grabación activa (escritorio y móvil)
+  updateRecordingUI(true);
+
   // Pausar y asegurar inicio exacto en segundo 0 para captura completa
-  state.audioElement.pause();
-  if (state.bgMusicAudio) state.bgMusicAudio.pause();
+  pauseAllAudio();
   state.audioElement.currentTime = 0;
   if (state.bgMusicAudio) state.bgMusicAudio.currentTime = 0;
   state.currentTime = 0;
 
-  // Esperar confirmación de seek a 0 para que no empiece a la mitad
+  // Esperar confirmación de seek a 0
   await new Promise((resolve) => {
     if (state.audioElement.currentTime === 0) return resolve();
     const onSeeked = () => {
@@ -3810,7 +3843,7 @@ async function startRecording() {
       resolve();
     };
     state.audioElement.addEventListener("seeked", onSeeked, { once: true });
-    setTimeout(resolve, 300);
+    setTimeout(resolve, 250);
   });
 
   const canvasStream = canvas.captureStream(30);
@@ -3831,20 +3864,16 @@ async function startRecording() {
     }
 
     if (soundEngine && soundEngine.masterGain) {
-      try {
-        soundEngine.masterGain.connect(state.destAudioStreamNode);
-      } catch (e) {}
+      try { soundEngine.masterGain.connect(state.destAudioStreamNode); } catch (e) {}
     }
 
     if (state.bgMusicGainNode && state.destAudioStreamNode) {
-      try {
-        state.bgMusicGainNode.connect(state.destAudioStreamNode);
-      } catch (e) {}
+      try { state.bgMusicGainNode.connect(state.destAudioStreamNode); } catch (e) {}
     }
 
     audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
   } catch (e) {
-    console.warn("Audio Context ya conectado:", e);
+    console.warn("Audio Context setup:", e);
     if (state.destAudioStreamNode) {
       audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
     }
@@ -3855,18 +3884,16 @@ async function startRecording() {
     ...audioTracks
   ]);
 
-  // Selección de códec compatible con MP4
-  const mp4Types = [
-    "video/mp4;codecs=avc1,mp4a.40.2",
-    "video/mp4;codecs=avc1",
-    "video/mp4;codecs=h264,aac",
-    "video/mp4",
+  // Selección de códec compatible con MediaRecorder
+  const supportedTypes = [
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
-    "video/webm"
+    "video/webm",
+    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/mp4"
   ];
-  let chosenMime = "video/webm";
-  for (let m of mp4Types) {
+  let chosenMime = "";
+  for (let m of supportedTypes) {
     if (MediaRecorder.isTypeSupported(m)) {
       chosenMime = m;
       break;
@@ -3875,10 +3902,10 @@ async function startRecording() {
   state.recordingMimeType = chosenMime;
 
   try {
-    state.mediaRecorder = new MediaRecorder(combinedStream, {
+    state.mediaRecorder = new MediaRecorder(combinedStream, chosenMime ? {
       mimeType: chosenMime,
-      videoBitsPerSecond: 5000000
-    });
+      videoBitsPerSecond: 4500000
+    } : undefined);
   } catch (err) {
     console.warn("Fallo con mimeType " + chosenMime + ", usando MediaRecorder predeterminado:", err);
     state.mediaRecorder = new MediaRecorder(combinedStream);
@@ -3892,61 +3919,121 @@ async function startRecording() {
 
   state.mediaRecorder.onstop = saveRecordedVideo;
 
-  // La finalización de la grabación se gestiona de forma centralizada en el listener ended de audioElement
-  state.mediaRecorder.start(250);
+  // Iniciar MediaRecorder capturando fragmentos cada 500ms
+  state.mediaRecorder.start(500);
+
+  // Iniciar reproducción simultánea de audio sincronizada
   restartAllAudio();
   state.isPlaying = true;
-  updateStatus("⏺ Grabando video MP4 con música y pizarra... Se descargará automáticamente al terminar.");
+  updateStatus("⏺ Grabando video en alta calidad... Deja que termine la lección completa para descargar el MP4.");
 }
 
-function stopRecording() {
+function stopRecording(force = false) {
   if (!state.isRecording) return;
+
+  const elapsedSec = (performance.now() - (state.recordingStartTime || performance.now())) / 1000;
+  if (!force && elapsedSec < 4.5 && state.duration > 8) {
+    const ok = confirm(
+      `⚠️ La lección apenas lleva ${Math.floor(elapsedSec)} segundos (duración completa: ${Math.floor(state.duration)}s).\n\n` +
+      `Si detienes ahora, el video solo durará 3 segundos y fallará en YouTube.\n\n` +
+      `¿Deseas esperar a que termine toda la lección automáticamente?\n\n` +
+      `(Presiona Cancelar para seguir grabando la lección completa)`
+    );
+    if (!ok) {
+      return;
+    }
+  }
+
   state.isRecording = false;
-  badgeRecording.style.display = "none";
-  btnRecord.classList.remove("btn-accent");
-  btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
+  updateRecordingUI(false);
 
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
-    try {
-      state.mediaRecorder.requestData();
-    } catch (e) {}
+    try { state.mediaRecorder.requestData(); } catch (e) {}
     state.mediaRecorder.stop();
   }
 }
 
+function updateRecordingUI(isRec) {
+  const recBanner = document.getElementById("recordingFloatingBanner");
+
+  if (isRec) {
+    if (badgeRecording) badgeRecording.style.display = "inline-block";
+    if (recBanner) recBanner.style.display = "flex";
+
+    if (btnRecord) {
+      btnRecord.classList.add("btn-accent");
+      btnRecord.textContent = "⏹ Grabando... (Espere al final)";
+    }
+    if (btnMobileRecord) {
+      btnMobileRecord.textContent = "⏹ Grabando...";
+      btnMobileRecord.style.background = "#dc2626";
+      btnMobileRecord.style.color = "#ffffff";
+      btnMobileRecord.style.fontWeight = "900";
+    }
+  } else {
+    if (badgeRecording) badgeRecording.style.display = "none";
+    if (recBanner) recBanner.style.display = "none";
+
+    if (btnRecord) {
+      btnRecord.classList.remove("btn-accent");
+      btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
+    }
+    if (btnMobileRecord) {
+      btnMobileRecord.textContent = "⏺ Guardar MP4";
+      btnMobileRecord.style.background = "";
+      btnMobileRecord.style.color = "";
+      btnMobileRecord.style.fontWeight = "";
+    }
+  }
+}
+
 async function saveRecordedVideo() {
-  updateStatus("💾 Procesando y preparando archivo MP4 para descarga...");
+  updateStatus("⚙️ Procesando video con FFmpeg para garantizar 100% de compatibilidad con YouTube...");
 
-  const isNativeMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
-  const rawBlob = new Blob(state.recordedChunks, { type: isNativeMp4 ? "video/mp4" : "video/webm" });
-
-  if (isNativeMp4) {
-    downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
+  if (!state.recordedChunks || state.recordedChunks.length === 0) {
+    updateStatus("❌ No se capturaron fotogramas de video.");
     return;
   }
 
-  // Enviar al servidor para conversión profesional FFmpeg (100% compatible y sin recortes)
+  const rawBlob = new Blob(state.recordedChunks, { type: state.recordingMimeType || "video/webm" });
+
+  if (rawBlob.size < 5000) {
+    updateStatus("⚠️ Grabación demasiado corta o vacía.");
+    return;
+  }
+
+  // SIEMPRE CONVERTIR EN EL SERVIDOR CON FFMPEG:
+  // FFmpeg genera el contenedor MP4 estándar con perfil H.264 High/Main,
+  // formato de color yuv420p universal, audio estéreo AAC y el átomo 'moov'
+  // al inicio (-movflags +faststart) que YouTube Shorts, TikTok y Reels exigen.
   try {
-    updateStatus("⚙️ Convirtiendo a MP4 optimizado con audio y duración completa...");
+    updateStatus("⚙️ Convirtiendo a MP4 optimizado para YouTube (con duración y audio completo)...");
     const resp = await fetch("/api/convert-mp4", {
       method: "POST",
-      headers: { "Content-Type": "video/webm" },
+      headers: { "Content-Type": state.recordingMimeType || "video/webm" },
       body: rawBlob
     });
 
     if (resp.ok) {
       const mp4Blob = await resp.blob();
-      downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
+      const filename = `profe_rochi_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}.mp4`;
+      downloadBlob(mp4Blob, filename);
+      updateStatus("✅ ¡Video MP4 listo y descargado! 100% compatible con YouTube Shorts.");
       return;
     } else {
-      console.warn("Fallo conversión backend, código:", resp.status);
+      const err = await resp.json().catch(() => ({}));
+      console.warn("Fallo conversión backend:", resp.status, err);
+      updateStatus(`⚠️ Aviso del servidor: ${err.error || "error en conversión"}. Descargando video directo.`);
     }
   } catch (e) {
-    console.warn("Conversión remota no disponible, descargando localmente:", e);
+    console.warn("No se pudo conectar con el servicio FFmpeg:", e);
+    updateStatus("⚠️ No se pudo conectar con el convertidor del servidor. Descargando video...");
   }
 
-  // Fallback si no hubo conversión
-  downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
+  // Fallback si no hubo conexión con el servidor
+  const isMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
+  const fallbackExt = isMp4 ? "mp4" : "webm";
+  downloadBlob(rawBlob, `profe_rochi_${Date.now()}.${fallbackExt}`);
 }
 
 function downloadBlob(blob, filename) {
@@ -3960,6 +4047,5 @@ function downloadBlob(blob, filename) {
   setTimeout(() => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    updateStatus("✅ ¡Video MP4 descargado con éxito! Listo para publicar.");
-  }, 100);
+  }, 200);
 }

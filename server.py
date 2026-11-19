@@ -140,28 +140,52 @@ class ProfeHandler(SimpleHTTPRequestHandler):
 
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            raw_webm = self.rfile.read(length)
-            if not raw_webm or len(raw_webm) < 100:
-                self._send_json(400, {"error": "Datos de video inválidos o vacíos"})
+            if length <= 0:
+                self._send_json(400, {"error": "Tamaño de archivo inválido"})
                 return
 
+            # Leer el flujo completo en bloques de 64KB para soportar subidas móviles sin truncamiento
+            chunks = []
+            remaining = length
+            while remaining > 0:
+                chunk = self.rfile.read(min(remaining, 65536))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            raw_video = b"".join(chunks)
+
+            if not raw_video or len(raw_video) < 500:
+                self._send_json(400, {"error": "Datos de video inválidos o demasiado cortos"})
+                return
+
+            content_type = self.headers.get("Content-Type", "")
+            ext = ".mp4" if "mp4" in content_type else ".webm"
+
             with tempfile.TemporaryDirectory() as tmpdir:
-                in_path = os.path.join(tmpdir, "input.webm")
+                in_path = os.path.join(tmpdir, f"input{ext}")
                 out_path = os.path.join(tmpdir, "output.mp4")
 
                 with open(in_path, "wb") as f:
-                    f.write(raw_webm)
+                    f.write(raw_video)
 
+                # Comando FFmpeg optimizado para máxima compatibilidad con YouTube Shorts, TikTok y Reels
                 cmd = [
                     ffmpeg_bin,
                     "-y",
+                    "-fflags", "+genpts",
+                    "-avoid_negative_ts", "make_zero",
                     "-i", in_path,
+                    "-map", "0:v:0",
+                    "-map", "0:a?",
                     "-c:v", "libx264",
-                    "-preset", "veryfast",
-                    "-crf", "20",
+                    "-preset", "faster",
+                    "-crf", "19",
                     "-pix_fmt", "yuv420p",
+                    "-r", "30",
                     "-c:a", "aac",
                     "-b:a", "192k",
+                    "-ar", "44100",
                     "-movflags", "+faststart",
                     out_path
                 ]

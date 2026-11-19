@@ -7,6 +7,1542 @@
 const RAE_TOPICS = [
 
   // =========================================================
+  // 📕 UN LIBRO LLENO DE ERRORES (LA PROFE ROCHI Y RAE)
+  // Trucos y técnicas para hablar y escribir sin equivocarse
+  // =========================================================
+{
+    "id": "haiga_haya",
+    "category": "Un libro lleno de errores",
+    "name": "¿Haiga o haya?",
+    "icon": "📕",
+    "summary": "Haiga solo si es un auto ostentoso según RAE; el verbo siempre es HAYA",
+    "steps": [
+      {
+        "speech": "¡Hola! Hoy aprenderás por qué la palabra 'haiga' no existe como verbo en español.",
+        "action": "write",
+        "text": "¿HAIGA O HAYA?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "En el diccionario, 'haiga' solo se refiere a un automóvil muy grande y ostentoso de los años cincuenta.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Como forma del verbo haber, ¡la única palabra correcta y aceptada es HAYA!",
+        "action": "write",
+        "text": "HAIGA = AUTO ANTIGUO | ¡No es un verbo!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Por ejemplo: 'Espero que haya comida' o 'Ojalá haya tiempo para repasar'.",
+        "action": "write",
+        "text": "HAYA = VERBO HABER | 'Espero que haya comida'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Recuerda siempre: HAYA con H y con Y griega!",
+        "action": "highlight",
+        "text": "HAYA = VERBO HABER | ¡Siempre con Y griega!",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Alguna vez se te ha escapado un 'haiga'? ¡Déjamelo aquí en los comentarios!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "en_base_a",
+    "category": "Un libro lleno de errores",
+    "name": "¿En base a o con base en?",
+    "icon": "📕",
+    "summary": "'En base a' es incorrecto; se dice 'con base en' o 'a base de'",
+    "steps": [
+      {
+        "speech": "¡Muchos redactan 'en base a' en el trabajo o la universidad, pero la RAE lo considera un error!",
+        "action": "write",
+        "text": "¿EN BASE A O CON BASE EN?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'En base a' es un calco del francés o italiano que debemos desterrar del español.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "La forma correcta para justificar una decisión o informe es 'CON BASE EN'.",
+        "action": "write",
+        "text": "❌ EN BASE A | ¡Incorrecto!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "O si te refieres a componentes o ingredientes, usa 'A BASE DE': 'jarabe a base de miel'.",
+        "action": "write",
+        "text": "✅ CON BASE EN | O 'A BASE DE'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Ejemplo perfecto: 'Con base en los resultados, aprobamos el proyecto'.",
+        "action": "highlight",
+        "text": "Ej: 'Con base en la ley' | O 'A base de esfuerzo'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Cómo lo decías tú? ¡Etiqueta a ese amigo que redacta informes todos los días!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "detras_de_mi",
+    "category": "Un libro lleno de errores",
+    "name": "¿Detrás de mí o detrás mío?",
+    "icon": "📕",
+    "summary": "Los adverbios no admiten posesivos: detrás de mí, delante de ti",
+    "steps": [
+      {
+        "speech": "¡Atención! Nunca digas 'detrás mío', 'delante tuyo' ni 'encima suyo'.",
+        "action": "write",
+        "text": "¿DETRÁS DE MÍ O DETRÁS MÍO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Los posesivos solo modifican a sustantivos: 'mi casa' o 'tu libro'. ¡Los adverbios de lugar no!",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Por eso, detrás, delante, encima y debajo deben ir acompañados de la preposición 'de' y el pronombre.",
+        "action": "write",
+        "text": "❌ DETRÁS MÍO | ¡Los adverbios no son posesivos!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Se dice: 'Detrás de mí', 'Delante de ti', 'Encima de él' y 'Cerca de nosotros'.",
+        "action": "write",
+        "text": "✅ DETRÁS DE MÍ | 'Ponte detrás de mí'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Grábate esta fórmula de oro para no volver a fallar!",
+        "action": "highlight",
+        "text": "delante de ti | encima de él | cerca de mí",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Repite con La Profe Rochi: detrás de mí! ¿Te sirvió el consejo? ¡Comenta!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "impreso_imprimido",
+    "category": "Un libro lleno de errores",
+    "name": "¿Impreso o imprimido?",
+    "icon": "📕",
+    "summary": "¡Ambos son correctos y aceptados por la RAE como participios!",
+    "steps": [
+      {
+        "speech": "¿Te han corregido diciendo que 'imprimido' no existe? ¡Te engañaron!",
+        "action": "write",
+        "text": "¿IMPRESO O IMPRIMIDO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "La Real Academia Española confirma que el verbo imprimir tiene dos participios válidos.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'He impreso el documento' es totalmente correcto con el participio irregular.",
+        "action": "write",
+        "text": "✅ HE IMPRESO | Participio irregular",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Pero 'he imprimido el documento' con el participio regular también es 100% correcto!",
+        "action": "write",
+        "text": "✅ HE IMPRIMIDO | Participio regular RAE",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Como adjetivo se prefiere impreso: 'libro impreso'. Pero con haber, ¡ambos valen!",
+        "action": "highlight",
+        "text": "Ambos son correctos | 'He impreso o he imprimido'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Cuál de los dos usas tú al hablar? ¡Déjamelo aquí abajo!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "frito_freido",
+    "category": "Un libro lleno de errores",
+    "name": "¿Frito o freído?",
+    "icon": "📕",
+    "summary": "Ambos son participios válidos según la RAE: he frito y he freído",
+    "steps": [
+      {
+        "speech": "¡Sí! El verbo freír también tiene dos participios perfectamente aceptados por la RAE.",
+        "action": "write",
+        "text": "¿FRITO O FREÍDO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "A muchos les suena raro freído, pero la gramática de la lengua española lo avala por completo.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Puedes decir: 'He frito unas papas para el almuerzo'.",
+        "action": "write",
+        "text": "✅ HE FRITO | 'He frito las papas'",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "O puedes decir con total validez: 'He freído un par de huevos en el sartén'.",
+        "action": "write",
+        "text": "✅ HE FREÍDO | 'He freído los huevos'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Eso sí: como adjetivo siempre decimos 'papas fritas', nunca 'papas freídas'!",
+        "action": "highlight",
+        "text": "Como adjetivo: papas fritas | ¡Ambos participios valen!",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Compártelo para que nadie te vuelva a corregir en la cocina! ¿Lo sabías?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "proveido_provisto",
+    "category": "Un libro lleno de errores",
+    "name": "¿Proveído o provisto?",
+    "icon": "📕",
+    "summary": "El verbo proveer acepta tanto provisto como proveído según la RAE",
+    "steps": [
+      {
+        "speech": "Junto con imprimir y freír, el verbo proveer forma la famosa terna de doble participio.",
+        "action": "write",
+        "text": "¿PROVEÍDO O PROVISTO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Tanto la forma regular terminada en -ído como la irregular en -to son cultas y correctas.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'El juez ha proveído lo necesario' es de uso muy común en el ámbito jurídico.",
+        "action": "write",
+        "text": "✅ PROVEÍDO | 'Ha proveído los recursos'",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Y 'la empresa ha provisto los uniformes' es igualmente impecable.",
+        "action": "write",
+        "text": "✅ PROVISTO | 'Ha provisto de víveres'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Impreso e imprimido, frito y freído, provisto y proveído: los 3 gemelos de la RAE!",
+        "action": "highlight",
+        "text": "¡Ambos son 100% correctos! | Respaldados por la RAE",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Conocías esta curiosidad de los verbos? ¡Guarda este video!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "subir_arriba_pleonasmos",
+    "category": "Un libro lleno de errores",
+    "name": "¿Subir arriba o salir afuera?",
+    "icon": "📕",
+    "summary": "Subir arriba, bajar abajo, entrar adentro y salir afuera son redundancias",
+    "steps": [
+      {
+        "speech": "¡Subir arriba, bajar abajo o salir afuera son redundancias cómicas que debes evitar!",
+        "action": "write",
+        "text": "¿SUBIR ARRIBA O SALIR AFUERA?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "En lingüística se llaman pleonasmos viciosos: repiten una idea que ya está en el verbo.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "El verbo 'subir' ya significa dirigirse hacia arriba. No hace falta aclararlo.",
+        "action": "write",
+        "text": "❌ SUBIR ARRIBA | 'Subir' ya indica ir arriba",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Lo mismo pasa con 'salir': salir ya significa pasar de dentro hacia fuera.",
+        "action": "write",
+        "text": "❌ SALIR AFUERA | 'Salir' ya indica ir afuera",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Basta con decir: 'Voy a subir al segundo piso' o 'Sal un momento, por favor'.",
+        "action": "highlight",
+        "text": "✅ BASTA CON DECIR: | 'Sube' o 'Sal un momento'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Qué otro pleonasmo escuchas en tu familia? ¡Déjamelo en los comentarios!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "dijistes_comistes",
+    "category": "Un libro lleno de errores",
+    "name": "¿Dijiste o dijistes?",
+    "icon": "📕",
+    "summary": "La segunda persona del pretérito perfecto simple nunca lleva S: dijiste, comiste",
+    "steps": [
+      {
+        "speech": "¡Esa S al final de las palabras en pasado es una intrusa que debemos expulsar!",
+        "action": "write",
+        "text": "¿DIJISTE O DIJISTES?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Cuando le hablas de 'tú' a alguien en pasado, jamás debes añadirle una S al final.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Decir 'dijistes', 'comistes', 'fuistes' o 'hicistes' es un error muy extendido pero incorrecto.",
+        "action": "write",
+        "text": "❌ DIJISTES / FUISTES | ¡Esa S final no existe!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "La forma impecable es: dijiste, comiste, fuiste, hiciste, cantaste y viniste.",
+        "action": "write",
+        "text": "✅ DIJISTE / FUISTE | 'Tú dijiste la verdad'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Quítale la S al pasado y hablarás con elegancia total!",
+        "action": "highlight",
+        "text": "comiste | viniste | hiciste | cantaste",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Se te escapaba esta S intrusa? ¡Coméntalo y suscríbete para más tips!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "cocer_coser",
+    "category": "Un libro lleno de errores",
+    "name": "¿Cocer o coser?",
+    "icon": "📕",
+    "summary": "Cocer con C es cocinar alimentos; Coser con S es unir telas con hilo",
+    "steps": [
+      {
+        "speech": "Suenan exactamente igual, ¡pero cambiar una C por una S cambia todo el significado!",
+        "action": "write",
+        "text": "¿COCER O COSER?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Estas palabras homófonas confunden a miles de personas en recetas y mensajes.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'Cocer' con C viene de cocina y calor: 'poner a cocer las verduras al vapor'.",
+        "action": "write",
+        "text": "COCER (con C) | = Cocinar al fuego",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "'Coser' con S viene de hilo y aguja: 'voy a coser el botón de la camisa'.",
+        "action": "write",
+        "text": "COSER (con S) | = Unir con aguja e hilo",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Truco mnemotécnico: Cocer con C de Cocina; Coser con S de Sastre!",
+        "action": "highlight",
+        "text": "Ej: 'Voy a cocer arroz' | 'Voy a coser el botón'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Nunca cuezas la camisa ni cosas las papas! ¿Te gustó el truco?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "bienes_vienes",
+    "category": "Un libro lleno de errores",
+    "name": "¿Bienes o vienes?",
+    "icon": "📕",
+    "summary": "Bienes con B son propiedades; Vienes con V es del verbo venir",
+    "steps": [
+      {
+        "speech": "Una sola letra puede transformar una herencia millonaria en una pregunta cotidiana.",
+        "action": "write",
+        "text": "¿BIENES O VIENES?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "La B y la V suenan igual en español moderno, ¡pero su ortografía es estricta!",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'Bienes' con B se refiere al patrimonio, riquezas o posesiones: 'bienes raíces'.",
+        "action": "write",
+        "text": "BIENES (con B) | = Riquezas y patrimonio",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "'Vienes' con V es la conjugación del verbo venir: '¿vienes hoy a mi casa?'.",
+        "action": "write",
+        "text": "VIENES (con V) | = Del verbo venir",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Fíjate en esta frase: 'Si vienes con V, cuidaremos todos tus bienes con B'.",
+        "action": "highlight",
+        "text": "'Separación de bienes' | '¿Vienes hoy conmigo?'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Conocías esta diferencia? ¡Déjame una oración con ambas en los comentarios!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "concordancia_mayoria",
+    "category": "Un libro lleno de errores",
+    "name": "¿La mayoría fue o fueron?",
+    "icon": "📕",
+    "summary": "Ambas opciones son válidas según la RAE: concordancia de grupo o de elementos",
+    "steps": [
+      {
+        "speech": "Si dices 'la mayoría de los estudiantes', ¿el verbo debe ir en singular o en plural?",
+        "action": "write",
+        "text": "¿LA MAYORÍA FUE O FUERON?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Esta es una de las dudas más frecuentes en redacción y exámenes universitarios!",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Si concuerdas con 'la mayoría', pones el verbo en singular: 'la mayoría aprobó'.",
+        "action": "write",
+        "text": "✅ LA MAYORÍA FUE | Concordancia gramatical",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Pero si concuerdas con 'los estudiantes', pones plural: 'la mayoría aprobaron'.",
+        "action": "write",
+        "text": "✅ LA MAYORÍA FUERON | Concordancia ad sensum",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡La RAE admite ambas como cultas y correctas! Puedes elegir la que mejor suene.",
+        "action": "highlight",
+        "text": "¡La RAE acepta ambas! | 'la mayoría llegó / llegaron'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Cuál opción prefieres tú al escribir? ¡Coméntamelo!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "queismo_truco",
+    "category": "Un libro lleno de errores",
+    "name": "¿Me enteré que o de que?",
+    "icon": "📕",
+    "summary": "Descubre si va 'que' o 'de que' transformando la frase en pregunta",
+    "steps": [
+      {
+        "speech": "¡Para saber si le falta o le sobra la palabra 'de' a tu frase, usa la pregunta mágica!",
+        "action": "write",
+        "text": "¿ME ENTERÉ QUE O DE QUE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Muchos caen en el queísmo y eliminan la preposición 'de' cuando era obligatoria.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Pregúntate: ¿Qué te enteraste o DE QUÉ te enteraste? ¡Pide 'de' a gritos!",
+        "action": "write",
+        "text": "¿DE QUÉ ME ENTERÉ? | 'De que no había clase'",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Por lo tanto, la forma correcta es: 'Me enteré DE QUE no había clase'.",
+        "action": "write",
+        "text": "✅ ME ENTERÉ DE QUE | Si la pregunta pide 'de', ¡ponlo!",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "En cambio: ¿Qué pienso? 'Pienso que es genial' (sin 'de').",
+        "action": "highlight",
+        "text": "Pienso que (¿Qué pienso?) | Me alegro de que (¿De qué?)",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡El truco de la pregunta nunca falla! Guarda este video para tus tareas.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "conyuge_no_conyugue",
+    "category": "Un libro lleno de errores",
+    "name": "Cónyuge (no cónyugue)",
+    "icon": "📕",
+    "summary": "La palabra correcta es cónyuge con sonido de jota, sin u intermedia",
+    "steps": [
+      {
+        "speech": "Muchos profesionales cometen el error de escribir y pronunciar 'cónyugue' con U.",
+        "action": "write",
+        "text": "¿CÓNYUGE O CÓNYUGUE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Esta palabra proviene del latín coniux y mantiene el sonido de la letra ge suave o jota.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Decir 'cónyugue' es incorrecto. La U intermedia no existe en el español formal.",
+        "action": "write",
+        "text": "❌ CÓNYUGUE | ¡Pronunciación incorrecta!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Se escribe y se pronuncia CÓNYUGE: 'el cónyuge firmó el acuerdo matrimonial'.",
+        "action": "write",
+        "text": "✅ CÓNYUGE | Se pronuncia 'cón-yu-je'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Además es palabra esdrújula, ¡así que siempre lleva tilde en la O!",
+        "action": "highlight",
+        "text": "Palabra esdrújula | Lleva tilde en la O",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Has visto este error en contratos o formularios? ¡Coméntalo aquí!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "trastorno_no_transtorno",
+    "category": "Un libro lleno de errores",
+    "name": "Trastorno (no transtorno)",
+    "icon": "📕",
+    "summary": "Se escribe trastorno, sin la letra N intermedia",
+    "steps": [
+      {
+        "speech": "A veces le agregamos letras a las palabras por inercia o por confusión de prefijos.",
+        "action": "write",
+        "text": "¿TRASTORNO O TRANSTORNO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Uno de los tropiezos más habituales en psicología y medicina es meterle una N a trastorno.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'Transtorno' con N intermedia no está admitido en el diccionario de la RAE.",
+        "action": "write",
+        "text": "❌ TRANSTORNO | ¡La N intermedia sobra!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "La palabra oficial es TRASTORNO: 'trastorno del sueño' o 'trastornar los planes'.",
+        "action": "write",
+        "text": "✅ TRASTORNO | Prefijo tras-",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Viene del prefijo tras- más el verbo tornar. ¡Sin la N intermedia!",
+        "action": "highlight",
+        "text": "trastornar | trastorno bipolar | traspié",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Dile adiós a esa N que nadie invitó! Comparte este tip ortográfico.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "prever_no_preveer",
+    "category": "Un libro lleno de errores",
+    "name": "Prever (no preveer)",
+    "icon": "📕",
+    "summary": "Viene de pre-ver (ver con anticipación), no de proveer",
+    "steps": [
+      {
+        "speech": "¡Prever significa ver antes, por eso se conjuga exactamente igual que el verbo VER!",
+        "action": "write",
+        "text": "¿PREVER O PREVEER?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Mucha gente lo confunde con 'proveer' y le mete una segunda E que no le corresponde.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Escribir 'preveer' con doble E o 'preveyó' es un error gramatical.",
+        "action": "write",
+        "text": "❌ PREVEER | ¡No lleva doble E!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Se escribe PREVER con una sola E: 'Él vio ➔ Él previó las consecuencias'.",
+        "action": "write",
+        "text": "✅ PREVER (pre + ver) | 'Él vio ➔ Él previó'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Recuerda: Yo preveo, tú prevés, él previó, nosotros prevemos. ¡Como VER!",
+        "action": "highlight",
+        "text": "Previó el peligro | Yo preveo, tú prevés",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Te habías equivocado con este verbo? ¡Ahora ya lo dominas al 100%!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "grosso_modo",
+    "category": "Un libro lleno de errores",
+    "name": "Grosso modo (sin la 'a')",
+    "icon": "📕",
+    "summary": "La locución culta es 'grosso modo', nunca 'a grosso modo'",
+    "steps": [
+      {
+        "speech": "¡En latín las locuciones no llevan preposiciones en español! Conoce la regla de oro.",
+        "action": "write",
+        "text": "¿A GROSSO MODO O GROSSO MODO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'Grosso modo' es una locución latina que significa 'a grandes rasgos' o 'aproximadamente'.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Añadirle la preposición 'a' delante es un error muy común pero censurado por la RAE.",
+        "action": "write",
+        "text": "❌ A GROSSO MODO | ¡La preposición 'A' sobra!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "La forma impecable es simplemente: 'Grosso modo, el costo será de diez mil dólares'.",
+        "action": "write",
+        "text": "✅ GROSSO MODO | Significa 'a grandes rasgos'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Lo mismo aplica para 'motu proprio' y 'corpore insepulto'. ¡Sin preposiciones añadidas!",
+        "action": "highlight",
+        "text": "'Grosso modo, costará mil' | Sin preposición",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Habla y escribe como un profesional de alto nivel! ¿Conocías este detalle?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "motu_proprio",
+    "category": "Un libro lleno de errores",
+    "name": "Motu proprio (con 'r')",
+    "icon": "📕",
+    "summary": "Se dice 'motu proprio', no 'de motu propio' ni 'por motu propio'",
+    "steps": [
+      {
+        "speech": "Esta locución latina casi todo el mundo la dice con dos errores juntos. ¡Corrijámosla!",
+        "action": "write",
+        "text": "¿MOTU PROPRIO O DE MOTU PROPIO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Se usa para indicar que alguien hizo algo voluntariamente, por iniciativa personal.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Primer error: ponerle 'de' o 'por'. Segundo error: quitarle la R a 'proprio'.",
+        "action": "write",
+        "text": "❌ DE MOTU PROPIO | Sin 'de' y con falta de 'r'",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "La forma latina auténtica es MOTU PROPRIO con doble R: 'Renunció motu proprio'.",
+        "action": "write",
+        "text": "✅ MOTU PROPRIO | Significa 'por iniciativa propia'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Sin preposición y con R en proprio! Ahora sí sonarás intachable en cualquier acta.",
+        "action": "highlight",
+        "text": "Doble R: 'proprio' | 'Lo hizo motu proprio'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Lo habías escuchado mal en televisión o noticias? ¡Comenta tu experiencia!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "sin_embargo_redundancia",
+    "category": "Un libro lleno de errores",
+    "name": "Sin embargo (sin 'mas')",
+    "icon": "📕",
+    "summary": "'Mas sin embargo' es un pleonasmo innecesario; usa solo uno",
+    "steps": [
+      {
+        "speech": "¿Alguna vez has dicho 'mas sin embargo'? ¡Cuidado, estás diciendo lo mismo dos veces!",
+        "action": "write",
+        "text": "¿MAS SIN EMBARGO O SIN EMBARGO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'Mas' (sin tilde) significa 'pero'. Y 'sin embargo' también expresa adversación.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Juntarlos en 'mas sin embargo' es un pleonasmo redundante que afea tu discurso.",
+        "action": "write",
+        "text": "❌ MAS SIN EMBARGO | Pleonasmo innecesario",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Elige uno solo: 'Estudió mucho; sin embargo, no aprobó' o 'Estudió, mas no aprobó'.",
+        "action": "write",
+        "text": "✅ SIN EMBARGO | O simplemente 'pero' o 'mas'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Recuerda además que 'sin embargo' siempre va aislado entre comas o punto y coma.",
+        "action": "highlight",
+        "text": "Siempre va entre comas: | 'Llovió; sin embargo, fuimos'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Una sola palabra adversativa basta para convencer! ¿Lo sabías?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "demostrativos_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Este, ese, aquel (ya sin tilde)",
+    "icon": "📕",
+    "summary": "Según las normas actuales de la RAE, los demostrativos no llevan tilde",
+    "steps": [
+      {
+        "speech": "¿Te enseñaron en el colegio a ponerle tilde a 'éste' cuando era pronombre? ¡Ya no va!",
+        "action": "write",
+        "text": "¿ÉSTE O ESTE? ¿LLEVA TILDE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "La RAE eliminó la obligatoriedad de la tilde en los pronombres demostrativos desde 2010.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Palabras como este, ese, aquel y sus femeninos no deben llevar tilde diacrítica.",
+        "action": "write",
+        "text": "❌ ÉSTE / ÉSA / AQUÉL | Ya no llevan tilde",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Son palabras llanas o agudas que siguen las reglas generales: 'Este libro es genial' o 'Este es mi hermano'.",
+        "action": "write",
+        "text": "✅ ESTE / ESA / AQUEL | Siempre sin tilde",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Incluso si hay ambigüedad, el contexto aclara todo sin necesidad de tilde!",
+        "action": "highlight",
+        "text": "Reglas de acentuación: | Son palabras llanas terminadas en vocal",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Sigues poniéndole tilde por costumbre? ¡Cuéntame en los comentarios!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "tilde_interrogativos",
+    "category": "Un libro lleno de errores",
+    "name": "Qué, quién, cuándo con tilde",
+    "icon": "📕",
+    "summary": "Llevan tilde cuando introducen preguntas o exclamaciones, directas o indirectas",
+    "steps": [
+      {
+        "speech": "Para saber si 'que', 'quien', 'cuando', 'como' y 'donde' llevan tilde, ¡mira la intención!",
+        "action": "write",
+        "text": "QUÉ, QUIÉN, CUÁNDO, DÓNDE",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Cuando tienen valor interrogativo o exclamativo, llevan tilde diacrítica obligatoria.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "En preguntas y exclamaciones directas: '¿Qué quieres?' o '¡Qué alegría verte!'.",
+        "action": "write",
+        "text": "✅ CON TILDE: | ¿Qué quieres? / ¡Qué emoción!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Y también en indirectas: 'No sé cuándo llegará' o 'Dime quién te lo contó'.",
+        "action": "write",
+        "text": "✅ PREGUNTAS INDIRECTAS: | 'No sé cuándo vendrá'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Si son simples relativos, van sin tilde: 'La casa donde crecí' o 'El libro que leí'.",
+        "action": "highlight",
+        "text": "Relativos van sin tilde: | 'La casa donde vivo'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡La tilde interrogativa le da fuerza a tu mensaje! Comenta una pregunta con tilde.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "mas_con_y_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Más vs Mas",
+    "icon": "📕",
+    "summary": "Más con tilde es cantidad; Mas sin tilde equivale a pero",
+    "steps": [
+      {
+        "speech": "La tilde diacrítica distingue dos palabras que suenan igual pero tienen vidas distintas.",
+        "action": "write",
+        "text": "¿MÁS O MAS?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'Más' con tilde es un adverbio de cantidad o el signo matemático de la suma.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Por ejemplo: 'Quiero más café' o 'Dos más dos son cuatro'. ¡Siempre con tilde!",
+        "action": "write",
+        "text": "MÁS (con tilde) | = Cantidad o suma (2 + 2)",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "'Mas' sin tilde es una conjunción adversativa que equivale exactamente a 'pero'.",
+        "action": "write",
+        "text": "MAS (sin tilde) | = Sinónimo de 'pero'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Ejemplo: 'Quiso asistir a clase, mas no encontró transporte'. ¡Equivale a pero!",
+        "action": "highlight",
+        "text": "'Quiero más café' | 'Quiso ir, mas no pudo'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Si puedes sustituirlo por 'pero', va sin tilde! ¿Te gustó el truco?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "te_con_y_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Té vs Te",
+    "icon": "📕",
+    "summary": "Té con tilde es la bebida de infusión; Te sin tilde es pronombre",
+    "steps": [
+      {
+        "speech": "Una sola tilde te separa de una aromática taza caliente o de una declaración de cariño.",
+        "action": "write",
+        "text": "¿TÉ O TE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "En español, 'té' como sustantivo que designa la planta o infusión lleva tilde diacrítica.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Ejemplo: 'Me apetece una taza de té verde con limón'. ¡Lleva tilde siempre!",
+        "action": "write",
+        "text": "TÉ (con tilde) | = Bebida aromática o infusión",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "En cambio, el pronombre personal va sin tilde: 'Te llamo más tarde' o 'Te quiero mucho'.",
+        "action": "write",
+        "text": "TE (sin tilde) | = Pronombre personal ('te quiero')",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Fíjate en esta frase completa: '¿Te sirvo una taza de té caliente?'.",
+        "action": "highlight",
+        "text": "'¿Te sirvo una taza de té?' | ¡Ambos en una sola frase!",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡El té para saborear siempre lleva tilde! ¿Cuál es tu infusión favorita?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "de_con_y_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Dé vs De",
+    "icon": "📕",
+    "summary": "Dé con tilde es del verbo dar; De sin tilde es la preposición",
+    "steps": [
+      {
+        "speech": "¿Cuándo lleva tilde la palabra 'de'? ¡Solo cuando proviene del verbo dar!",
+        "action": "write",
+        "text": "¿DÉ O DE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Es una de las tildes diacríticas más fáciles de recordar con la técnica de La Profe Rochi.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Si es del verbo DAR, lleva tilde: 'Dile que me dé mi dinero' o 'Ojalá te dé suerte'.",
+        "action": "write",
+        "text": "DÉ (con tilde) | = Forma del verbo DAR",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Si es la preposición que indica origen o materia, no lleva tilde: 'vaso de agua'.",
+        "action": "write",
+        "text": "DE (sin tilde) | = Preposición ('vaso de agua')",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Mira este ejemplo: 'Pídele que te dé el libro de historia'. ¡El primero lleva tilde!",
+        "action": "highlight",
+        "text": "'Pídele que te dé el libro de arte' | ¡Diferenciación clara!",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Si viene de dar, dale una tilde! ¿A que no se te olvida nunca más?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "se_con_y_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Sé vs Se",
+    "icon": "📕",
+    "summary": "Sé con tilde viene de saber o de ser; Se sin tilde es pronombre",
+    "steps": [
+      {
+        "speech": "¡Sé inteligente y domina la diferencia entre 'sé' con tilde y 'se' sin tilde en 30 segundos!",
+        "action": "write",
+        "text": "¿SÉ O SE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'Sé' con tilde corresponde a dos verbos: al verbo SABER ('yo sé') o al imperativo de SER ('sé tú mismo').",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Ejemplos: 'Yo sé la respuesta correcta' o 'Sé amable con los demás'.",
+        "action": "write",
+        "text": "SÉ (con tilde) | = Verbo saber ('yo sé') o ser ('sé tú')",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "En cambio, el pronombre reflexivo va sin tilde: 'Él se peina' o 'Se fueron de viaje'.",
+        "action": "write",
+        "text": "SE (sin tilde) | = Pronombre ('se cayó')",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Fíjate en esta frase: 'Yo sé que él se esforzó al máximo'. ¡Saber con tilde!",
+        "action": "highlight",
+        "text": "'Yo sé que se fue temprano' | Saber lleva tilde",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡La famosa frase 'Solo sé que nada sé' lleva dos tildes! ¿Te gustó la lección?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "mi_con_y_sin_tilde",
+    "category": "Un libro lleno de errores",
+    "name": "Mí vs Mi",
+    "icon": "📕",
+    "summary": "Mí con tilde es pronombre personal; Mi sin tilde es posesivo o nota musical",
+    "steps": [
+      {
+        "speech": "A mí me apasiona enseñarte ortografía. ¡Fíjate bien en ese 'a mí'!",
+        "action": "write",
+        "text": "¿MÍ O MI?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "'Mí' con tilde es el pronombre personal tónico: se refiere a la primera persona.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Siempre que vaya después de una preposición lleva tilde: 'Este regalo es para mí'.",
+        "action": "write",
+        "text": "MÍ (con tilde) | = Pronombre ('es para mí')",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "En cambio, el determinante posesivo va sin tilde: 'mi familia', 'mi teléfono', 'mi meta'.",
+        "action": "write",
+        "text": "MI (sin tilde) | = Posesivo ('mi casa, mi auto')",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Mira esta combinación: 'Mi hermano compró un libro para mí'. ¡Impecable!",
+        "action": "highlight",
+        "text": "'Mi amigo vino por mí' | Diferencia total",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Si te refieres a ti mismo después de preposición, no olvides la tilde! Comenta.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "medio_abierta",
+    "category": "Un libro lleno de errores",
+    "name": "¿Medio abierta o media abierta?",
+    "icon": "📕",
+    "summary": "Medio funciona como adverbio invariable: medio abierta, medio cansada",
+    "steps": [
+      {
+        "speech": "¡Uno de los errores más frecuentes al hablar en la calle! Decir 'la puerta quedó media abierta'.",
+        "action": "write",
+        "text": "¿MEDIO ABIERTA O MEDIA ABIERTA?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Cuando 'medio' significa 'a medias' o 'parcialmente', actúa como un adverbio.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Y en español los adverbios son invariables: ¡no tienen femenino ni plural!",
+        "action": "write",
+        "text": "❌ MEDIA ABIERTA | ¡El adverbio no tiene género!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Lo correcto es decir: 'la puerta quedó MEDIO abierta' o 'ella está MEDIO dormida'.",
+        "action": "write",
+        "text": "✅ MEDIO ABIERTA | Significa 'parcialmente abierta'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡'Media' solo se usa para la mitad de algo: 'media naranja' o las medias que te pones!",
+        "action": "highlight",
+        "text": "'Ella está medio cansada' | 'La ventana quedó medio abierta'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Decías 'media dormida'? ¡Ahora ya sabes que se dice medio dormida! Comparte.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "sobretodo_sobre_todo",
+    "category": "Un libro lleno de errores",
+    "name": "Sobretodo vs Sobre todo",
+    "icon": "📕",
+    "summary": "Sobretodo junto es una prenda de vestir; Sobre todo separado es principalmente",
+    "steps": [
+      {
+        "speech": "No es lo mismo ponerse una prenda de abrigo que enfatizar una idea importante.",
+        "action": "write",
+        "text": "¿SOBRETODO O SOBRE TODO?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Esta confusión ortográfica llena de tachones cientos de redacciones cada día.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'Sobretodo' escrito junto es un sustantivo que significa abrigo largo que se lleva sobre la ropa.",
+        "action": "write",
+        "text": "SOBRETODO (junto) | = Abrigo largo o gabardina",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "'Sobre todo' separado significa 'especialmente' o 'principalmente'.",
+        "action": "write",
+        "text": "SOBRE TODO (separado) | = Especialmente o principalmente",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Ejemplo: 'Me encanta viajar, sobre todo a la playa'. ¡El noventa y nueve por ciento de las veces va separado!",
+        "action": "highlight",
+        "text": "'Me gusta leer, sobre todo poesía' | Separado es lo común",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Ponte el sobretodo, pero sobre todo escribe bien! ¿Lo sabías?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "adonde_a_donde",
+    "category": "Un libro lleno de errores",
+    "name": "¿Adónde o a dónde?",
+    "icon": "📕",
+    "summary": "La RAE admite ambas grafías (junta o separada), la tilde depende de si interroga",
+    "steps": [
+      {
+        "speech": "¡Buenas noticias de la Real Academia Española para simplificarnos la vida!",
+        "action": "write",
+        "text": "¿ADÓNDE O A DÓNDE?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Durante años hubo discusiones sobre si se escribía junto o separado. Hoy la RAE admite ambas.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "En preguntas: puedes escribir '¿Adónde vas?' o '¿A dónde vas?'. ¡Ambas son correctas con tilde!",
+        "action": "write",
+        "text": "CON TILDE (interrogativo) | ¿Adónde vas? = ¿A dónde vas?",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "En relativos sin pregunta: 'el pueblo adonde voy' o 'el pueblo a donde voy' (ambas sin tilde).",
+        "action": "write",
+        "text": "SIN TILDE (relativo) | 'El lugar adonde voy'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Lo que jamás debes olvidar es la tilde cuando haces una pregunta!",
+        "action": "highlight",
+        "text": "¡Junto o separado, ambos valen! | Respaldado por la RAE",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Una duda menos en tu libreta! Guarda este video para consultar siempre.",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "hubo_fiestas_no_hubieron",
+    "category": "Un libro lleno de errores",
+    "name": "Hubo fiestas (no hubieron fiestas)",
+    "icon": "📕",
+    "summary": "El verbo haber es impersonal en singular cuando indica existencia de cosas o personas",
+    "steps": [
+      {
+        "speech": "¡Regla de oro de la RAE que todo hispanohablante debe tatuarse en el cerebro!",
+        "action": "write",
+        "text": "¿HUBO FIESTAS O HUBIERON?",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Cuando el verbo 'haber' expresa existencia de cosas o personas, es un verbo IMPERSONAL.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "Al no tener sujeto, no se puede pluralizar. 'Hubieron personas' es un error gravísimo.",
+        "action": "write",
+        "text": "❌ HUBIERON FIESTAS | ¡Error de concordancia!",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "Se dice siempre en singular: 'HUBO fiestas', 'HUBO problemas', 'HUBO miles de personas'.",
+        "action": "write",
+        "text": "✅ HUBO FIESTAS | Siempre en singular",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "'Hubieron' solo existe como tiempo compuesto antiguo: 'cuando hubieron terminado'. ¡Jamás de existencia!",
+        "action": "highlight",
+        "text": "'Hubo problemas' | 'Hubo miles de personas'",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¡Siempre di HUBO y sonarás con una cultura impecable! ¿Te quedó claro?",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+  {
+    "id": "persona_humana_pleonasmos",
+    "category": "Un libro lleno de errores",
+    "name": "Pleonasmos de redacción",
+    "icon": "📕",
+    "summary": "Lapso de tiempo, persona humana, testigo presencial y volver a repetir",
+    "steps": [
+      {
+        "speech": "¡Cuidado con estas frases redundantes que inundan correos, contratos y noticias!",
+        "action": "write",
+        "text": "PLEONASMOS QUE DEBES EVITAR",
+        "target": "title",
+        "camera": "board"
+      },
+      {
+        "speech": "Un pleonasmo es añadir palabras innecesarias que ya están comprendidas en el término principal.",
+        "action": "talk",
+        "text": "",
+        "target": "intro",
+        "camera": "teacher"
+      },
+      {
+        "speech": "'Lapso de tiempo' es redundante porque un lapso es por definición un espacio de tiempo.",
+        "action": "write",
+        "text": "❌ LAPSO DE TIEMPO | Lapso ya es de tiempo",
+        "target": "example1",
+        "camera": "board"
+      },
+      {
+        "speech": "'Testigo presencial' también sobra, porque un testigo ya es quien presencia un hecho.",
+        "action": "write",
+        "text": "❌ TESTIGO PRESENCIAL | Un testigo ya es presencial",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "Di simplemente: persona (no persona humana), repetir (no volver a repetir) y lapso.",
+        "action": "highlight",
+        "text": "❌ PERSONA HUMANA ➔ persona | ❌ VOLVER A REPETIR ➔ repetir",
+        "target": "example2",
+        "camera": "board"
+      },
+      {
+        "speech": "¿Cuál de estos pleonasmos escuchas más a menudo en televisión? ¡Comenta!",
+        "action": "talk",
+        "text": "",
+        "target": "outro",
+        "camera": "teacher"
+      }
+    ]
+  },
+
+
+  // =========================================================
   // 1. DUDAS FRECUENTES Y PALABRAS HOMÓFONAS (VIRALES)
   // =========================================================
   {

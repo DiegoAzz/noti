@@ -167,6 +167,10 @@ PIZARRA: [Palabra clave, número, ecuación o ejemplo corto que se escribe en la
 - Paso 5 (Ejemplo 2): PIZARRA con el segundo ejemplo + HABLA explicándolo.
 - Paso 6 (Llamado a la acción): HABLA invitando a comentar (ej: "¿Conoces otro ejemplo? ¡Déjalo aquí en los comentarios!").
 
+4. ETIQUETAS / TAGS OBLIGATORIAS AL FINAL (Separadas por coma para YouTube / TikTok / Reels):
+- Al final de todo el guion, incluye OBLIGATORIAMENTE una línea con las etiquetas separadas por comas. Debe iniciar SIEMPRE con "profe rochi, profe monica" seguido de las palabras clave del tema, ortografía, RAE, dudas frecuentes, etc.:
+ETIQUETAS: profe rochi, profe monica, [etiquetas del tema separadas por coma]
+
 EJEMPLO DE SALIDA EXACTA:
 TÍTULO: PALABRAS AGUDAS
 HABLA: ¡Aprende las palabras agudas en solo 30 segundos!
@@ -176,6 +180,7 @@ HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
 PIZARRA: compás
 HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
 HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!
+ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de ortografia, rae, aprender español, lengua castellana, educacion, trucos de ortografia, profe de español, shorts
 
 ¡Genera ahora el guion para el siguiente tema!: `;
 
@@ -533,6 +538,7 @@ function setupEventListeners() {
       camera: "board"
     });
     renderStepsUI();
+    updateYoutubeCopy();
   });
 
   if (selectVoice) selectVoice.addEventListener("change", (e) => state.voice = e.target.value);
@@ -585,8 +591,9 @@ PIZARRA: camión
 HABLA: Llevan tilde cuando terminan en N, S o vocal, como camión.
 PIZARRA: compás
 HABLA: ¡Otro ejemplo perfecto es compás! Termina en S y se acentúa al final.
-HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
-        updateStatus("💡 Ejemplo cargado en el cuadro. Haz clic en '⚡ Auto-Dividir'.");
+HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!
+ETIQUETAS: profe rochi, profe monica, palabras agudas, acentuacion, reglas de ortografia, rae, aprender español, lengua castellana, educacion, trucos de ortografia, profe de español, shorts`;
+        updateStatus("💡 Ejemplo con etiquetas cargado en el cuadro. Haz clic en '⚡ Auto-Dividir'.");
       }
     });
   }
@@ -788,6 +795,7 @@ function loadTemplate(key) {
     delete s.speechEndTime;
   });
   renderStepsUI();
+  updateYoutubeCopy();
   updateStatus(`Plantilla cargada: ${key.toUpperCase()}`);
 }
 
@@ -886,7 +894,8 @@ function parseScriptText(raw) {
   const newSteps = [];
   let explicitTitle = "";
 
-  const hasTags = lines.some(l => /^(T[ÍI]TULO|HABLA|PROFE|DOCENTE|PIZARRA|TEXTO|ESCRIBE|ARCO|FLECHA):/i.test(l));
+  const hasTags = lines.some(l => /^(T[ÍI]TULO|HABLA|PROFE|DOCENTE|PIZARRA|TEXTO|ESCRIBE|ARCO|FLECHA|ETIQUETAS|TAGS|KEYWORDS):/i.test(l));
+  let explicitTags = "";
 
   if (hasTags) {
     let pendingText = "";
@@ -895,6 +904,8 @@ function parseScriptText(raw) {
     for (const line of lines) {
       if (/^(T[ÍI]TULO):/i.test(line)) {
         explicitTitle = line.replace(/^(T[ÍI]TULO):/i, "").trim().slice(0, 30);
+      } else if (/^(ETIQUETAS|TAGS|KEYWORDS):/i.test(line)) {
+        explicitTags = line.replace(/^(ETIQUETAS|TAGS|KEYWORDS):/i, "").trim();
       } else if (/^(PIZARRA|TEXTO|ESCRIBE):/i.test(line)) {
         pendingText = line.replace(/^(PIZARRA|TEXTO|ESCRIBE):/i, "").trim().slice(0, 30);
         pendingAction = "write";
@@ -965,9 +976,11 @@ function parseScriptText(raw) {
       newSteps[0].action = "write";
     }
     state.steps = newSteps;
+    state.customTags = explicitTags || null;
     renderStepsUI();
+    updateYoutubeCopy();
     if (pasteScriptPanel) pasteScriptPanel.style.display = "none";
-    updateStatus(`✅ ¡Guion importado! Se generaron ${newSteps.length} pasos respetando los límites.`);
+    updateStatus(`✅ ¡Guion importado! Se generaron ${newSteps.length} pasos con etiquetas optimizadas.`);
   }
 }
 
@@ -1441,14 +1454,160 @@ window.addEventListener("load", () => {
   initTopicsSelector();
 });
 
+function generateTopicTags(topic, steps) {
+  // Si el usuario especificó etiquetas manuales en un guion pegado, se respetan
+  if (state.customTags && state.customTags.trim().length > 0) {
+    let custom = state.customTags.trim();
+    if (!/profe\s+rochi/i.test(custom)) custom = "profe rochi, " + custom;
+    if (!/profe\s+monica/i.test(custom)) custom = custom.replace(/profe\s+rochi,?\s*/i, "profe rochi, profe monica, ");
+    return custom;
+  }
+
+  const tags = [];
+
+  // 1. REGLA OBLIGATORIA (Solicitado expresamente por el usuario):
+  // "profe rochi, profe monica" SIEMPRE de primero
+  tags.push("profe rochi", "profe monica");
+
+  // 2. Marca personal y canal educativo
+  tags.push("la profe rochi", "profesora rochi", "educacion", "clases online");
+
+  // 3. Extracción de palabras clave del título del tema
+  const titleText = topic ? topic.name : getLessonTitle();
+  const cleanTitle = (titleText || "")
+    .replace(/[¿?¡!]/g, "")
+    .trim()
+    .toLowerCase();
+
+  if (cleanTitle) {
+    tags.push(cleanTitle);
+
+    // Si tiene " o " (ej: "¿ay, hay o ahí?", "¿haiga o haya?", "b o v")
+    if (cleanTitle.includes(" o ")) {
+      const parts = cleanTitle.split(/\s+o\s+/);
+      parts.forEach(p => {
+        const item = p.trim();
+        if (item && item.length > 1) tags.push(item);
+      });
+      if (parts.length >= 2) {
+        tags.push(`diferencia entre ${parts.join(" y ")}`);
+        tags.push(`como se escribe ${parts.join(" o ")}`);
+      }
+    }
+
+    // Palabras compuestas
+    const words = cleanTitle.split(/[\s,]+/).filter(w => w.length > 2 && !["los", "las", "del", "con", "por", "que", "una", "uno"].includes(w));
+    if (words.length >= 2 && words.length <= 4) {
+      tags.push(words.join(" "));
+    }
+  }
+
+  // 4. Categoría y términos pedagógicos afines
+  const cat = (topic && topic.category ? topic.category : "").toLowerCase();
+  if (cat.includes("ortograf") || cat.includes("rae") || cat.includes("errores") || cat.includes("lengua") || !cat) {
+    tags.push(
+      "ortografia",
+      "rae",
+      "lengua castellana",
+      "aprender español",
+      "reglas de ortografia",
+      "español correcto",
+      "dudas frecuentes",
+      "gramatica",
+      "como escribir bien",
+      "trucos de ortografia",
+      "errores comunes",
+      "un libro lleno de errores",
+      "profe de español",
+      "palabras dudosas"
+    );
+  } else if (cat.includes("matem")) {
+    tags.push("matematicas", "trucos de matematicas", "aprender matematicas", "profe de matematicas", "calculo mental", "algebra");
+  } else if (cat.includes("ciencias") || cat.includes("naturales")) {
+    tags.push("ciencias naturales", "biologia", "aprender ciencias", "curiosidades cientificas", "experimentos");
+  } else if (cat.includes("sociales") || cat.includes("historia")) {
+    tags.push("ciencias sociales", "historia", "geografia", "cultura general");
+  } else if (cat.includes("ingl")) {
+    tags.push("ingles facil", "aprender ingles", "ingles desde cero", "pronunciacion en ingles");
+  }
+
+  // 5. Palabras clave desde las palabras escritas en la pizarra
+  const currentSteps = steps || (state && state.steps) || (topic ? topic.steps : []);
+  if (Array.isArray(currentSteps)) {
+    currentSteps.forEach(s => {
+      if (s.text && s.target !== "title") {
+        const parts = s.text.replace(/[¿?¡!=:;]/g, " ").split(/\||\n/);
+        parts.forEach(p => {
+          const item = p.trim().toLowerCase();
+          if (item.length > 2 && item.length < 25 && !item.includes("ejemplo") && !item.includes("espero") && !item.includes("recuerda")) {
+            tags.push(item);
+          }
+        });
+      }
+    });
+  }
+
+  // 6. Formatos y etiquetas virales de alto alcance
+  tags.push("shorts", "reels", "tiktok educativo", "aprende en tiktok", "viral", "whiteboard animation");
+
+  // 7. Deduplicar manteniendo estrictamente "profe rochi, profe monica" al inicio
+  const seen = new Set();
+  const result = [];
+  result.push("profe rochi", "profe monica");
+  seen.add("profe rochi");
+  seen.add("profe monica");
+
+  tags.forEach(t => {
+    if (!t) return;
+    const clean = t.trim().toLowerCase().replace(/\s+/g, " ");
+    if (clean.length > 1 && !seen.has(clean)) {
+      seen.add(clean);
+      result.push(clean);
+    }
+  });
+
+  return result.join(", ");
+}
+
+function exportCurrentScriptWithTags() {
+  const lines = [];
+  const title = getLessonTitle();
+  lines.push(`TÍTULO: ${title}`);
+  lines.push("");
+
+  const topics = window.RAE_TOPICS || window.PROFE_TOPICS || [];
+  const currentTopic = topics.find(t => t.name === title || t.id === (state.currentTopicId || ""));
+
+  (state.steps || []).forEach((s, idx) => {
+    if (s.target === "title" && idx === 0) return;
+    if (s.action === "clear") {
+      lines.push("ACCION: BORRAR PIZARRA");
+    }
+    if (s.speech && s.speech.trim()) {
+      lines.push(`HABLA: ${s.speech.trim()}`);
+    }
+    if (s.text && s.text.trim()) {
+      lines.push(`PIZARRA: ${s.text.trim()}`);
+    }
+    lines.push("");
+  });
+
+  const tags = generateTopicTags(currentTopic, state.steps);
+  lines.push(`ETIQUETAS: ${tags}`);
+
+  return lines.join("\n");
+}
+
 function updateYoutubeCopy(topic) {
   const ytTitleInput = document.getElementById("ytCopyTitle");
   const ytDescInput = document.getElementById("ytCopyDesc");
+  const ytTagsInput = document.getElementById("ytCopyTags");
   if (!ytTitleInput || !ytDescInput) return;
 
-  const titleText = topic ? topic.name : getLessonTitle();
-  const summaryText = topic ? (topic.summary || "") : "Explicación interactiva en pizarra con La Profe Rochi.";
-  const categoryText = topic ? (topic.category || "Educación") : "Educación";
+  const currentTopic = topic || (window.RAE_TOPICS || []).find(t => t.id === state.currentTopicId) || null;
+  const titleText = currentTopic ? currentTopic.name : getLessonTitle();
+  const summaryText = currentTopic ? (currentTopic.summary || "") : "Explicación interactiva en pizarra con La Profe Rochi.";
+  const categoryText = currentTopic ? (currentTopic.category || "Educación") : "Educación";
 
   // 1. Título Viral optimizado para YouTube / Shorts / Reels / TikTok
   const cleanTitle = titleText.replace(/^¿/, "").replace(/\?$/, "").trim();
@@ -1467,7 +1626,10 @@ function updateYoutubeCopy(topic) {
     ? keyPoints.join("\n") 
     : `✍️ Regla explicada paso a paso en la pizarra interactiva.`;
 
-  // 3. Descripción completa profesional para YouTube
+  // 3. Generar Etiquetas dinámicas separadas por coma
+  const tagsString = generateTopicTags(currentTopic, state.steps);
+
+  // 4. Descripción completa profesional para YouTube
   const viralDescription = `¿Tienes dudas con "${cleanTitle}"? ¡En esta clase rápida de 1 minuto, La Profe Rochi te lo explica de forma súper sencilla y entretenida en la pizarra animada!
 
 📚 REGLA RÁPIDA:
@@ -1482,18 +1644,29 @@ ${keyPointsStr}
 
 ----------------------------------------
 📌 Asignatura: ${categoryText}
-#LaProfeRochi #Educacion #AprendeEnTikTok #Shorts #Reels #WhiteboardAnimation #ProfePizarra #ClasesOnline #RAE`;
+#LaProfeRochi #Educacion #AprendeEnTikTok #Shorts #Reels #WhiteboardAnimation #ProfePizarra #ClasesOnline #RAE
+
+----------------------------------------
+🏷️ ETIQUETAS / TAGS (Copia y pega en YouTube / TikTok):
+${tagsString}`;
 
   ytTitleInput.value = viralTitle;
   ytDescInput.value = viralDescription;
+  if (ytTagsInput) {
+    ytTagsInput.value = tagsString;
+  }
 }
 
 function setupYoutubeCopyButtons() {
   const btnCopyAll = document.getElementById("btnCopyAllYoutube");
   const btnCopyTitle = document.getElementById("btnCopyYtTitle");
   const btnCopyDesc = document.getElementById("btnCopyYtDesc");
+  const btnCopyTags = document.getElementById("btnCopyYtTags");
+  const btnCopyFullScript = document.getElementById("btnCopyFullScript");
+  const btnExportScriptToPanel = document.getElementById("btnExportScriptToPanel");
   const ytTitleInput = document.getElementById("ytCopyTitle");
   const ytDescInput = document.getElementById("ytCopyDesc");
+  const ytTagsInput = document.getElementById("ytCopyTags");
 
   const copyText = (text, msg) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1519,8 +1692,11 @@ function setupYoutubeCopyButtons() {
 
   if (btnCopyAll) {
     btnCopyAll.addEventListener("click", () => {
-      const full = `${ytTitleInput ? ytTitleInput.value : ""}\n\n${ytDescInput ? ytDescInput.value : ""}`;
-      copyText(full, "✅ ¡Título y Descripción completa para YouTube copiados al portapapeles!");
+      const title = ytTitleInput ? ytTitleInput.value : "";
+      const desc = ytDescInput ? ytDescInput.value : "";
+      const tags = ytTagsInput ? ytTagsInput.value : "";
+      const full = `📌 TÍTULO:\n${title}\n\n📝 DESCRIPCIÓN:\n${desc}\n\n🏷️ ETIQUETAS:\n${tags}`;
+      copyText(full, "✅ ¡Título, Descripción y Etiquetas completas para YouTube copiados al portapapeles!");
     });
   }
   if (btnCopyTitle) {
@@ -1533,6 +1709,26 @@ function setupYoutubeCopyButtons() {
       copyText(ytDescInput ? ytDescInput.value : "", "✅ ¡Descripción de YouTube copiada al portapapeles!");
     });
   }
+  if (btnCopyTags) {
+    btnCopyTags.addEventListener("click", () => {
+      copyText(ytTagsInput ? ytTagsInput.value : "", "✅ ¡Etiquetas copiadas al portapapeles (separadas por coma)!");
+    });
+  }
+  if (btnCopyFullScript) {
+    btnCopyFullScript.addEventListener("click", () => {
+      const script = exportCurrentScriptWithTags();
+      copyText(script, "✅ ¡Guion completo con pasos y etiquetas copiado al portapapeles!");
+    });
+  }
+  if (btnExportScriptToPanel) {
+    btnExportScriptToPanel.addEventListener("click", () => {
+      const rawScriptText = document.getElementById("rawScriptText");
+      if (rawScriptText) {
+        rawScriptText.value = exportCurrentScriptWithTags();
+        updateStatus("📋 Guion actual con etiquetas cargado en el editor.");
+      }
+    });
+  }
 }
 
 function loadTopicLesson(topicId) {
@@ -1542,6 +1738,9 @@ function loadTopicLesson(topicId) {
 
   // 1. Limpiar completamente audio previo, timers y caché para que nunca se mezcle con el tema anterior
   stopAndResetAllAudio();
+
+  state.currentTopicId = topicId;
+  state.customTags = null;
 
   // 2. Cargar pasos limpios sin timestamps residuales
   state.steps = JSON.parse(JSON.stringify(topic.steps));
@@ -1570,11 +1769,21 @@ window.removeStep = (idx) => {
   if (state.steps.length <= 1) return;
   state.steps.splice(idx, 1);
   renderStepsUI();
+  updateYoutubeCopy();
 };
 
-window.updateStepSpeech = (idx, val) => state.steps[idx].speech = val;
-window.updateStepAction = (idx, val) => state.steps[idx].action = val;
-window.updateStepText = (idx, val) => state.steps[idx].text = val;
+window.updateStepSpeech = (idx, val) => {
+  state.steps[idx].speech = val;
+  updateYoutubeCopy();
+};
+window.updateStepAction = (idx, val) => {
+  state.steps[idx].action = val;
+  updateYoutubeCopy();
+};
+window.updateStepText = (idx, val) => {
+  state.steps[idx].text = val;
+  updateYoutubeCopy();
+};
 
 function resizeCanvas() {
   if (state.format === "9:16") {
@@ -1717,12 +1926,74 @@ function updateTimeBadge() {
   const cur = formatTime(state.currentTime);
   const dur = formatTime(state.duration);
   badgeTime.textContent = `${cur} / ${dur}`;
+
+  // Actualización en tiempo real del progreso de grabación (móvil y escritorio)
+  if (state.isRecording) {
+    const recTimer = document.getElementById("recBannerTimer");
+    if (recTimer) recTimer.textContent = `● GRABANDO MP4: ${cur} / ${dur}`;
+    if (btnMobileRecord) btnMobileRecord.textContent = `⏹ Grabando (${cur})`;
+    if (btnRecord) btnRecord.textContent = `⏹ Grabando (${cur} / ${dur}) - Descarga automática`;
+  }
 }
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
   const s = Math.floor(sec % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+async function synthesizeLessonAudio() {
+  if (!state.audioContext) {
+    initAudio();
+  }
+  if (state.audioContext && state.audioContext.state === "suspended") {
+    try { await state.audioContext.resume(); } catch (e) {}
+  }
+
+  const fullScript = state.steps.map(s => s.speech.trim()).join(" ... ");
+
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: fullScript,
+      voice: state.voice,
+      pitchHz: 0,
+      ratePct: 2
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al sintetizar voz");
+  }
+
+  const data = await res.json();
+  state.wordsTimeline = data.words || [];
+
+  assignTimestampsToSteps();
+
+  const audioBlob = b64toBlob(data.audioBase64, data.mimeType || "audio/mpeg");
+  const audioUrl = URL.createObjectURL(audioBlob);
+  state.audioElement.src = audioUrl;
+
+  // Esperar a que el audio cargue completamente sus metadatos y buffer
+  await new Promise((resolve) => {
+    let resolved = false;
+    const onReady = () => {
+      if (!resolved) {
+        resolved = true;
+        state.audioElement.removeEventListener("canplaythrough", onReady);
+        resolve();
+      }
+    };
+    state.audioElement.addEventListener("canplaythrough", onReady);
+    setTimeout(onReady, 500);
+  });
+
+  if (state.audioElement.duration && !isNaN(state.audioElement.duration)) {
+    state.duration = Math.max(state.duration, state.audioElement.duration);
+  }
 }
 
 async function generateAndPlay() {
@@ -1733,59 +2004,8 @@ async function generateAndPlay() {
   btnPlayPreview.disabled = true;
   updateStatus("🎙️ Sintetizando voz con Inteligencia Artificial...");
 
-  if (!state.audioContext) {
-    initAudio();
-  }
-  if (state.audioContext.state === "suspended") {
-    await state.audioContext.resume();
-  }
-
-  const fullScript = state.steps.map(s => s.speech.trim()).join(" ... ");
-
   try {
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: fullScript,
-        voice: state.voice,
-        pitchHz: 0,
-        ratePct: 2
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Error al sintetizar voz");
-    }
-
-    const data = await res.json();
-    state.wordsTimeline = data.words || [];
-
-    assignTimestampsToSteps();
-
-    const audioBlob = b64toBlob(data.audioBase64, data.mimeType || "audio/mpeg");
-    const audioUrl = URL.createObjectURL(audioBlob);
-    state.audioElement.src = audioUrl;
-
-    // Esperar a que el audio cargue completamente sus metadatos y buffer
-    await new Promise((resolve) => {
-      let resolved = false;
-      const onReady = () => {
-        if (!resolved) {
-          resolved = true;
-          state.audioElement.removeEventListener("canplaythrough", onReady);
-          resolve();
-        }
-      };
-      state.audioElement.addEventListener("canplaythrough", onReady);
-      setTimeout(onReady, 400);
-    });
-
-    if (state.audioElement.duration && !isNaN(state.audioElement.duration)) {
-      state.duration = Math.max(state.duration, state.audioElement.duration);
-    }
-
+    await synthesizeLessonAudio();
     state.currentTime = 0;
     restartAllAudio();
     state.isPlaying = true;
@@ -2014,6 +2234,11 @@ function renderLoop(time) {
   if (state.audioElement && !state.audioElement.paused) {
     state.currentTime = state.audioElement.currentTime;
     updateTimeBadge();
+  }
+
+  // Auto-finalización garantizada de la grabación cuando la lección llega al final exacto
+  if (state.isRecording && state.duration > 4 && state.currentTime >= (state.duration - 0.2)) {
+    stopRecording(true);
   }
 
   const currentStep = getCurrentStep();
@@ -2457,151 +2682,238 @@ function drawBoardContent(w, h, currentStep, time) {
     }
   }
 
-  // 2. CONTENIDO INFERIOR: Se auto-limpia con cada nuevo paso de escritura (no se sobreescribe)
-  let activeWriteIdx = -1;
-  for (let k = currentIdx; k >= 1; k--) {
-    if (state.steps[k] && state.steps[k].action === "write") {
-      activeWriteIdx = k;
-      break;
+  // Si estamos en el paso 0 (título), la pizarra en el cuerpo queda limpia
+  if (currentIdx === 0) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
+
+  // 2. ACCIÓN EXPLÍCITA DE BORRADO DE PIZARRA (clear)
+  if (currentStep && currentStep.action === "clear") {
+    const s = currentStep;
+    const stepStart = s.startTime || 0;
+    const speechEnd = s.speechEndTime || (stepStart + 2.0);
+    const wipeDur = Math.max(0.6, speechEnd - stepStart);
+    const elapsed = Math.max(0, t - stepStart);
+    const wipeProg = Math.min(1.0, elapsed / wipeDur);
+
+    drawEraserWipe(ctx, w, startY + 60, startY + 340, wipeProg);
+
+    if (state.isPlaying && wipeProg < 1.0) {
+      handTargetX = (w * 0.22) + (w * 0.56) * wipeProg;
+      handTargetY = startY + 180 + Math.sin(wipeProg * Math.PI * 4) * 40;
+      handAngle = 0;
+      isWritingNow = true;
+    }
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
+
+  // 3. DETERMINACIÓN DEL PASO ACTIVO DEL CUERPO (AUTO-LIMPIEZA ENTRE PASOS)
+  // Cada nuevo paso con contenido borra la pizarra y se actualiza limpiamente sin amontonarse nunca
+  let activeStep = null;
+  let activeStepIdx = -1;
+
+  if (currentStep && (
+    (currentStep.text && currentStep.text.trim().length > 0) ||
+    currentStep.action === "write" ||
+    currentStep.action === "highlight" ||
+    currentStep.action === "arc"
+  )) {
+    activeStep = currentStep;
+    activeStepIdx = currentIdx;
+  } else {
+    // Si el paso actual es solo charla (talk) sin texto, mantenemos visible el paso previo más reciente
+    for (let k = currentIdx - 1; k >= 1; k--) {
+      const prev = state.steps[k];
+      if (!prev) continue;
+      if (prev.action === "clear") {
+        // Un paso previo ordenó borrar la pizarra
+        break;
+      }
+      if ((prev.text && prev.text.trim().length > 0) || prev.action === "write" || prev.action === "highlight" || prev.action === "arc") {
+        activeStep = prev;
+        activeStepIdx = k;
+        break;
+      }
     }
   }
 
-  // Si hay un paso de escritura activo posterior al título, dibujamos ese paso y sus derivados (arcos/resaltados)
-  if (activeWriteIdx >= 1) {
-    const s = state.steps[activeWriteIdx];
-    const isCurrent = (activeWriteIdx === currentIdx);
-    const fullText = s.text || "";
-    const yPos = startY + rowHeight; // Fila 1
+  if (!activeStep) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
 
-    const stepStart = s.startTime || 0;
-    const speechEnd = s.speechEndTime || (stepStart + 2.5);
-    const speechDur = Math.max(0.8, speechEnd - stepStart);
+  // Texto a dibujar en la zona de contenido
+  const fullRawText = (activeStep.text || "").trim();
+  if (!fullRawText) {
+    soundEngine.updateWriting(isWritingNow, time);
+    state.lastHandX = handTargetX;
+    state.lastHandY = handTargetY;
+    state.isWritingNow = isWritingNow;
+    return;
+  }
 
-    // Velocidad de escritura ágil (la mano no se arrastra ni se retrasa: ej: "1 2 2 1" toma ~0.8s)
-    const writeDur = Math.min(speechDur * 0.45, Math.max(0.75, fullText.length * 0.09));
-    const elapsed = Math.max(0, t - stepStart);
-    const isWritingActive = isCurrent && (elapsed < writeDur) && state.isPlaying;
-    const writeProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, writeDur)) : 1.0;
+  // División inteligente en 1 o 2 líneas si contiene separadores o es largo
+  let lines = [];
+  if (fullRawText.includes("\n")) {
+    lines = fullRawText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.includes("|")) {
+    lines = fullRawText.split("|").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.includes("//")) {
+    lines = fullRawText.split("//").map(l => l.trim()).filter(l => l.length > 0);
+  } else if (fullRawText.length > 24 && (fullRawText.includes(". ") || fullRawText.includes(": "))) {
+    const sep = fullRawText.includes(". ") ? ". " : ": ";
+    const parts = fullRawText.split(sep);
+    lines = [parts[0] + (sep === ". " ? "." : ":"), parts.slice(1).join(sep).trim()];
+  } else {
+    lines = [fullRawText];
+  }
 
-    const charCount = Math.floor(fullText.length * writeProg);
-    const textToShow = fullText.substring(0, charCount);
+  const isCurrent = (activeStepIdx === currentIdx);
+  const stepStart = activeStep.startTime || 0;
+  const speechEnd = activeStep.speechEndTime || (stepStart + 2.5);
+  const speechDur = Math.max(0.8, speechEnd - stepStart);
 
+  const writeDur = Math.min(speechDur * 0.48, Math.max(0.75, fullRawText.length * 0.08));
+  const elapsed = Math.max(0, t - stepStart);
+  const isWritingActive = isCurrent && (elapsed < writeDur) && state.isPlaying;
+  const writeProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, writeDur)) : 1.0;
+
+  if (lines.length === 1) {
+    // 1 SOLA LÍNEA (Centrada verticalmente en la zona de contenido de la pizarra)
+    const lineY = startY + rowHeight * 1.35;
     let fontSize = 72;
     ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-    let totalW = ctx.measureText(fullText).width;
-    if (totalW > 740) {
-      fontSize = Math.max(44, Math.floor(fontSize * (740 / totalW)));
+    let lineW = ctx.measureText(lines[0]).width;
+    if (lineW > 740) {
+      fontSize = Math.max(38, Math.floor(fontSize * (740 / lineW)));
       ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-      totalW = ctx.measureText(fullText).width;
+      lineW = ctx.measureText(lines[0]).width;
     }
-    const startX = (w / 2) - (totalW / 2);
+    const lineX = (w / 2) - (lineW / 2);
 
-    ctx.fillStyle = mainInk;
+    const charCount = Math.floor(lines[0].length * writeProg);
+    const textToShow = lines[0].substring(0, charCount);
+
+    if (activeStep.action === "highlight") {
+      const hlW = lineW * writeProg;
+      ctx.save();
+      ctx.fillStyle = "rgba(250, 204, 21, 0.42)";
+      ctx.fillRect(lineX - 8, lineY - 54, hlW + 16, 64);
+      ctx.restore();
+    }
+
+    ctx.fillStyle = (activeStep.action === "highlight") ? blueInk : mainInk;
     ctx.textAlign = "left";
-    ctx.fillText(textToShow, startX, yPos);
+    ctx.fillText(textToShow, lineX, lineY);
 
-    // Escribe activamente solo mientras traza la palabra. Al terminar, la docente se pone a un costado
-    if (isWritingActive && fullText.length > 0) {
+    if (isWritingActive && lines[0].length > 0) {
       const textW = ctx.measureText(textToShow).width;
-      handTargetX = startX + textW;
-      handTargetY = yPos - 14;
+      handTargetX = lineX + textW;
+      handTargetY = lineY - 14;
       handAngle = -0.12;
       isWritingNow = true;
     }
 
-    // Dibujar arcos o resaltados pertenecientes a este paso activo
-    for (let j = activeWriteIdx + 1; j <= currentIdx; j++) {
-      const subStep = state.steps[j];
-      if (!subStep) continue;
-      const isSubCurrent = (j === currentIdx);
-      const subStepStart = subStep.startTime || 0;
-      const subSpeechEnd = subStep.speechEndTime || (subStepStart + 2.5);
-      const subSpeechDur = Math.max(0.8, subSpeechEnd - subStepStart);
+    // Arco curvo de unión entre letras
+    if (activeStep.action === "arc") {
+      const subProg = isCurrent ? Math.min(1.0, elapsed / Math.max(0.01, speechDur * 0.40)) : 1.0;
+      const text = lines[0];
+      const charWidth = lineW / Math.max(1, text.length);
+      const p1X = lineX + (activeStep.fromIdx || 0) * charWidth + charWidth / 2;
+      const p2X = lineX + (activeStep.toIdx !== undefined ? activeStep.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
 
-      const subElapsed = Math.max(0, t - subStepStart);
-      const subDrawDur = Math.min(subSpeechDur * 0.38, 1.0);
-      const isSubDrawing = isSubCurrent && (subElapsed < subDrawDur) && state.isPlaying;
-      const subProg = isSubCurrent ? Math.min(1.0, subElapsed / Math.max(0.01, subDrawDur)) : 1.0;
+      drawCurvedArrow(ctx, p1X, lineY - 58, p2X, lineY - 58, -42, redInk, subProg);
 
-      if (subStep.action === "arc") {
-        const text = s.text || subStep.text || "";
-        ctx.font = `bold ${fontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-        const arcTotalW = ctx.measureText(text).width;
-        const arcStartX = (w / 2) - (arcTotalW / 2);
-        const charWidth = arcTotalW / Math.max(1, text.length);
+      if (activeStep.fromIdx2 !== undefined && activeStep.toIdx2 !== undefined) {
+        const q1X = lineX + activeStep.fromIdx2 * charWidth + charWidth / 2;
+        const q2X = lineX + activeStep.toIdx2 * charWidth + charWidth / 2;
+        drawCurvedArrow(ctx, q1X, lineY - 52, q2X, lineY - 52, -26, blueInk, subProg);
+      }
 
-        const p1X = arcStartX + (subStep.fromIdx || 0) * charWidth + charWidth / 2;
-        const p2X = arcStartX + (subStep.toIdx !== undefined ? subStep.toIdx : (text.length - 1)) * charWidth + charWidth / 2;
+      if (isWritingActive && subProg < 1.0) {
+        const tArc = Math.min(1, subProg);
+        const midX = (p1X + p2X) / 2;
+        const midY = (lineY - 58) - 42;
+        handTargetX = (1 - tArc) * (1 - tArc) * p1X + 2 * (1 - tArc) * tArc * midX + tArc * tArc * p2X;
+        handTargetY = (1 - tArc) * (1 - tArc) * (lineY - 58) + 2 * (1 - tArc) * tArc * midY + tArc * tArc * (lineY - 58);
+        handAngle = Math.atan2(midY - (lineY - 58), p2X - p1X) * 0.4;
+        isWritingNow = true;
+      }
+    }
+  } else {
+    // 2 LÍNEAS (Línea 1 concepto principal, Línea 2 ejemplo o aclaración)
+    const line1Y = startY + rowHeight * 0.95;
+    const line2Y = startY + rowHeight * 1.95;
 
-        drawCurvedArrow(ctx, p1X, yPos - 58, p2X, yPos - 58, -42, redInk, subProg);
+    let fontSize1 = 68;
+    ctx.font = `bold ${fontSize1}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let line1W = ctx.measureText(lines[0]).width;
+    if (line1W > 740) {
+      fontSize1 = Math.max(38, Math.floor(fontSize1 * (740 / line1W)));
+      ctx.font = `bold ${fontSize1}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      line1W = ctx.measureText(lines[0]).width;
+    }
+    const line1X = (w / 2) - (line1W / 2);
 
-        if (subStep.fromIdx2 !== undefined && subStep.toIdx2 !== undefined) {
-          const q1X = arcStartX + subStep.fromIdx2 * charWidth + charWidth / 2;
-          const q2X = arcStartX + subStep.toIdx2 * charWidth + charWidth / 2;
-          drawCurvedArrow(ctx, q1X, yPos - 52, q2X, yPos - 52, -26, blueInk, subProg);
-        }
+    const prog1 = Math.min(1.0, writeProg / 0.5);
+    const prog2 = Math.max(0.0, Math.min(1.0, (writeProg - 0.5) / 0.5));
 
-        if (isSubDrawing) {
-          const tArc = Math.min(1, subProg);
-          const midX = (p1X + p2X) / 2;
-          const midY = (yPos - 58) - 42;
-          handTargetX = (1 - tArc) * (1 - tArc) * p1X + 2 * (1 - tArc) * tArc * midX + tArc * tArc * p2X;
-          handTargetY = (1 - tArc) * (1 - tArc) * (yPos - 58) + 2 * (1 - tArc) * tArc * midY + tArc * tArc * (yPos - 58);
-          handAngle = Math.atan2(midY - (yPos - 58), p2X - p1X) * 0.4;
-          isWritingNow = true;
-        }
-      } else if (subStep.action === "highlight") {
-        const isDifferentText = Boolean(subStep.text && s.text && subStep.text.trim() !== s.text.trim());
-        if (!isDifferentText) {
-          // El texto ya está dibujado en la pizarra (línea 2326) con startX y yPos exactos.
-          // NO se vuelve a llamar a fillText (eso producía que el texto se dibujara dos veces y se amontonaran las letras).
-          // Únicamente se dibuja el trazo del resaltador amarillo suave animado sobre el texto original:
-          const hlWidth = totalW * subProg;
-          ctx.save();
-          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
-          ctx.fillRect(startX - 6, yPos - 52, hlWidth + 12, 60);
-          ctx.restore();
+    const chars1 = Math.floor(lines[0].length * prog1);
+    const text1ToShow = lines[0].substring(0, chars1);
 
-          if (isSubDrawing) {
-            handTargetX = startX + hlWidth;
-            handTargetY = yPos - 22;
-            handAngle = -0.05;
-            isWritingNow = true;
-          }
-        } else {
-          // Es un texto nuevo e independiente: pertenece a la FILA 2 (yPos + rowHeight)
-          const targetRowY = yPos + rowHeight;
-          let hlFontSize = 72;
-          ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-          const hlText = subStep.text.trim();
-          let hlTotalW = ctx.measureText(hlText).width;
-          if (hlTotalW > 740) {
-            hlFontSize = Math.max(38, Math.floor(hlFontSize * (740 / hlTotalW)));
-            ctx.font = `bold ${hlFontSize}px 'Caveat', 'Kalam', cursive, sans-serif`;
-            hlTotalW = ctx.measureText(hlText).width;
-          }
-          const hlStartX = (w / 2) - (hlTotalW / 2);
-          const hlWidth = hlTotalW * subProg;
+    ctx.fillStyle = mainInk;
+    ctx.textAlign = "left";
+    ctx.fillText(text1ToShow, line1X, line1Y);
 
-          // Cuadro de resaltador en Fila 2
-          ctx.save();
-          ctx.fillStyle = "rgba(250, 204, 21, 0.40)";
-          ctx.fillRect(hlStartX - 6, targetRowY - 52, hlWidth + 12, 60);
-          ctx.restore();
+    let fontSize2 = 56;
+    ctx.font = `bold ${fontSize2}px 'Caveat', 'Kalam', cursive, sans-serif`;
+    let line2W = ctx.measureText(lines[1]).width;
+    if (line2W > 740) {
+      fontSize2 = Math.max(34, Math.floor(fontSize2 * (740 / line2W)));
+      ctx.font = `bold ${fontSize2}px 'Caveat', 'Kalam', cursive, sans-serif`;
+      line2W = ctx.measureText(lines[1]).width;
+    }
+    const line2X = (w / 2) - (line2W / 2);
 
-          // Texto nítido en Fila 2
-          ctx.fillStyle = blueInk;
-          ctx.textAlign = "left";
-          const charSubCount = Math.floor(hlText.length * subProg);
-          ctx.fillText(hlText.substring(0, charSubCount), hlStartX, targetRowY);
+    const chars2 = Math.floor(lines[1].length * prog2);
+    const text2ToShow = lines[1].substring(0, chars2);
 
-          if (isSubDrawing) {
-            handTargetX = hlStartX + hlWidth;
-            handTargetY = targetRowY - 22;
-            handAngle = -0.05;
-            isWritingNow = true;
-          }
-        }
+    if (activeStep.action === "highlight" && prog2 > 0) {
+      const hlW = line2W * prog2;
+      ctx.save();
+      ctx.fillStyle = "rgba(250, 204, 21, 0.42)";
+      ctx.fillRect(line2X - 8, line2Y - 48, hlW + 16, 56);
+      ctx.restore();
+    }
+
+    ctx.fillStyle = (activeStep.action === "highlight") ? blueInk : (palette.accentInk || blueInk);
+    ctx.textAlign = "left";
+    ctx.fillText(text2ToShow, line2X, line2Y);
+
+    if (isWritingActive) {
+      if (prog1 < 1.0) {
+        const textW = ctx.measureText(text1ToShow).width;
+        handTargetX = line1X + textW;
+        handTargetY = line1Y - 14;
+        handAngle = -0.12;
+        isWritingNow = true;
+      } else if (prog2 < 1.0 && lines[1].length > 0) {
+        const textW = ctx.measureText(text2ToShow).width;
+        handTargetX = line2X + textW;
+        handTargetY = line2Y - 14;
+        handAngle = -0.12;
+        isWritingNow = true;
       }
     }
   }
@@ -2611,6 +2923,44 @@ function drawBoardContent(w, h, currentStep, time) {
   state.lastHandX = handTargetX;
   state.lastHandY = handTargetY;
   state.isWritingNow = isWritingNow;
+}
+
+/* 2b. ANIMACIÓN REALISTA DEL BORRADOR DE PIZARRA (ACCIÓN CLEAR) */
+function drawEraserWipe(ctx, w, topY, bottomY, progress) {
+  if (progress <= 0 || progress >= 1.0) return;
+  const startX = w * 0.22;
+  const endX = w * 0.78;
+  const curX = startX + (endX - startX) * progress;
+  const curY = topY + ((bottomY - topY) / 2) + Math.sin(progress * Math.PI * 6) * 35;
+
+  ctx.save();
+  ctx.translate(curX, curY);
+  ctx.rotate(-0.08);
+
+  // Sombra suave del borrador sobre la pizarra
+  ctx.shadowColor = "rgba(0,0,0,0.30)";
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 8;
+
+  // Bloque de madera (cuerpo del borrador)
+  ctx.fillStyle = "#854d0e";
+  ctx.beginPath();
+  ctx.roundRect(-45, -28, 90, 56, 8);
+  ctx.fill();
+
+  // Relieve de madera superior
+  ctx.fillStyle = "#a16207";
+  ctx.beginPath();
+  ctx.roundRect(-42, -26, 84, 20, 5);
+  ctx.fill();
+
+  // Capa de fieltro (base que limpia la pizarra)
+  ctx.fillStyle = "#1e293b";
+  ctx.beginPath();
+  ctx.roundRect(-45, 16, 90, 14, [0, 0, 6, 6]);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 /* FLECHA / ARCO CURVO DE UNIÓN ENTRE LETRAS */
@@ -3826,11 +4176,24 @@ function drawViralCaptions(w, h, currentStep) {
 }
 
 /* =========================================================
-   GRABACIÓN Y DESCARGA DIRECTA DE VIDEO (MP4)
+   GRABACIÓN Y CONVERSIÓN PROFESIONAL DE VIDEO MP4 (YOUTUBE READY)
    ========================================================= */
 function toggleRecording() {
   if (state.isRecording) {
-    stopRecording();
+    // Protección anti-corte accidental: si lleva menos de 5 segundos y la lección dura más de 8s
+    const elapsedSec = (performance.now() - (state.recordingStartTime || performance.now())) / 1000;
+    if (elapsedSec < 4.5 && state.duration > 8) {
+      const ok = confirm(
+        `⚠️ La lección apenas lleva ${Math.floor(elapsedSec)} segundos (duración completa: ${Math.floor(state.duration)}s).\n\n` +
+        `Si detienes ahora, el video solo durará 3 segundos y fallará en YouTube.\n\n` +
+        `El video se descargará solo al finalizar la explicación completa.\n\n` +
+        `¿Deseas esperar a que termine? (Recomendado: Cancelar para seguir grabando)`
+      );
+      if (!ok) {
+        return; // Sigue grabando
+      }
+    }
+    stopRecording(true);
   } else {
     startRecording();
   }
@@ -3842,39 +4205,43 @@ async function startRecording() {
     window.setMobileTab("preview");
   }
   if (state.isRecording) {
-    stopRecording();
+    stopRecording(true);
     return;
   }
 
-  // Si no se ha generado el audio aún, generarlo primero automáticamente
-  if (!state.audioElement || !state.audioElement.src) {
-    updateStatus("🎙️ Sintetizando lección primero para iniciar la grabación...");
-    await generateAndPlay();
-    await new Promise(r => setTimeout(r, 600));
-  }
-
-  state.isRecording = true;
-  state.recordedChunks = [];
-  btnRecord.classList.add("btn-accent");
-  btnRecord.textContent = "⏹ Detener y Guardar MP4";
-  badgeRecording.style.display = "inline-block";
-
-  // Despertar AudioContext si estaba suspendido
+  // 1. Despertar AudioContext de inmediato en el gesto del usuario
   if (!state.audioContext) {
     initAudio();
   }
   if (state.audioContext && state.audioContext.state === "suspended") {
-    await state.audioContext.resume();
+    try { await state.audioContext.resume(); } catch (e) {}
   }
 
+  // 2. Si no se ha generado el audio aún, sintetizarlo primero
+  if (!state.audioElement || !state.audioElement.src) {
+    updateStatus("🎙️ Sintetizando audio de la lección antes de grabar...");
+    try {
+      await synthesizeLessonAudio();
+    } catch (err) {
+      alert("Error al preparar el audio para grabación: " + err.message);
+      return;
+    }
+  }
+
+  state.isRecording = true;
+  state.recordedChunks = [];
+  state.recordingStartTime = performance.now();
+
+  // Actualizar UI visualmente para indicar grabación activa (escritorio y móvil)
+  updateRecordingUI(true);
+
   // Pausar y asegurar inicio exacto en segundo 0 para captura completa
-  state.audioElement.pause();
-  if (state.bgMusicAudio) state.bgMusicAudio.pause();
+  pauseAllAudio();
   state.audioElement.currentTime = 0;
   if (state.bgMusicAudio) state.bgMusicAudio.currentTime = 0;
   state.currentTime = 0;
 
-  // Esperar confirmación de seek a 0 para que no empiece a la mitad
+  // Esperar confirmación de seek a 0
   await new Promise((resolve) => {
     if (state.audioElement.currentTime === 0) return resolve();
     const onSeeked = () => {
@@ -3882,7 +4249,7 @@ async function startRecording() {
       resolve();
     };
     state.audioElement.addEventListener("seeked", onSeeked, { once: true });
-    setTimeout(resolve, 300);
+    setTimeout(resolve, 250);
   });
 
   const canvasStream = canvas.captureStream(30);
@@ -3903,20 +4270,16 @@ async function startRecording() {
     }
 
     if (soundEngine && soundEngine.masterGain) {
-      try {
-        soundEngine.masterGain.connect(state.destAudioStreamNode);
-      } catch (e) {}
+      try { soundEngine.masterGain.connect(state.destAudioStreamNode); } catch (e) {}
     }
 
     if (state.bgMusicGainNode && state.destAudioStreamNode) {
-      try {
-        state.bgMusicGainNode.connect(state.destAudioStreamNode);
-      } catch (e) {}
+      try { state.bgMusicGainNode.connect(state.destAudioStreamNode); } catch (e) {}
     }
 
     audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
   } catch (e) {
-    console.warn("Audio Context ya conectado:", e);
+    console.warn("Audio Context setup:", e);
     if (state.destAudioStreamNode) {
       audioTracks = state.destAudioStreamNode.stream.getAudioTracks();
     }
@@ -3927,18 +4290,16 @@ async function startRecording() {
     ...audioTracks
   ]);
 
-  // Selección de códec compatible con MP4
-  const mp4Types = [
-    "video/mp4;codecs=avc1,mp4a.40.2",
-    "video/mp4;codecs=avc1",
-    "video/mp4;codecs=h264,aac",
-    "video/mp4",
+  // Selección de códec compatible con MediaRecorder
+  const supportedTypes = [
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
-    "video/webm"
+    "video/webm",
+    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/mp4"
   ];
-  let chosenMime = "video/webm";
-  for (let m of mp4Types) {
+  let chosenMime = "";
+  for (let m of supportedTypes) {
     if (MediaRecorder.isTypeSupported(m)) {
       chosenMime = m;
       break;
@@ -3947,10 +4308,10 @@ async function startRecording() {
   state.recordingMimeType = chosenMime;
 
   try {
-    state.mediaRecorder = new MediaRecorder(combinedStream, {
+    state.mediaRecorder = new MediaRecorder(combinedStream, chosenMime ? {
       mimeType: chosenMime,
-      videoBitsPerSecond: 5000000
-    });
+      videoBitsPerSecond: 4500000
+    } : undefined);
   } catch (err) {
     console.warn("Fallo con mimeType " + chosenMime + ", usando MediaRecorder predeterminado:", err);
     state.mediaRecorder = new MediaRecorder(combinedStream);
@@ -3964,61 +4325,121 @@ async function startRecording() {
 
   state.mediaRecorder.onstop = saveRecordedVideo;
 
-  // La finalización de la grabación se gestiona de forma centralizada en el listener ended de audioElement
-  state.mediaRecorder.start(250);
+  // Iniciar MediaRecorder capturando fragmentos cada 500ms
+  state.mediaRecorder.start(500);
+
+  // Iniciar reproducción simultánea de audio sincronizada
   restartAllAudio();
   state.isPlaying = true;
-  updateStatus("⏺ Grabando video MP4 con música y pizarra... Se descargará automáticamente al terminar.");
+  updateStatus("⏺ Grabando video en alta calidad... Deja que termine la lección completa para descargar el MP4.");
 }
 
-function stopRecording() {
+function stopRecording(force = false) {
   if (!state.isRecording) return;
+
+  const elapsedSec = (performance.now() - (state.recordingStartTime || performance.now())) / 1000;
+  if (!force && elapsedSec < 4.5 && state.duration > 8) {
+    const ok = confirm(
+      `⚠️ La lección apenas lleva ${Math.floor(elapsedSec)} segundos (duración completa: ${Math.floor(state.duration)}s).\n\n` +
+      `Si detienes ahora, el video solo durará 3 segundos y fallará en YouTube.\n\n` +
+      `¿Deseas esperar a que termine toda la lección automáticamente?\n\n` +
+      `(Presiona Cancelar para seguir grabando la lección completa)`
+    );
+    if (!ok) {
+      return;
+    }
+  }
+
   state.isRecording = false;
-  badgeRecording.style.display = "none";
-  btnRecord.classList.remove("btn-accent");
-  btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
+  updateRecordingUI(false);
 
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
-    try {
-      state.mediaRecorder.requestData();
-    } catch (e) {}
+    try { state.mediaRecorder.requestData(); } catch (e) {}
     state.mediaRecorder.stop();
   }
 }
 
+function updateRecordingUI(isRec) {
+  const recBanner = document.getElementById("recordingFloatingBanner");
+
+  if (isRec) {
+    if (badgeRecording) badgeRecording.style.display = "inline-block";
+    if (recBanner) recBanner.style.display = "flex";
+
+    if (btnRecord) {
+      btnRecord.classList.add("btn-accent");
+      btnRecord.textContent = "⏹ Grabando... (Espere al final)";
+    }
+    if (btnMobileRecord) {
+      btnMobileRecord.textContent = "⏹ Grabando...";
+      btnMobileRecord.style.background = "#dc2626";
+      btnMobileRecord.style.color = "#ffffff";
+      btnMobileRecord.style.fontWeight = "900";
+    }
+  } else {
+    if (badgeRecording) badgeRecording.style.display = "none";
+    if (recBanner) recBanner.style.display = "none";
+
+    if (btnRecord) {
+      btnRecord.classList.remove("btn-accent");
+      btnRecord.textContent = "⏺ Grabar y Descargar Video MP4";
+    }
+    if (btnMobileRecord) {
+      btnMobileRecord.textContent = "⏺ Guardar MP4";
+      btnMobileRecord.style.background = "";
+      btnMobileRecord.style.color = "";
+      btnMobileRecord.style.fontWeight = "";
+    }
+  }
+}
+
 async function saveRecordedVideo() {
-  updateStatus("💾 Procesando y preparando archivo MP4 para descarga...");
+  updateStatus("⚙️ Procesando video con FFmpeg para garantizar 100% de compatibilidad con YouTube...");
 
-  const isNativeMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
-  const rawBlob = new Blob(state.recordedChunks, { type: isNativeMp4 ? "video/mp4" : "video/webm" });
-
-  if (isNativeMp4) {
-    downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
+  if (!state.recordedChunks || state.recordedChunks.length === 0) {
+    updateStatus("❌ No se capturaron fotogramas de video.");
     return;
   }
 
-  // Enviar al servidor para conversión profesional FFmpeg (100% compatible y sin recortes)
+  const rawBlob = new Blob(state.recordedChunks, { type: state.recordingMimeType || "video/webm" });
+
+  if (rawBlob.size < 5000) {
+    updateStatus("⚠️ Grabación demasiado corta o vacía.");
+    return;
+  }
+
+  // SIEMPRE CONVERTIR EN EL SERVIDOR CON FFMPEG:
+  // FFmpeg genera el contenedor MP4 estándar con perfil H.264 High/Main,
+  // formato de color yuv420p universal, audio estéreo AAC y el átomo 'moov'
+  // al inicio (-movflags +faststart) que YouTube Shorts, TikTok y Reels exigen.
   try {
-    updateStatus("⚙️ Convirtiendo a MP4 optimizado con audio y duración completa...");
+    updateStatus("⚙️ Convirtiendo a MP4 optimizado para YouTube (con duración y audio completo)...");
     const resp = await fetch("/api/convert-mp4", {
       method: "POST",
-      headers: { "Content-Type": "video/webm" },
+      headers: { "Content-Type": state.recordingMimeType || "video/webm" },
       body: rawBlob
     });
 
     if (resp.ok) {
       const mp4Blob = await resp.blob();
-      downloadBlob(mp4Blob, `profe_rochi_${Date.now()}.mp4`);
+      const filename = `profe_rochi_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}.mp4`;
+      downloadBlob(mp4Blob, filename);
+      updateStatus("✅ ¡Video MP4 listo y descargado! 100% compatible con YouTube Shorts.");
       return;
     } else {
-      console.warn("Fallo conversión backend, código:", resp.status);
+      const err = await resp.json().catch(() => ({}));
+      console.warn("Fallo conversión backend:", resp.status, err);
+      updateStatus(`⚠️ Aviso del servidor: ${err.error || "error en conversión"}. Descargando video directo.`);
     }
   } catch (e) {
-    console.warn("Conversión remota no disponible, descargando localmente:", e);
+    console.warn("No se pudo conectar con el servicio FFmpeg:", e);
+    updateStatus("⚠️ No se pudo conectar con el convertidor del servidor. Descargando video...");
   }
 
-  // Fallback si no hubo conversión
-  downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
+  // Fallback si no hubo conexión con el servidor
+  const isMp4 = state.recordingMimeType && state.recordingMimeType.includes("mp4");
+  const fallbackExt = isMp4 ? "mp4" : "webm";
+  downloadBlob(rawBlob, `profe_rochi_${Date.now()}.${fallbackExt}`);
 }
 
 async function downloadBlob(blob, filename) {

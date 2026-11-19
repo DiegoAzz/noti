@@ -109,6 +109,7 @@ const soundEngine = new WhiteboardSoundEngine();
 const state = {
   voice: "es-CO-SalomeNeural",
   avatar: "bellum",
+  outfit: "red",
   theme: "classroom",
   cameraMode: "director",
   format: "9:16",
@@ -677,6 +678,32 @@ HABLA: ¿Cuál otra palabra aguda con tilde conoces? ¡Coméntala!`;
   if (btnPreviewCover) btnPreviewCover.addEventListener("click", toggleCoverPreview);
   if (btnMobileCover) btnMobileCover.addEventListener("click", toggleCoverPreview);
 
+  // Botón móvil directo para guardar portada HD en galería o compartir
+  const btnMobileSaveCover = document.getElementById("btnMobileSaveCover");
+  if (btnMobileSaveCover) {
+    btnMobileSaveCover.addEventListener("click", downloadThumbnailCover);
+  }
+
+  // Selector de Outfit elegante y sensual para La Profe Rochi
+  const selectOutfit = document.getElementById("selectOutfit");
+  if (selectOutfit) {
+    selectOutfit.value = state.outfit || "red";
+    selectOutfit.addEventListener("change", (e) => {
+      setAvatarOutfit(e.target.value);
+      const badge = document.getElementById("badgeOutfitActive");
+      if (badge) {
+        const badgeNames = {
+          red: "🔴 Rojo",
+          black: "⚫ Negro",
+          blue: "🔵 Azul",
+          purple: "🟣 Púrpura"
+        };
+        badge.textContent = badgeNames[e.target.value] || "Sensual";
+      }
+      updateStatus(`👗 Outfit cambiado a: ${e.target.options[e.target.selectedIndex].text}`);
+    });
+  }
+
   // Control de volumen de voz del docente
   if (sliderVoiceVol) {
     sliderVoiceVol.addEventListener("input", (e) => {
@@ -753,7 +780,13 @@ function switchActiveTemplate(event, key) {
 }
 
 function loadTemplate(key) {
+  stopAndResetAllAudio();
   state.steps = JSON.parse(JSON.stringify(TEMPLATES[key] || TEMPLATES.capicua));
+  state.steps.forEach(s => {
+    s.progress = 0;
+    delete s.startTime;
+    delete s.speechEndTime;
+  });
   renderStepsUI();
   updateStatus(`Plantilla cargada: ${key.toUpperCase()}`);
 }
@@ -1124,6 +1157,9 @@ function renderSensualCover(targetCanvas) {
     tCtx.restore();
   }
 
+  // Reloj de pared dinámico con hora exacta en la portada
+  drawLiveWallClock(tCtx, w, h);
+
   // Cuadrícula sutil solo para Matemáticas (sin recuadros ni marcos artificiales)
   if (palette && palette.hasGrid) {
     const bx0 = 215, by0 = 695, bw = 675, bh = 470;
@@ -1271,22 +1307,32 @@ function renderSensualCover(targetCanvas) {
 
 function downloadThumbnailCover() {
   try {
+    updateStatus("📸 Generando portada sensual HD...");
     const offCanvas = document.createElement("canvas");
     offCanvas.width = canvas.width || 1080;
     offCanvas.height = canvas.height || 1920;
     renderSensualCover(offCanvas);
 
-    const dataUrl = offCanvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `portada_sensual_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    updateStatus("📸 ¡Portada HD guardada con éxito (pose sensual de espaldas escribiendo)!");
+    offCanvas.toBlob(async (blob) => {
+      if (!blob) {
+        // Fallback rápido si toBlob no responde
+        const dataUrl = offCanvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `portada_sensual_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        updateStatus("📸 ¡Portada HD guardada con éxito!");
+        return;
+      }
+      const filename = `portada_sensual_${getLessonTitle().toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+      await downloadBlob(blob, filename);
+      updateStatus("📸 ¡Portada HD guardada con éxito!");
+    }, "image/png");
   } catch (err) {
     console.error("Error al guardar miniatura de portada:", err);
-    alert("No se pudo generar la portada.");
+    alert("No se pudo generar la portada: " + err.message);
   }
 }
 
@@ -1494,7 +1540,16 @@ function loadTopicLesson(topicId) {
   const topic = topics.find(t => t.id === topicId);
   if (!topic) return;
 
+  // 1. Limpiar completamente audio previo, timers y caché para que nunca se mezcle con el tema anterior
+  stopAndResetAllAudio();
+
+  // 2. Cargar pasos limpios sin timestamps residuales
   state.steps = JSON.parse(JSON.stringify(topic.steps));
+  state.steps.forEach(s => {
+    s.progress = 0;
+    delete s.startTime;
+    delete s.speechEndTime;
+  });
   renderStepsUI();
 
   // Actualizar automáticamente el Copy de YouTube con este tema
@@ -1508,12 +1563,7 @@ function loadTopicLesson(topicId) {
     badgeActive.style.background = pal.badgeBg;
   }
 
-  state.currentTime = 0;
-  state.duration = 0;
-  state.isPlaying = false;
-  state.isRecording = false;
-
-  updateStatus(`✅ ¡Lección cargada: "${topic.name}" (${pal.name})! Haz clic en '▶ Generar y Reproducir'.`);
+  updateStatus(`✅ ¡Lección cargada: "${topic.name}" (${pal ? pal.name : ''})! Haz clic en '▶ Generar y Reproducir'.`);
 }
 
 window.removeStep = (idx) => {
@@ -1628,6 +1678,39 @@ function restartAllAudio() {
     state.bgMusicAudio.currentTime = 0;
   }
   playAllAudio();
+}
+
+function stopAndResetAllAudio() {
+  try {
+    if (state.audioElement) {
+      state.audioElement.pause();
+      state.audioElement.removeAttribute("src");
+      state.audioElement.load();
+    }
+  } catch (e) {}
+  try {
+    if (state.bgMusicAudio) {
+      state.bgMusicAudio.pause();
+      state.bgMusicAudio.currentTime = 0;
+    }
+  } catch (e) {}
+  try {
+    if (typeof soundEngine !== "undefined" && soundEngine && soundEngine.stopMarker) {
+      soundEngine.stopMarker();
+    }
+  } catch (e) {}
+
+  state.wordsTimeline = [];
+  state.currentTime = 0;
+  state.duration = 0;
+  state.isPlaying = false;
+  state.isRecording = false;
+  state.isShowingCoverPreview = false;
+  state.recordedChunks = [];
+
+  if (typeof btnTogglePlay !== "undefined" && btnTogglePlay) btnTogglePlay.textContent = "▶";
+  if (typeof badgeRecording !== "undefined" && badgeRecording) badgeRecording.style.display = "none";
+  updateTimeBadge();
 }
 
 function updateTimeBadge() {
@@ -2109,6 +2192,104 @@ function drawChannelLogo(w, h, time) {
   ctx.restore();
 }
 
+/* DIBUJAR RELOJ DE PARED EN VIVO CON LA HORA EXACTA Y SEGUNDERO EN MOVIMIENTO */
+function drawLiveWallClock(targetCtx, w, h) {
+  if (state.theme !== "classroom") return;
+
+  const isLandscape = (w > h);
+  // Coordenadas milimétricas exactas alineadas con el marco del reloj de pared
+  const cx = isLandscape ? 217 : 160;
+  const cy = isLandscape ? 176 : 160;
+  const r = isLandscape ? 72 : 76;
+
+  targetCtx.save();
+
+  // 1. Esfera limpia del reloj (cubre manecillas estáticas y da fondo nítido)
+  targetCtx.beginPath();
+  targetCtx.arc(cx, cy, r, 0, Math.PI * 2);
+  const dialGrad = targetCtx.createRadialGradient(cx - r * 0.25, cy - r * 0.25, r * 0.1, cx, cy, r);
+  dialGrad.addColorStop(0, "#ffffff");
+  dialGrad.addColorStop(1, "#fffcf0");
+  targetCtx.fillStyle = dialGrad;
+  targetCtx.fill();
+  targetCtx.lineWidth = 3;
+  targetCtx.strokeStyle = "#1e1e24";
+  targetCtx.stroke();
+
+  // 2. 12 marcas de las horas (3, 6, 9, 12 destacadas)
+  for (let i = 0; i < 12; i++) {
+    const ang = (i * Math.PI) / 6;
+    const isMajor = (i % 3 === 0);
+    const tickLen = isMajor ? 10 : 6;
+    const rIn = r - 4 - tickLen;
+    const rOut = r - 4;
+    targetCtx.beginPath();
+    targetCtx.moveTo(cx + Math.sin(ang) * rIn, cy - Math.cos(ang) * rIn);
+    targetCtx.lineTo(cx + Math.sin(ang) * rOut, cy - Math.cos(ang) * rOut);
+    targetCtx.strokeStyle = isMajor ? "#0f172a" : "#64748b";
+    targetCtx.lineWidth = isMajor ? 3.5 : 2;
+    targetCtx.lineCap = "round";
+    targetCtx.stroke();
+  }
+
+  // 3. Hora real del momento exacto (avanza en tiempo real o en sincronía con el video)
+  const now = new Date();
+  const baseMs = now.getTime() + (state.isPlaying ? (state.currentTime * 1000) : 0);
+  const d = new Date(baseMs);
+  const hours = d.getHours() % 12;
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds() + d.getMilliseconds() / 1000;
+
+  // 4. Manecilla de las Horas
+  const hAng = ((hours + minutes / 60) * Math.PI) / 6;
+  targetCtx.beginPath();
+  targetCtx.moveTo(cx - Math.sin(hAng) * 7, cy + Math.cos(hAng) * 7);
+  targetCtx.lineTo(cx + Math.sin(hAng) * (r * 0.52), cy - Math.cos(hAng) * (r * 0.52));
+  targetCtx.strokeStyle = "#0f172a";
+  targetCtx.lineWidth = 5;
+  targetCtx.lineCap = "round";
+  targetCtx.stroke();
+
+  // 5. Manecilla de los Minutos
+  const mAng = ((minutes + seconds / 60) * Math.PI) / 30;
+  targetCtx.beginPath();
+  targetCtx.moveTo(cx - Math.sin(mAng) * 9, cy + Math.cos(mAng) * 9);
+  targetCtx.lineTo(cx + Math.sin(mAng) * (r * 0.75), cy - Math.cos(mAng) * (r * 0.75));
+  targetCtx.strokeStyle = "#1e293b";
+  targetCtx.lineWidth = 3.5;
+  targetCtx.lineCap = "round";
+  targetCtx.stroke();
+
+  // 6. Segundero Dinámico (aguja roja continua que se mueve visiblemente)
+  const sAng = (seconds * Math.PI) / 30;
+  targetCtx.beginPath();
+  targetCtx.moveTo(cx - Math.sin(sAng) * 14, cy + Math.cos(sAng) * 14);
+  targetCtx.lineTo(cx + Math.sin(sAng) * (r * 0.84), cy - Math.cos(sAng) * (r * 0.84));
+  targetCtx.strokeStyle = "#dc2626";
+  targetCtx.lineWidth = 2;
+  targetCtx.lineCap = "round";
+  targetCtx.stroke();
+
+  // 7. Eje central del reloj
+  targetCtx.beginPath();
+  targetCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+  targetCtx.fillStyle = "#dc2626";
+  targetCtx.fill();
+  targetCtx.beginPath();
+  targetCtx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+  targetCtx.fillStyle = "#ffffff";
+  targetCtx.fill();
+
+  // 8. Reflejo de luz y cristal
+  targetCtx.beginPath();
+  targetCtx.arc(cx, cy, r - 4, -Math.PI * 0.78, -Math.PI * 0.22);
+  targetCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+  targetCtx.lineWidth = 3;
+  targetCtx.stroke();
+
+  targetCtx.restore();
+}
+
 /* 1. FONDO DE PIZARRA Y AULA */
 function drawWhiteboardBackground(w, h) {
   // Fondo de Aula Ilustrada oficial (Pizarra con marco amarillo, reloj y pupitres)
@@ -2131,6 +2312,9 @@ function drawWhiteboardBackground(w, h) {
       ctx.fillRect(0, 0, w, 1340);
       ctx.restore();
     }
+
+    // Reloj dinámico de pared en vivo
+    drawLiveWallClock(ctx, w, h);
 
     // Cuadrícula sutil solo para Matemáticas (sin recuadros ni marcos artificiales)
     if (palette && palette.hasGrid) {
@@ -2657,17 +2841,26 @@ function drawUltraRealisticHand(ctx, x, y, time, tiltAngle = 0, isTouching = tru
   ctx.fill();
   ctx.restore();
 
-  // E. Muñeca y Manga de Chaqueta (Roja para Bellum, Negra para clásica)
+  // E. Muñeca y Manga de Chaqueta (Adaptada dinámicamente al Outfit activo de La Profe Rochi)
   ctx.save();
   const sleeveGrad = ctx.createLinearGradient(70, 90, 160, 180);
-  if (isRedTeacher) {
-    sleeveGrad.addColorStop(0, "#ef4444");
-    sleeveGrad.addColorStop(0.4, "#dc2626");
-    sleeveGrad.addColorStop(1, "#991b1b");
-  } else {
+  const curOutfit = state.outfit || "red";
+  if (curOutfit === "black") {
     sleeveGrad.addColorStop(0, "#27272a");
     sleeveGrad.addColorStop(0.4, "#18181b");
     sleeveGrad.addColorStop(1, "#09090b");
+  } else if (curOutfit === "blue") {
+    sleeveGrad.addColorStop(0, "#3b82f6");
+    sleeveGrad.addColorStop(0.4, "#1d4ed8");
+    sleeveGrad.addColorStop(1, "#1e3a8a");
+  } else if (curOutfit === "purple") {
+    sleeveGrad.addColorStop(0, "#a855f7");
+    sleeveGrad.addColorStop(0.4, "#7e22ce");
+    sleeveGrad.addColorStop(1, "#581c87");
+  } else {
+    sleeveGrad.addColorStop(0, "#ef4444");
+    sleeveGrad.addColorStop(0.4, "#dc2626");
+    sleeveGrad.addColorStop(1, "#991b1b");
   }
   ctx.fillStyle = sleeveGrad;
 
@@ -2680,7 +2873,7 @@ function drawUltraRealisticHand(ctx, x, y, time, tiltAngle = 0, isTouching = tru
   ctx.fill();
 
   // Borde de la manga / puño con textura
-  ctx.strokeStyle = isRedTeacher ? "#000000" : "rgba(255, 255, 255, 0.15)";
+  ctx.strokeStyle = (curOutfit === "black") ? "rgba(255, 255, 255, 0.25)" : "#000000";
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(75, 95);
@@ -2704,29 +2897,33 @@ const bellumSprites = {
   sensualCover: new Image()
 };
 
-bellumSprites.base.src = "/avatars/sprites/base_pose.png";
-bellumSprites.sensualCover.src = "/avatars/clean_sprites/sensual_cover_pose.png";
+// Inicializar arrays de imágenes
+for (let i = 1; i <= 8; i++) bellumSprites.talk.push(new Image());
+for (let i = 1; i <= 6; i++) bellumSprites.write.push(new Image());
+for (let i = 1; i <= 6; i++) bellumSprites.turn.push(new Image());
 
-// 8 frames de animación explicando con gestos expresivos (hablando, apuntando, sonriendo)
-for (let i = 1; i <= 8; i++) {
-  const img = new Image();
-  img.src = `/avatars/sprites/talk_${i}.png`;
-  bellumSprites.talk.push(img);
+function setAvatarOutfit(outfit = "red") {
+  state.outfit = outfit;
+  const isRed = (outfit === "red");
+  const cleanPath = isRed ? "/avatars/clean_sprites" : `/avatars/outfits/${outfit}`;
+  const spritesPath = isRed ? "/avatars/sprites" : `/avatars/outfits/${outfit}`;
+
+  bellumSprites.base.src = `${spritesPath}/base_pose.png`;
+  bellumSprites.sensualCover.src = `${cleanPath}/sensual_cover_pose.png`;
+
+  for (let i = 1; i <= 8; i++) {
+    bellumSprites.talk[i - 1].src = `${spritesPath}/talk_${i}.png`;
+  }
+  for (let i = 1; i <= 6; i++) {
+    bellumSprites.write[i - 1].src = `${spritesPath}/write_${i}.png`;
+  }
+  for (let i = 1; i <= 6; i++) {
+    bellumSprites.turn[i - 1].src = `${spritesPath}/turn_${i}.png`;
+  }
 }
 
-// 6 frames de animación escribiendo en la pizarra
-for (let i = 1; i <= 6; i++) {
-  const img = new Image();
-  img.src = `/avatars/sprites/write_${i}.png`;
-  bellumSprites.write.push(img);
-}
-
-// 6 frames de giro hacia la pizarra
-for (let i = 1; i <= 6; i++) {
-  const img = new Image();
-  img.src = `/avatars/sprites/turn_${i}.png`;
-  bellumSprites.turn.push(img);
-}
+// Cargar outfit inicial
+setAvatarOutfit(state.outfit || "red");
 
 // Coordenadas milimétricas de la punta del marcador en write_1..write_6 (tamaño 500x800)
 const WRITE_MARKER_TIPS = [
@@ -3824,17 +4021,43 @@ async function saveRecordedVideo() {
   downloadBlob(rawBlob, `profe_rochi_${Date.now()}.mp4`);
 }
 
-function downloadBlob(blob, filename) {
+async function downloadBlob(blob, filename) {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  // En móvil: intentar primero Web Share nativo con archivo para guardar directo en la galería / fotos
+  if (isMobile && navigator.canShare) {
+    try {
+      const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: "Archivo generado por La Profe Rochi"
+        });
+        updateStatus("✅ ¡Archivo guardado en tu dispositivo!");
+        return;
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.warn("Share fallback:", err);
+      } else {
+        return; // Usuario canceló el modal nativo
+      }
+    }
+  }
+
+  // Descarga directa con blob URL universal
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.style.display = "none";
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    updateStatus("✅ ¡Video MP4 descargado con éxito! Listo para publicar.");
-  }, 100);
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    updateStatus("✅ ¡Archivo descargado con éxito! Listo para publicar.");
+  }, 1000);
 }

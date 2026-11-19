@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;600;700;800;900&family=Kalam:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=110">
   <script src="three.min.js"></script>
   <script src="GLTFLoader.js"></script>
-  <script src="rae_topics.js?v=105"></script>
+  <script src="rae_topics.js?v=110"></script>
 </head>
 <body>
   <!-- BARRA DE PESTAÑAS MÓVIL (SOLO VISIBLE EN CELULAR / PANTALLAS PEQUEÑAS) -->
@@ -93,6 +93,20 @@
                 <option value="blackboard_dark">Pizarra Oscura Moderna</option>
               </select>
             </div>
+          </div>
+
+          <!-- OUTFIT SEXY Y ELEGANTE DE LA PROFE ROCHI -->
+          <div class="form-group" style="background: rgba(239, 68, 68, 0.08); padding: 8px 12px; border-radius: 8px; border: 1.5px solid rgba(239, 68, 68, 0.35); margin-top: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+              <label for="selectOutfit" style="font-size:0.78rem; font-weight:700; color:#fca5a5;">👗 Outfit de La Profe Rochi:</label>
+              <span id="badgeOutfitActive" style="font-size:0.65rem; font-weight:800; color:#fde047; background: rgba(251, 191, 36, 0.2); padding: 2px 6px; border-radius: 6px;">🔴 Rojo</span>
+            </div>
+            <select id="selectOutfit" class="form-control" style="font-weight:600;">
+              <option value="red" selected>🔴 Rojo Pasión Oficial (Clásico y Sensual)</option>
+              <option value="black">⚫ Negro Seductor & Elegante (Noir Chic / Femme Fatale)</option>
+              <option value="blue">🔵 Azul Zafiro Sexy (Ejecutiva Moderna)</option>
+              <option value="purple">🟣 Púrpura Glamour (Diva Whiteboard)</option>
+            </select>
           </div>
 
           <!-- LOGO OFICIAL DEL CANAL: LA PROFE ROCHI -->
@@ -330,13 +344,14 @@
 
       <!-- BOTONES FLOTANTES MÓVILES PARA ACCIÓN RÁPIDA -->
       <div class="mobile-floating-actions">
-        <button id="btnMobilePlay" class="btn btn-primary btn-sm" style="flex:1;">▶ Vista Previa</button>
-        <button id="btnMobileCover" class="btn btn-secondary btn-sm" style="flex:1; border:1px solid #fbbf24; color:#fde047;">📸 Portada</button>
-        <button id="btnMobileRecord" class="btn btn-accent btn-sm" style="flex:1;">⏺ Guardar MP4</button>
+        <button id="btnMobilePlay" class="btn btn-primary btn-sm" style="flex:1;">▶ Video</button>
+        <button id="btnMobileCover" class="btn btn-secondary btn-sm" style="flex:1; border:1px solid #fbbf24; color:#fde047;">📸 Ver</button>
+        <button id="btnMobileSaveCover" class="btn btn-secondary btn-sm" style="flex:1; border:1px solid #a855f7; color:#e9d5ff;">💾 Portada</button>
+        <button id="btnMobileRecord" class="btn btn-accent btn-sm" style="flex:1;">⏺ MP4</button>
       </div>
     </main>
   </div>
 
-  <script src="app.js?v=105"></script>
+  <script src="app.js?v=110"></script>
 </body>
 </html>
